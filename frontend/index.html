@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Course Assistant</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    .main-content {
+      padding: 30px;
+    }
+
+    .section {
+      margin-bottom: 40px;
+      padding: 25px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .section h2 {
+      color: #4f46e5;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .form-row input {
+      flex: 1;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    button {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 600;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4);
+    }
+
+    .btn-secondary {
+      background: #64748b;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+    }
+
+    .btn-success {
+      background: #10b981;
+    }
+
+    .courses-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .course-card {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+      transition: all 0.3s;
+    }
+
+    .course-card:hover {
+      border-color: #4f46e5;
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    .course-header {
+      display: flex;
+      justify-content: between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .course-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 5px;
+    }
+
+    .course-id {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+    }
+
+    .course-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .course-actions button {
+      padding: 8px 16px;
+      font-size: 0.9rem;
+    }
+
+    .files-list {
+      margin-top: 15px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 15px;
+    }
+
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: #f1f5f9;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .file-name {
+      font-weight: 500;
+      color: #1e293b;
+    }
+
+    .chat-section {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 25px;
+      margin-top: 20px;
+    }
+
+    .chat-header {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .chat-messages {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      height: 400px;
+      overflow-y: auto;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+
+    .message {
+      margin-bottom: 15px;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .message.user {
+      background: #eff6ff;
+      border-left: 4px solid #4f46e5;
+    }
+
+    .message.assistant {
+      background: #f0fdf4;
+      border-left: 4px solid #10b981;
+    }
+
+    .message-content {
+      line-height: 1.6;
+    }
+
+    .chat-input {
+      display: flex;
+      gap: 10px;
+    }
+
+    .chat-input textarea {
+      flex: 1;
+      min-height: 50px;
+      resize: vertical;
+    }
+
+    .status-message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-weight: 500;
+    }
+
+    .status-success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-error {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #4f46e5;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📚 AI Course Assistant</h1>
+      <p>Upload course materials and chat with your personalized AI tutor</p>
+    </div>
+
+    <div class="main-content">
+      <!-- Status Messages -->
+      <div id="status-message" class="hidden"></div>
+
+      <!-- Create Course Section -->
+      <div class="section">
+        <h2>➕ Create New Course</h2>
+        <div class="form-row">
+          <input 
+            id="course-id" 
+            placeholder="Course ID (e.g., COSC221)" 
+            maxlength="20"
+          />
+          <input 
+            id="course-title" 
+            placeholder="Course Title (e.g., Data Structures)" 
+          />
+          <button onclick="createCourse()">Create Course</button>
+        </div>
+      </div>
+
+      <!-- Upload Files Section -->
+      <div class="section">
+        <h2>📤 Upload Course Materials</h2>
+        <div class="form-group">
+          <select id="upload-course-id">
+            <option value="">Select a course...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <input 
+            type="file" 
+            id="file-input" 
+            multiple 
+            accept=".pdf,.docx,.pptx,.txt"
+          />
+        </div>
+        <button onclick="uploadFiles()">Upload Files</button>
+      </div>
+
+      <!-- Courses Display -->
+      <div class="section">
+        <h2>📚 Your Courses</h2>
+        <button onclick="loadCourses()" class="btn-secondary">🔄 Refresh Courses</button>
+        <div id="course-list" class="courses-grid"></div>
+      </div>
+
+      <!-- Chat Section -->
+      <div class="chat-section">
+        <h2>💬 Chat with Your AI Tutor</h2>
+        <div class="chat-header">
+          <select id="chat-course-id">
+            <option value="">Select a course to chat about...</option>
+          </select>
+          <button onclick="clearChat()" class="btn-secondary">Clear Chat</button>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+          <div class="message assistant">
+            <div class="message-content">
+              👋 Hello! Select a course and ask me anything about your uploaded materials. I can help explain concepts, answer questions, and provide study guidance.
+            </div>
+          </div>
+        </div>
+        <div class="chat-input">
+          <textarea 
+            id="question-input" 
+            placeholder="Ask a question about your course materials..."
+            rows="2"
+          ></textarea>
+          <button onclick="askQuestion()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+
+    // Show status message
+    function showStatus(message, type = 'success') {
+      const statusDiv = document.getElementById('status-message');
+      statusDiv.className = `status-message status-${type}`;
+      statusDiv.textContent = message;
+      statusDiv.classList.remove('hidden');
+      
+      setTimeout(() => {
+        statusDiv.classList.add('hidden');
+      }, 5000);
+    }
+
+    // Create course
+    async function createCourse() {
+      const id = document.getElementById("course-id").value.trim();
+      const title = document.getElementById("course-title").value.trim();
+      
+      if (!id || !title) {
+        showStatus("Please enter both course ID and title.", 'error');
+        return;
+      }
+
+      const form = new FormData();
+      form.append("course_id", id);
+      form.append("title", title);
+
+      try {
+        const res = await fetch(`${API_BASE}/create-course`, {
+          method: "POST",
+          body: form,
+        });
+
+        const result = await res.json();
+        
+        if (res.ok) {
+          showStatus(`✅ Course "${title}" created successfully!`);
+          document.getElementById("course-id").value = "";
+          document.getElementById("course-title").value = "";
+          await loadCourses();
+        } else {
+          showStatus(result.message || "Error creating course", 'error');
+        }
+      } catch (error) {
+        showStatus("Network error. Make sure your backend is running.", 'error');
+      }
+    }
+
+    // Load courses
+    async function loadCourses() {
+      try {
+        const res = await fetch(`${API_BASE}/list-courses`);
+        const data = await res.json();
+        const courses = data.courses || [];
+        
+        const container = document.getElementById("course-list");
+        const uploadDropdown = document.getElementById("upload-course-id");
+        const chatDropdown = document.getElementById("chat-course-id");
+
+        // Clear existing content completely
+        container.innerHTML = "";
+        
+        // Store currently selected values
+        const currentUploadSelection = uploadDropdown.value;
+        const currentChatSelection = chatDropdown.value;
+        
+        // Clear and rebuild dropdowns
+        uploadDropdown.innerHTML = '<option value="">Select a course...</option>';
+        chatDropdown.innerHTML = '<option value="">Select a course to chat about...</option>';
+
+        if (courses.length === 0) {
+          container.innerHTML = '<p style="text-align: center; color: #64748b; font-style: italic;">No courses created yet. Create your first course above!</p>';
+          return;
+        }
+
+        // Track which courses still exist
+        const existingCourseIds = new Set();
+
+        courses.forEach((course) => {
+          existingCourseIds.add(course.course_id);
+          
+          // Create course card
+          const courseCard = document.createElement("div");
+          courseCard.className = "course-card";
+          courseCard.innerHTML = `
+            <div class="course-title">${course.title}</div>
+            <div class="course-id">ID: ${course.course_id}</div>
+            <div class="course-actions">
+              <button onclick="viewFiles('${course.course_id}')" class="btn-secondary">📂 View Files</button>
+              <button onclick="deleteCourse('${course.course_id}')" class="btn-danger">🗑 Delete</button>
+            </div>
+            <div id="files-${course.course_id}" class="files-list hidden"></div>
+          `;
+          container.appendChild(courseCard);
+
+          // Add to upload dropdown
+          const uploadOption = document.createElement("option");
+          uploadOption.value = course.course_id;
+          uploadOption.textContent = `${course.course_id} - ${course.title}`;
+          uploadDropdown.appendChild(uploadOption);
+
+          // Add to chat dropdown
+          const chatOption = document.createElement("option");
+          chatOption.value = course.course_id;
+          chatOption.textContent = `${course.course_id} - ${course.title}`;
+          chatDropdown.appendChild(chatOption);
+        });
+
+        // Restore selections only if the course still exists
+        if (existingCourseIds.has(currentUploadSelection)) {
+          uploadDropdown.value = currentUploadSelection;
+        }
+        
+        if (existingCourseIds.has(currentChatSelection)) {
+          chatDropdown.value = currentChatSelection;
+        } else if (currentChatSelection && !existingCourseIds.has(currentChatSelection)) {
+          // If the selected chat course was deleted, clear the chat
+          clearChat();
+        }
+        
+      } catch (error) {
+        showStatus("Error loading courses. Check if backend is running.", 'error');
+        console.error("Error loading courses:", error);
+      }
+    }
+
+    // Upload files
+    async function uploadFiles() {
+      const courseId = document.getElementById("upload-course-id").value;
+      const input = document.getElementById("file-input");
+      const files = input.files;
+      
+      if (!courseId) {
+        showStatus("Please select a course first.", 'error');
+        return;
+      }
+      
+      if (files.length === 0) {
+        showStatus("Please select files to upload.", 'error');
+        return;
+      }
+
+      const form = new FormData();
+      for (let file of files) {
+        form.append("files", file);
+      }
+      form.append("course_id", courseId);
+
+      try {
+        showStatus("Uploading files...", 'success');
+        const res = await fetch(`${API_BASE}/upload`, {
+          method: "POST",
+          body: form,
+        });
+
+        const result = await res.json();
+        
+        if (res.ok) {
+          showStatus(`✅ Successfully uploaded ${files.length} file(s)!`);
+          input.value = "";
+          await viewFiles(courseId);
+        } else {
+          showStatus(result.message || "Upload failed", 'error');
+        }
+      } catch (error) {
+        showStatus("Upload failed. Check your connection and backend.", 'error');
+      }
+    }
+
+    // View files for a course
+    async function viewFiles(courseId) {
+      try {
+        const res = await fetch(`${API_BASE}/list-files?course_id=${courseId}`);
+        const data = await res.json();
+        const files = data.files || [];
+        
+        const fileDiv = document.getElementById(`files-${courseId}`);
+        
+        if (!fileDiv) {
+          console.warn(`File div for course ${courseId} not found`);
+          return;
+        }
+        
+        if (files.length === 0) {
+          fileDiv.innerHTML = '<p style="color: #64748b; font-style: italic;">No files uploaded yet.</p>';
+          fileDiv.classList.remove('hidden');
+          return;
+        }
+
+        fileDiv.innerHTML = files.map(file => `
+          <div class="file-item">
+            <span class="file-name">📄 ${file}</span>
+            <button onclick="deleteFile('${courseId}', '${file}')" class="btn-danger" style="padding: 6px 12px; font-size: 0.8rem;">🗑 Delete</button>
+          </div>
+        `).join('');
+        
+        fileDiv.classList.remove('hidden');
+      } catch (error) {
+        showStatus("Error loading files.", 'error');
+        console.error("Error loading files:", error);
+      }
+    }
+
+    // Delete course
+    async function deleteCourse(courseId) {
+      const confirmed = confirm(`Are you sure you want to delete course "${courseId}"? This will remove all uploaded files.`);
+      if (!confirmed) return;
+
+      try {
+        const form = new FormData();
+        form.append("course_id", courseId);
+        
+        const res = await fetch(`${API_BASE}/delete-course`, {
+          method: "POST",
+          body: form,
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          showStatus(`✅ Course "${courseId}" deleted successfully!`);
+          
+          // Force reload courses to ensure UI is updated
+          setTimeout(async () => {
+            await loadCourses();
+          }, 100);
+          
+        } else {
+          const result = await res.json();
+          showStatus(result.message || "Failed to delete course", 'error');
+        }
+      } catch (error) {
+        showStatus("Error deleting course.", 'error');
+        console.error("Error deleting course:", error);
+      }
+    }
+
+    // Delete file
+    async function deleteFile(courseId, filename) {
+      const confirmed = confirm(`Delete file "${filename}"?`);
+      if (!confirmed) return;
+
+      try {
+        const form = new FormData();
+        form.append("course_id", courseId);
+        form.append("filename", filename);
+        
+        const res = await fetch(`${API_BASE}/delete-file`, {
+          method: "POST",
+          body: form,
+        });
+
+        const result = await res.json();
+        
+        if (res.ok) {
+          showStatus(`✅ File "${filename}" deleted!`);
+          // Refresh the files list for this specific course
+          await viewFiles(courseId);
+        } else {
+          showStatus(result.message || "Failed to delete file", 'error');
+        }
+      } catch (error) {
+        showStatus("Error deleting file.", 'error');
+        console.error("Error deleting file:", error);
+      }
+    }
+
+    // Ask question
+    async function askQuestion() {
+      const courseId = document.getElementById("chat-course-id").value;
+      const question = document.getElementById("question-input").value.trim();
+      
+      if (!courseId) {
+        showStatus("Please select a course to chat about.", 'error');
+        return;
+      }
+      
+      if (!question) {
+        showStatus("Please enter a question.", 'error');
+        return;
+      }
+
+      const chatMessages = document.getElementById("chat-messages");
+      const questionInput = document.getElementById("question-input");
+      
+      // Add user message
+      const userMessage = document.createElement("div");
+      userMessage.className = "message user";
+      userMessage.innerHTML = `<div class="message-content"><strong>You:</strong> ${question}</div>`;
+      chatMessages.appendChild(userMessage);
+      
+      // Add loading message
+      const loadingMessage = document.createElement("div");
+      loadingMessage.className = "message assistant";
+      loadingMessage.innerHTML = `<div class="message-content"><span class="loading"></span> AI is thinking...</div>`;
+      chatMessages.appendChild(loadingMessage);
+      
+      // Clear input and scroll to bottom
+      questionInput.value = "";
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      try {
+        const form = new FormData();
+        form.append("question", question);
+        form.append("course_id", courseId);
+        
+        const res = await fetch(`${API_BASE}/ask`, {
+          method: "POST",
+          body: form,
+        });
+
+        const result = await res.json();
+        
+        // Remove loading message
+        chatMessages.removeChild(loadingMessage);
+        
+        if (res.ok) {
+          const aiMessage = document.createElement("div");
+          aiMessage.className = "message assistant";
+          aiMessage.innerHTML = `<div class="message-content"><strong>AI Tutor:</strong> ${result.answer}</div>`;
+          chatMessages.appendChild(aiMessage);
+        } else {
+          const errorMessage = document.createElement("div");
+          errorMessage.className = "message assistant";
+          errorMessage.innerHTML = `<div class="message-content"><strong>Error:</strong> ${result.message || "Failed to get answer"}</div>`;
+          chatMessages.appendChild(errorMessage);
+        }
+        
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      } catch (error) {
+        // Remove loading message
+        if (chatMessages.contains(loadingMessage)) {
+          chatMessages.removeChild(loadingMessage);
+        }
+        
+        const errorMessage = document.createElement("div");
+        errorMessage.className = "message assistant";
+        errorMessage.innerHTML = `<div class="message-content"><strong>Error:</strong> Network error. Check if backend is running.</div>`;
+        chatMessages.appendChild(errorMessage);
+        
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    }
+
+    // Clear chat
+    function clearChat() {
+      const chatMessages = document.getElementById("chat-messages");
+      chatMessages.innerHTML = `
+        <div class="message assistant">
+          <div class="message-content">
+            👋 Hello! Select a course and ask me anything about your uploaded materials. I can help explain concepts, answer questions, and provide study guidance.
+          </div>
+        </div>
+      `;
+    }
+
+    // Allow enter key to send messages
+    document.addEventListener('DOMContentLoaded', function() {
+      const questionInput = document.getElementById('question-input');
+      questionInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          askQuestion();
+        }
+      });
+    });
+
+    // Load courses on page load
+    window.addEventListener('load', loadCourses);
+  </script>
+</body>
+</html>
