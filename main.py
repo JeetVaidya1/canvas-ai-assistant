@@ -26,28 +26,36 @@ app = FastAPI()
 
 @app.post("/upload/{course_id}")
 async def upload(course_id: str, file: UploadFile = File(...)):
-    # 1) Read the bytes from the incoming file
+    # 1) Read the file bytes
     content = await file.read()
-    # 2) Send those bytes into Supabase storage
+
+    # 2) Upload to Supabase Storage (overwrite if exists)
     storage_path = f"{course_id}/{file.filename}"
     public_url = upload_file("course-files", content, storage_path)
 
-    # 3) Record it in your database
-       # … after public_url = upload_file(…)
+    # 3) Record metadata in Supabase
     try:
         result = supabase.table("files").insert({
-            "course_id": course_id,
-            "filename": file.filename,
+            "course_id":   course_id,
+            "filename":    file.filename,
             "storage_path": storage_path,
-            "file_type": file.filename.rsplit(".", 1)[-1],
+            "file_type":   file.filename.rsplit(".", 1)[-1],
             "uploaded_at": "now()"
         }).execute()
         metadata = result.data
     except Exception as e:
-        # Bubble up any error from Supabase
-        raise HTTPException(status_code=500, detail=f"DB insert failed: {e}")
+        raise HTTPException(500, detail=f"DB insert failed: {e}")
 
-    return {"url": public_url, "meta": metadata}
+    # 4) **Ingest & chunk** via your updated ingest.py
+    #    This call will extract text, embed, store in pgvector, and return chunk previews
+    chunks = process_file(file.filename, content, course_id)
+
+    # 5) Return everything
+    return {
+        "url":    public_url,
+        "meta":   metadata,
+        "chunks": chunks
+    }
 
 
 
