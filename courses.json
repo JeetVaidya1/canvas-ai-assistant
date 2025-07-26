@@ -1,6 +1,19 @@
 {
   "cosc222": {
-    "title": "Data Structures",
+    "title": "data structures",
+    "files": [
+      "301_2_DataRepresentation.pdf",
+      "301_3_Excel.pdf"
+    ]
+  },
+  "bio201": {
+    "title": "membranes",
+    "files": [
+      "Final Exam Review.pdf"
+    ]
+  },
+  "busi101": {
+    "title": "marketing",
     "files": []
   }
 }

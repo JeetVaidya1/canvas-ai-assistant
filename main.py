@@ -6,8 +6,50 @@ from query_engine import ask_question
 import os
 import json
 import shutil
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from storage import upload_file           
+from supabase import create_client
+import os
+from dotenv import load_dotenv
+
+# 1. Load the secret note (.env)
+load_dotenv()
+
+# 2. Read the URL & KEY from that note
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+# 3. Make a Supabase “client” to talk to the database
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app = FastAPI()
+
+@app.post("/upload/{course_id}")
+async def upload(course_id: str, file: UploadFile = File(...)):
+    # 1) Read the bytes from the incoming file
+    content = await file.read()
+    # 2) Send those bytes into Supabase storage
+    storage_path = f"{course_id}/{file.filename}"
+    public_url = upload_file("course-files", content, storage_path)
+
+    # 3) Record it in your database
+       # … after public_url = upload_file(…)
+    try:
+        result = supabase.table("files").insert({
+            "course_id": course_id,
+            "filename": file.filename,
+            "storage_path": storage_path,
+            "file_type": file.filename.rsplit(".", 1)[-1],
+            "uploaded_at": "now()"
+        }).execute()
+        metadata = result.data
+    except Exception as e:
+        # Bubble up any error from Supabase
+        raise HTTPException(status_code=500, detail=f"DB insert failed: {e}")
+
+    return {"url": public_url, "meta": metadata}
+
+
 
 # Allow frontend access (CORS setup)
 app.add_middleware(
