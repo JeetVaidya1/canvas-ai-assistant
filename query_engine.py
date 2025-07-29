@@ -1,35 +1,48 @@
+# query_engine.py
+
 import os
 from dotenv import load_dotenv
-from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
-from langchain.chains import RetrievalQA
-from langchain.llms import OpenAI
+from openai import OpenAI
+from vector_store import VectorStore
 
-# Load API key from .env
+# Load keys
 load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Load vector store
-def load_vector_store(store_path="vector_store"):
-    embeddings = OpenAIEmbeddings(api_key=api_key)
-    return FAISS.load_local(store_path, embeddings, allow_dangerous_deserialization=True)
+# Instantiate clients
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
+vector_store   = VectorStore()
 
-# Create QA engine
-def create_qa_engine(store_path="vector_store"):
-    db = load_vector_store(store_path)
-    retriever = db.as_retriever()
-    llm = OpenAI(api_key=api_key, temperature=0.1)
-    qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
-    return qa
+# You can customize this system prompt however you like
+SYSTEM_PROMPT = """
+You are a helpful tutor. Use the provided context from course materials to answer the user’s question as clearly and thoroughly as possible.
+"""
 
-# Ask a question
-def ask_question(question, course_id):
-    store_path = os.path.join("vectorstores", course_id)  # ✅ Correct path
-    qa = create_qa_engine(store_path)
-    return qa.run(question)
+def ask_question(question: str, course_id: str) -> str:
+    # 1) Embed the user’s question
+    emb_resp = openai_client.embeddings.create(
+        model="text-embedding-ada-002",
+        input=[question]
+    )
+    q_emb = emb_resp.data[0].embedding
 
+    # 2) Retrieve top‑5 relevant chunks from pgvector, with fallback
+    try:
+        results = vector_store.query(course_id, q_emb, top_k=5) or []
+    except Exception:
+        results = []
 
-# For testing:
-if __name__ == "__main__":
-    q = input("❓ Ask a question: ")
-    print("💬 Answer:", ask_question(q))
+    # 3) Build context string; empty if no results
+    context = "\n\n".join(r.get("content", "") for r in results)
+
+    # 4) Call the chat API with context + question
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user",   "content": f"Context:\n{context}\n\nQuestion: {question}"}
+    ]
+    chat_resp = openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages
+    )
+
+    return chat_resp.choices[0].message.content
