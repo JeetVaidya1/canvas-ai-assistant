@@ -8,9 +8,12 @@ import json
 import shutil
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from storage import upload_file           
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Query
 from supabase import create_client
+from datetime import datetime
 import os
 from dotenv import load_dotenv
+from query_engine import ask_question
 
 # 1. Load the secret note (.env)
 load_dotenv()
@@ -126,9 +129,57 @@ async def upload_files(
     return {"status": "ok", "chunks": chunks_preview}
 
 @app.post("/ask")
-async def query(question: str = Form(...), course_id: str = Form(...)):
+async def ask_endpoint(
+    question:    str             = Form(...),
+    course_id:   str             = Form(...),
+    session_id:  str | None      = Form(None),
+    user_id:     str             = Form("anonymous")  # TODO: wire in real auth
+):
+    # 1) Create a new chat_session if none was provided
+    if not session_id:
+        try:
+            resp = supabase.table("chat_sessions").insert({
+                "user_id":    user_id,
+                "course_id":  course_id,
+                "title":      question[:50],
+                "created_at": datetime.utcnow().isoformat()
+            }).execute()
+            session_id = resp.data[0]["id"]
+        except Exception as e:
+            raise HTTPException(500, detail=f"Couldn’t create session: {e}")
+
+    # 2) Record the user’s question
+    try:
+        supabase.table("messages").insert({
+            "session_id": session_id,
+            "role":       "user",
+            "content":    question,
+            "timestamp":  datetime.utcnow().isoformat()
+        }).execute()
+    except Exception as e:
+        raise HTTPException(500, detail=f"Couldn’t save question: {e}")
+
+    # 3) Generate the AI’s answer
     answer = ask_question(question, course_id)
-    return {"question": question, "answer": answer}
+
+    # 4) Record the assistant’s answer
+    try:
+        supabase.table("messages").insert({
+            "session_id": session_id,
+            "role":       "assistant",
+            "content":    answer,
+            "timestamp":  datetime.utcnow().isoformat()
+        }).execute()
+    except Exception as e:
+        raise HTTPException(500, detail=f"Couldn’t save answer: {e}")
+
+    return {
+        "session_id": session_id,
+        "question":   question,
+        "answer":     answer
+    }
+
+
 
 @app.get("/list-courses")
 def list_courses():
@@ -211,3 +262,36 @@ async def delete_entire_course(course_id: str = Form(...)):
             
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.get("/sessions")
+def list_sessions(user_id: str = Query(..., description="User ID to filter by")):
+    """
+    List all sessions for a user, newest first.
+    """
+    try:
+        resp = supabase.table("chat_sessions") \
+            .select("*") \
+            .eq("user_id", user_id) \
+            .order("created_at", desc=True) \
+            .execute()
+        sessions = resp.data
+    except Exception as e:
+        raise HTTPException(500, detail=f"Couldn’t fetch sessions: {e}")
+    return {"sessions": sessions}
+
+
+@app.get("/sessions/{session_id}/messages")
+def get_messages(session_id: str):
+    """
+    Fetch all messages in a session, oldest first.
+    """
+    try:
+        resp = supabase.table("messages") \
+            .select("*") \
+            .eq("session_id", session_id) \
+            .order("timestamp", desc=False) \
+            .execute()
+        messages = resp.data
+    except Exception as e:
+        raise HTTPException(500, detail=f"Couldn’t fetch messages: {e}")
+    return {"messages": messages}
