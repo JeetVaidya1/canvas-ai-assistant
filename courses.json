@@ -30,5 +30,11 @@
   "math100": {
     "title": "CALC 1",
     "files": []
+  },
+  "cosc310": {
+    "title": "Soft Eng",
+    "files": [
+      "W4_Design-Architectural.pdf"
+    ]
   }
 }

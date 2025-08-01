@@ -16,6 +16,16 @@ from query_engine import ask_question
 from storage import upload_file
 from ingest import process_file
 
+# NEW: Try to import enhanced modules
+try:
+    from enhanced_ingest import process_file_enhanced, delete_file_from_course as enhanced_delete_file
+    from enhanced_query_engine import enhanced_ask_question
+    ENHANCED_MODE = True
+    print("✅ Enhanced multimodal system loaded!")
+except ImportError as e:
+    print(f"⚠️ Enhanced system not available: {e}")
+    ENHANCED_MODE = False
+
 # 1. Load the secret note (.env)
 load_dotenv()
 
@@ -23,7 +33,7 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-# 3. Make a Supabase “client” to talk to the database
+# 3. Make a Supabase "client" to talk to the database
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app = FastAPI()
@@ -50,9 +60,16 @@ async def upload(course_id: str, file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(500, detail=f"DB insert failed: {e}")
 
-    # 4) **Ingest & chunk** via your updated ingest.py
-    #    This call will extract text, embed, store in pgvector, and return chunk previews
-    chunks = process_file(file.filename, content, course_id)
+    # 4) **Enhanced processing with fallback**
+    try:
+        if ENHANCED_MODE:
+            print("🚀 Using enhanced multimodal processing...")
+            chunks = process_file_enhanced(file.filename, content, course_id)
+        else:
+            chunks = process_file(file.filename, content, course_id)
+    except Exception as e:
+        print(f"⚠️ Processing failed, using fallback: {e}")
+        chunks = process_file(file.filename, content, course_id)
 
     # 5) Return everything
     return {
@@ -60,8 +77,6 @@ async def upload(course_id: str, file: UploadFile = File(...)):
         "meta":   metadata,
         "chunks": chunks
     }
-
-
 
 # Allow frontend access (CORS setup)
 app.add_middleware(
@@ -88,7 +103,10 @@ def save_courses(courses):
 
 @app.get("/")
 def health_check():
-    return {"status": "✅ API is running"}
+    status_message = "✅ API is running"
+    if ENHANCED_MODE:
+        status_message += " (Enhanced Mode Active 🚀)"
+    return {"status": status_message}
 
 @app.post("/create-course")
 def create_course(course_id: str = Form(...), title: str = Form(...)):
@@ -129,7 +147,7 @@ async def upload_files(
     files: List[UploadFile] = File(...),
     course_id: str = Form(...)
 ):
-    print(f"🚀 Upload request received for course: {course_id}")
+    print(f"🚀 Enhanced upload request for course: {course_id}")
     print(f"📁 Number of files: {len(files)}")
     
     # Check if course exists
@@ -185,7 +203,6 @@ async def upload_files(
             storage_path = f"{course_id}/{file.filename}"
             print(f"☁️ Uploading to storage: {storage_path}")
             try:
-                from storage import upload_file
                 public_url = upload_file("course-files", content, storage_path)
                 print(f"✅ Storage upload successful: {public_url}")
             except Exception as e:
@@ -213,15 +230,31 @@ async def upload_files(
                 errors.append(f"Database insert failed for {file.filename}: {e}")
                 continue
 
-            # 5) Process file for vector embeddings
+            # 5) **ENHANCED: Process file for vector embeddings with multimodal support**
             print("🧠 Processing file for AI embeddings...")
             try:
-                chunks = process_file(file.filename, content, course_id)
-                print(f"✅ Processed into {len(chunks)} chunks")
+                if ENHANCED_MODE:
+                    print("🚀 Using enhanced multimodal processing...")
+                    chunks = process_file_enhanced(file.filename, content, course_id)
+                    print(f"✅ Enhanced processing successful: {len(chunks)} chunks")
+                else:
+                    print("📝 Using basic processing...")
+                    chunks = process_file(file.filename, content, course_id)
+                    print(f"✅ Basic processing successful: {len(chunks)} chunks")
+                
                 chunks_preview.extend(chunks[:2])  # Preview first 2 chunks per file
             except Exception as e:
-                print(f"❌ Vector processing failed: {e}")
-                chunks_preview.append({"chunk": f"Processing failed for {file.filename}: {e}"})
+                print(f"❌ Processing failed: {e}")
+                # Fallback to basic processing if enhanced fails
+                try:
+                    if ENHANCED_MODE:
+                        print("🔄 Falling back to basic processing...")
+                    chunks = process_file(file.filename, content, course_id)
+                    chunks_preview.extend(chunks[:2])
+                    print(f"✅ Fallback processing successful")
+                except Exception as e2:
+                    print(f"❌ All processing failed: {e2}")
+                    chunks_preview.append({"chunk": f"Processing failed for {file.filename}: {e2}"})
 
             # 6) Also save to local storage for backward compatibility
             print("💿 Saving to local storage...")
@@ -272,7 +305,7 @@ async def upload_files(
         response["errors"] = errors
         response["status"] = "partial" if uploaded_files else "failed"
     
-    print(f"📤 Final response: {response}")
+    print(f"📤 Enhanced processing complete!")
     return response
 
 @app.post("/ask")
@@ -293,9 +326,9 @@ async def ask_endpoint(
             }).execute()
             session_id = resp.data[0]["id"]
         except Exception as e:
-            raise HTTPException(500, detail=f"Couldn’t create session: {e}")
+            raise HTTPException(500, detail=f"Couldn't create session: {e}")
 
-    # 2) Record the user’s question
+    # 2) Record the user's question
     try:
         supabase.table("messages").insert({
             "session_id": session_id,
@@ -304,12 +337,22 @@ async def ask_endpoint(
             "timestamp":  datetime.utcnow().isoformat()
         }).execute()
     except Exception as e:
-        raise HTTPException(500, detail=f"Couldn’t save question: {e}")
+        raise HTTPException(500, detail=f"Couldn't save question: {e}")
 
-    # 3) Generate the AI’s answer
-    answer = ask_question(question, course_id)
+    # 3) **ENHANCED: Generate the AI's answer with multimodal support**
+    try:
+        if ENHANCED_MODE:
+            print("🤖 Using enhanced question answering...")
+            answer = enhanced_ask_question(question, course_id)
+            print("✅ Enhanced answer generated!")
+        else:
+            print("📝 Using basic question answering...")
+            answer = ask_question(question, course_id)
+    except Exception as e:
+        print(f"❌ Enhanced QA failed, using fallback: {e}")
+        answer = ask_question(question, course_id)
 
-    # 4) Record the assistant’s answer
+    # 4) Record the assistant's answer
     try:
         supabase.table("messages").insert({
             "session_id": session_id,
@@ -318,15 +361,13 @@ async def ask_endpoint(
             "timestamp":  datetime.utcnow().isoformat()
         }).execute()
     except Exception as e:
-        raise HTTPException(500, detail=f"Couldn’t save answer: {e}")
+        raise HTTPException(500, detail=f"Couldn't save answer: {e}")
 
     return {
         "session_id": session_id,
         "question":   question,
         "answer":     answer
     }
-
-
 
 @app.get("/list-courses")
 def list_courses():
@@ -350,7 +391,6 @@ def list_courses():
             courses = json.load(f)
         
         return {"courses": [{"course_id": cid, "title": data["title"]} for cid, data in courses.items()]}
-# Replace your /list-files endpoint in main.py with this:
 
 @app.get("/list-files")
 def list_files(course_id: str):
@@ -387,8 +427,15 @@ async def delete_file(course_id: str = Form(...), filename: str = Form(...)):
         except Exception as e:
             print(f"Storage deletion failed (file may not exist): {e}")
         
-        # Delete from vector store (implement in your ingest.py)
-        deleted = delete_file_from_course(course_id, filename)
+        # **ENHANCED: Use enhanced delete if available**
+        try:
+            if ENHANCED_MODE:
+                deleted = enhanced_delete_file(course_id, filename)
+            else:
+                deleted = delete_file_from_course(course_id, filename)
+        except Exception as e:
+            print(f"Vector store deletion failed: {e}")
+            deleted = False
         
         # Clean up local files if they exist
         courses = load_courses()
@@ -458,9 +505,8 @@ def list_sessions(user_id: str = Query(..., description="User ID to filter by"))
             .execute()
         sessions = resp.data
     except Exception as e:
-        raise HTTPException(500, detail=f"Couldn’t fetch sessions: {e}")
+        raise HTTPException(500, detail=f"Couldn't fetch sessions: {e}")
     return {"sessions": sessions}
-
 
 @app.get("/sessions/{session_id}/messages")
 def get_messages(session_id: str):
@@ -475,7 +521,7 @@ def get_messages(session_id: str):
             .execute()
         messages = resp.data
     except Exception as e:
-        raise HTTPException(500, detail=f"Couldn’t fetch messages: {e}")
+        raise HTTPException(500, detail=f"Couldn't fetch messages: {e}")
     return {"messages": messages}
 
 @app.delete("/sessions/{session_id}")
@@ -493,3 +539,20 @@ def delete_session(session_id: str):
         return {"status": "ok", "message": "Session deleted successfully"}
     except Exception as e:
         raise HTTPException(500, detail=f"Couldn't delete session: {e}")
+
+# **NEW: Enhanced system status endpoint**
+@app.get("/system-status")
+def get_system_status():
+    """
+    Get current system capabilities and status
+    """
+    return {
+        "enhanced_mode": ENHANCED_MODE,
+        "capabilities": {
+            "multimodal_processing": ENHANCED_MODE,
+            "image_extraction": ENHANCED_MODE,
+            "enhanced_formatting": ENHANCED_MODE,
+            "question_classification": ENHANCED_MODE
+        },
+        "version": "1.1.0" if ENHANCED_MODE else "1.0.0"
+    }
