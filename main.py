@@ -14,6 +14,7 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 from query_engine import ask_question
+from storage import upload_file
 
 # 1. Load the secret note (.env)
 load_dotenv()
@@ -91,15 +92,35 @@ def health_check():
 
 @app.post("/create-course")
 def create_course(course_id: str = Form(...), title: str = Form(...)):
-    courses = load_courses()
-    if course_id in courses:
-        return {"status": "exists", "message": "Course already exists"}
+    # Check if course already exists in Supabase
+    try:
+        existing = supabase.table("courses").select("*").eq("course_id", course_id).execute()
+        if existing.data:
+            raise HTTPException(400, detail="Course already exists")
+    except Exception as e:
+        if "Course already exists" in str(e):
+            raise e
+        # If it's just a DB connection issue, continue with local storage
+        pass
 
+    # Create local directories
     os.makedirs(f"data/{course_id}", exist_ok=True)
     os.makedirs(f"vectorstores/{course_id}", exist_ok=True)
 
+    # Save to local JSON file (for backward compatibility)
+    courses = load_courses()
     courses[course_id] = {"title": title, "files": []}
     save_courses(courses)
+
+    # **NEW: Also save to Supabase**
+    try:
+        supabase.table("courses").insert({
+            "course_id": course_id,
+            "title": title
+        }).execute()
+    except Exception as e:
+        # If Supabase fails, at least we have local storage
+        print(f"Warning: Failed to save to Supabase: {e}")
 
     return {"status": "ok", "message": f"Created course {title}"}
 
@@ -108,25 +129,80 @@ async def upload_files(
     files: List[UploadFile] = File(...),
     course_id: str = Form(...)
 ):
-    courses = load_courses()
-    if course_id not in courses:
-        return {"status": "error", "message": "Invalid course_id"}
+    # Check if course exists
+    try:
+        course_check = supabase.table("courses").select("*").eq("course_id", course_id).execute()
+        if not course_check.data:
+            raise HTTPException(400, detail="Course not found")
+    except Exception as e:
+        raise HTTPException(400, detail=f"Invalid course_id: {e}")
 
+    uploaded_files = []
     chunks_preview = []
+    
     for file in files:
-        contents = await file.read()
-        chunks = process_file(file.filename, contents, course_id)
-        chunks_preview.extend(chunks[:2])  # Preview
+        # 1) Read the file bytes
+        content = await file.read()
 
-        # Save file metadata
-        courses[course_id]["files"].append(file.filename)
-        file_path = f"data/{course_id}/{file.filename}"
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, "wb") as f:
-            f.write(contents)
+        # 2) Upload to Supabase Storage
+        storage_path = f"{course_id}/{file.filename}"
+        try:
+            public_url = upload_file("course-files", content, storage_path)
+        except Exception as e:
+            raise HTTPException(500, detail=f"Storage upload failed: {e}")
 
-    save_courses(courses)
-    return {"status": "ok", "chunks": chunks_preview}
+        # 3) Record metadata in Supabase files table
+        try:
+            result = supabase.table("files").insert({
+                "course_id": course_id,
+                "filename": file.filename,
+                "storage_path": storage_path,
+                "file_type": file.filename.rsplit(".", 1)[-1] if "." in file.filename else "unknown",
+                "uploaded_at": "now()"
+            }).execute()
+            file_metadata = result.data[0] if result.data else {}
+        except Exception as e:
+            raise HTTPException(500, detail=f"DB insert failed: {e}")
+
+        # 4) Process file for vector embeddings
+        try:
+            chunks = process_file(file.filename, content, course_id)
+            chunks_preview.extend(chunks[:2])  # Preview first 2 chunks per file
+        except Exception as e:
+            print(f"Warning: Vector processing failed for {file.filename}: {e}")
+            chunks_preview.append({"chunk": f"Processing failed for {file.filename}"})
+
+        # 5) Also save to local storage for backward compatibility
+        try:
+            courses = load_courses()
+            if course_id not in courses:
+                courses[course_id] = {"title": "Unknown", "files": []}
+            
+            if file.filename not in courses[course_id]["files"]:
+                courses[course_id]["files"].append(file.filename)
+            
+            # Save actual file locally
+            file_path = f"data/{course_id}/{file.filename}"
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, "wb") as f:
+                f.write(content)
+            
+            save_courses(courses)
+        except Exception as e:
+            print(f"Warning: Local storage failed: {e}")
+
+        uploaded_files.append({
+            "filename": file.filename,
+            "url": public_url,
+            "metadata": file_metadata
+        })
+
+    return {
+        "status": "ok", 
+        "message": f"Uploaded {len(uploaded_files)} files",
+        "files": uploaded_files,
+        "chunks": chunks_preview
+    }
 
 @app.post("/ask")
 async def ask_endpoint(
@@ -183,85 +259,120 @@ async def ask_endpoint(
 
 @app.get("/list-courses")
 def list_courses():
-    courses_file = "courses.json"
-    if not os.path.exists(courses_file):
-        return {"courses": []}
+    try:
+        # Fetch from Supabase first
+        resp = supabase.table("courses").select("*").order("created_at", desc=True).execute()
+        courses_data = resp.data
+        
+        # Convert to the format expected by frontend
+        courses = [{"course_id": c["course_id"], "title": c["title"]} for c in courses_data]
+        return {"courses": courses}
     
-    with open(courses_file, "r") as f:
-        courses = json.load(f)
-    
-    return {"courses": [{"course_id": cid, "title": data["title"]} for cid, data in courses.items()]}
+    except Exception as e:
+        print(f"Supabase error: {e}")
+        # Fallback to local JSON file
+        courses_file = "courses.json"
+        if not os.path.exists(courses_file):
+            return {"courses": []}
+        
+        with open(courses_file, "r") as f:
+            courses = json.load(f)
+        
+        return {"courses": [{"course_id": cid, "title": data["title"]} for cid, data in courses.items()]}
+# Replace your /list-files endpoint in main.py with this:
 
 @app.get("/list-files")
 def list_files(course_id: str):
-    folder_path = os.path.join("vectorstores", course_id, "files.json")
-    if not os.path.exists(folder_path):
-        return {"files": []}
+    try:
+        # Fetch from Supabase files table
+        resp = supabase.table("files").select("filename").eq("course_id", course_id).execute()
+        files = [row["filename"] for row in resp.data]
+        return {"files": files}
     
-    with open(folder_path, "r") as f:
-        file_list = json.load(f)
-    
-    return {"files": file_list}
+    except Exception as e:
+        print(f"Supabase error: {e}")
+        # Fallback to local JSON
+        folder_path = os.path.join("vectorstores", course_id, "files.json")
+        if not os.path.exists(folder_path):
+            return {"files": []}
+        
+        with open(folder_path, "r") as f:
+            file_list = json.load(f)
+        
+        return {"files": file_list}
 
 from ingest import delete_file_from_course, delete_course
 
 @app.post("/delete-file")
 async def delete_file(course_id: str = Form(...), filename: str = Form(...)):
     try:
-        # First, delete from vector database using ingest module
+        # Delete from Supabase files table
+        supabase.table("files").delete().eq("course_id", course_id).eq("filename", filename).execute()
+        
+        # Delete from Supabase storage
+        storage_path = f"{course_id}/{filename}"
+        try:
+            supabase.storage.from_("course-files").remove([storage_path])
+        except Exception as e:
+            print(f"Storage deletion failed (file may not exist): {e}")
+        
+        # Delete from vector store (implement in your ingest.py)
         deleted = delete_file_from_course(course_id, filename)
-        if deleted:
-            # Remove from courses.json
-            courses = load_courses()
-            if course_id in courses and filename in courses[course_id]["files"]:
-                courses[course_id]["files"].remove(filename)
-                save_courses(courses)
-            
-            # Also remove from vectorstores files.json (the one that list-files reads)
-            files_json_path = f"vectorstores/{course_id}/files.json"
-            if os.path.exists(files_json_path):
-                with open(files_json_path, "r") as f:
-                    file_list = json.load(f)
-                
-                if filename in file_list:
-                    file_list.remove(filename)
-                    with open(files_json_path, "w") as f:
-                        json.dump(file_list, f, indent=2)
-            
-            # Also delete the actual file from the data directory
-            file_path = f"data/{course_id}/{filename}"
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            
-            return {"status": "ok", "message": f"Deleted {filename} from {course_id}"}
-        else:
-            return {"status": "error", "message": "File not found"}
+        
+        # Clean up local files if they exist
+        courses = load_courses()
+        if course_id in courses and filename in courses[course_id]["files"]:
+            courses[course_id]["files"].remove(filename)
+            save_courses(courses)
+        
+        return {"status": "ok", "message": f"Deleted {filename} from {course_id}"}
+        
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(500, detail=f"Failed to delete file: {e}")
 
 @app.post("/delete-course")
 async def delete_entire_course(course_id: str = Form(...)):
     try:
-        # First, delete from vector database using ingest module
+        # Delete all files for this course from Supabase files table
+        files_result = supabase.table("files").select("filename, storage_path").eq("course_id", course_id).execute()
+        
+        # Delete from storage
+        if files_result.data:
+            storage_paths = [row["storage_path"] for row in files_result.data]
+            if storage_paths:
+                try:
+                    supabase.storage.from_("course-files").remove(storage_paths)
+                except Exception as e:
+                    print(f"Storage deletion failed: {e}")
+        
+        # Delete files metadata from database
+        supabase.table("files").delete().eq("course_id", course_id).execute()
+        
+        # Delete course from courses table
+        supabase.table("courses").delete().eq("course_id", course_id).execute()
+        
+        # Delete from vector store
         success = delete_course(course_id)
         
-        # Then, remove from courses.json
+        # Clean up local files
         courses = load_courses()
         if course_id in courses:
             del courses[course_id]
             save_courses(courses)
             
-            # Also clean up the data directory
+            # Clean up local directories
             data_path = f"data/{course_id}"
             if os.path.exists(data_path):
                 shutil.rmtree(data_path)
-            
-            return {"status": "ok", "message": f"Deleted course {course_id}"}
-        else:
-            return {"status": "error", "message": "Course not found"}
-            
+                
+            vectorstore_path = f"vectorstores/{course_id}"
+            if os.path.exists(vectorstore_path):
+                shutil.rmtree(vectorstore_path)
+        
+        return {"status": "ok", "message": f"Deleted course {course_id}"}
+        
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(500, detail=f"Failed to delete course: {e}")
 
 @app.get("/sessions")
 def list_sessions(user_id: str = Query(..., description="User ID to filter by")):
