@@ -26,6 +26,14 @@ except ImportError as e:
     print(f"⚠️ Enhanced system not available: {e}")
     ENHANCED_MODE = False
 
+try:
+    from conversational_rag_engine import conversational_ask_question
+    CONVERSATIONAL_MODE = True
+    print("✅ Conversational RAG system loaded!")
+except ImportError as e:
+    print(f"⚠️ Conversational RAG not available: {e}")
+    CONVERSATIONAL_MODE = False
+
 # 1. Load the secret note (.env)
 load_dotenv()
 
@@ -310,18 +318,18 @@ async def upload_files(
 
 @app.post("/ask")
 async def ask_endpoint(
-    question:    str             = Form(...),
-    course_id:   str             = Form(...),
-    session_id:  str | None      = Form(None),
-    user_id:     str             = Form("anonymous")  # TODO: wire in real auth
+    question: str = Form(...),
+    course_id: str = Form(...),
+    session_id: str | None = Form(None),
+    user_id: str = Form("anonymous")
 ):
     # 1) Create a new chat_session if none was provided
     if not session_id:
         try:
             resp = supabase.table("chat_sessions").insert({
-                "user_id":    user_id,
-                "course_id":  course_id,
-                "title":      question[:50],
+                "user_id": user_id,
+                "course_id": course_id,
+                "title": question[:50],
                 "created_at": datetime.utcnow().isoformat()
             }).execute()
             session_id = resp.data[0]["id"]
@@ -332,41 +340,44 @@ async def ask_endpoint(
     try:
         supabase.table("messages").insert({
             "session_id": session_id,
-            "role":       "user",
-            "content":    question,
-            "timestamp":  datetime.utcnow().isoformat()
+            "role": "user",
+            "content": question,
+            "timestamp": datetime.utcnow().isoformat()
         }).execute()
     except Exception as e:
         raise HTTPException(500, detail=f"Couldn't save question: {e}")
 
-    # 3) **ENHANCED: Generate the AI's answer with multimodal support**
+    # 3) **NEW: Generate conversational answer with context awareness**
     try:
-        if ENHANCED_MODE:
+        if CONVERSATIONAL_MODE:
+            print("🧠 Using conversational RAG with context awareness...")
+            answer = conversational_ask_question(question, course_id, session_id)
+            print("✅ Conversational answer generated!")
+        elif ENHANCED_MODE:
             print("🤖 Using enhanced question answering...")
             answer = enhanced_ask_question(question, course_id)
-            print("✅ Enhanced answer generated!")
         else:
             print("📝 Using basic question answering...")
             answer = ask_question(question, course_id)
     except Exception as e:
-        print(f"❌ Enhanced QA failed, using fallback: {e}")
-        answer = ask_question(question, course_id)
+        print(f"❌ All QA methods failed, using fallback: {e}")
+        answer = "I'm having trouble processing your question. Could you please rephrase it or try asking in a different way?"
 
     # 4) Record the assistant's answer
     try:
         supabase.table("messages").insert({
             "session_id": session_id,
-            "role":       "assistant",
-            "content":    answer,
-            "timestamp":  datetime.utcnow().isoformat()
+            "role": "assistant",
+            "content": answer,
+            "timestamp": datetime.utcnow().isoformat()
         }).execute()
     except Exception as e:
         raise HTTPException(500, detail=f"Couldn't save answer: {e}")
 
     return {
         "session_id": session_id,
-        "question":   question,
-        "answer":     answer
+        "question": question,
+        "answer": answer
     }
 
 @app.get("/list-courses")
