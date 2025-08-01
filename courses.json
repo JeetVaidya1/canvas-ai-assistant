@@ -12,7 +12,19 @@
   "cosc222": {
     "title": "Data Structures",
     "files": [
-      "301_3_Excel.pdf"
+      "lecture2_algorithm_analysis.pdf",
+      "lecture3_arraylist_linked lists.pdf",
+      "lecture4_Stacks.pdf",
+      "lecture5_Queue.pdf",
+      "lecture6_trees_part1 - tree terminology and recursion review.pdf",
+      "lecture6_trees_part2 - binary tree traversals.pdf",
+      "lecture7_BSTs_part1.pdf",
+      "lecture8_BST_deletion.pdf",
+      "lecture9_tree_balancing.pdf",
+      "lecture10_in_class_activity.pdf",
+      "lecture15_Hashing.pdf",
+      "lecture16_Sorting_Part 1.pdf",
+      "lecture16_Sorting_Part 2.pdf"
     ]
   },
   "math100": {

@@ -1,4 +1,4 @@
-# advanced_query_engine.py
+# query_engine.py
 
 import os
 import json
@@ -7,8 +7,6 @@ from typing import List, Dict, Any, Tuple
 from dotenv import load_dotenv
 from openai import OpenAI
 from vector_store import VectorStore
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 
 # Load keys
 load_dotenv()
@@ -252,31 +250,44 @@ RESPONSE GUIDELINES:
 
 Provide your response:"""
 
-    async def ask_question(self, question: str, course_id: str) -> str:
-        """Main entry point for advanced RAG question answering"""
+    def ask_question(self, question: str, course_id: str) -> str:
+        """Main entry point for advanced RAG question answering - SYNCHRONOUS VERSION"""
         try:
+            print(f"🤖 Advanced RAG processing question: {question}")
+            
             # Step 1: Classify the question type
+            print("📝 Classifying question type...")
             query_type = self.classify_query_type(question)
+            print(f"✅ Question type: {query_type}")
             
             # Step 2: Expand the query for better retrieval
+            print("🔍 Expanding query...")
             expanded_queries = self.expand_query(question, query_type)
+            print(f"✅ Generated {len(expanded_queries)} query variations")
             
             # Step 3: Perform hybrid search
+            print("🔎 Performing hybrid search...")
             search_results = self.hybrid_search(expanded_queries, course_id, top_k=12)
+            print(f"✅ Found {len(search_results)} search results")
             
             if not search_results:
                 return "I don't have enough information in your course materials to answer this question. Please make sure you've uploaded relevant files for this topic."
             
             # Step 4: Rerank results for relevance
+            print("📊 Reranking results...")
             reranked_results = self.rerank_results(question, search_results)
+            print(f"✅ Reranked {len(reranked_results)} results")
             
             # Step 5: Create enhanced context
+            print("📚 Creating enhanced context...")
             context = self.create_enhanced_context(question, query_type, reranked_results)
             
             # Step 6: Generate optimized prompt
+            print("🎯 Generating optimized prompt...")
             prompt = self.generate_student_optimized_prompt(question, query_type, context)
             
             # Step 7: Generate final response with GPT-4
+            print("🧠 Generating final response...")
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o",  # Use best model for generation
                 messages=[{"role": "user", "content": prompt}],
@@ -284,16 +295,20 @@ Provide your response:"""
                 max_tokens=2000   # Allow for comprehensive responses
             )
             
-            return response.choices[0].message.content
+            answer = response.choices[0].message.content
+            print("✅ Advanced RAG response generated successfully!")
+            return answer
             
         except Exception as e:
-            print(f"Error in advanced RAG: {e}")
+            print(f"❌ Error in advanced RAG: {e}")
+            import traceback
+            traceback.print_exc()
             return "I encountered an error while processing your question. Please try rephrasing your question or check if your course materials are properly uploaded."
 
 # Create global instance
 advanced_rag_engine = AdvancedRAGEngine()
 
-# Updated function for backward compatibility
+# Updated function for backward compatibility - NO MORE ASYNCIO.RUN!
 def ask_question(question: str, course_id: str) -> str:
-    """Enhanced ask_question function using advanced RAG"""
-    return asyncio.run(advanced_rag_engine.ask_question(question, course_id))
+    """Enhanced ask_question function using advanced RAG - SYNCHRONOUS"""
+    return advanced_rag_engine.ask_question(question, course_id)
