@@ -9,13 +9,17 @@ from docx import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from openai import OpenAI
 from vector_store import VectorStore
+from supabase import create_client
 
-# Load environment variables for OpenAI
+# Load environment variables for OpenAI and Supabase
 load_dotenv()
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Initialize vector store
+# Initialize vector store and Supabase client
 vector_store = VectorStore()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
@@ -90,10 +94,59 @@ def process_file(filename: str, file_bytes: bytes, course_id: str) -> list[dict]
 
 
 def delete_file_from_course(course_id: str, filename: str) -> bool:
-    # TODO: implement removal from pgvector and Supabase storage
-    return False
+    """Delete all embeddings for a specific file from a course."""
+    try:
+        # Delete from embeddings table
+        supabase.table("embeddings").delete().eq("course_id", course_id).eq("doc_name", filename).execute()
+        
+        # Delete from files table
+        supabase.table("files").delete().eq("course_id", course_id).eq("filename", filename).execute()
+        
+        # Delete from Supabase storage
+        storage_path = f"{course_id}/{filename}"
+        try:
+            supabase.storage.from_("course-files").remove([storage_path])
+        except Exception as e:
+            print(f"Warning: Storage deletion failed: {e}")
+        
+        return True
+    except Exception as e:
+        print(f"Error deleting file {filename} from course {course_id}: {e}")
+        return False
 
 
 def delete_course(course_id: str) -> bool:
-    # TODO: implement dropping all chunks and cleaning storage
-    return False
+    """Delete an entire course and all its data."""
+    try:
+        # Delete all embeddings for this course
+        supabase.table("embeddings").delete().eq("course_id", course_id).execute()
+        
+        # Delete all files metadata for this course
+        supabase.table("files").delete().eq("course_id", course_id).execute()
+        
+        # Delete all chat sessions and messages for this course
+        sessions_resp = supabase.table("chat_sessions").select("id").eq("course_id", course_id).execute()
+        session_ids = [s["id"] for s in sessions_resp.data]
+        
+        for session_id in session_ids:
+            supabase.table("messages").delete().eq("session_id", session_id).execute()
+        
+        supabase.table("chat_sessions").delete().eq("course_id", course_id).execute()
+        
+        # Delete the course itself
+        supabase.table("courses").delete().eq("course_id", course_id).execute()
+        
+        # Delete all files from storage for this course
+        try:
+            # List all files in the course folder
+            files_list = supabase.storage.from_("course-files").list(course_id)
+            if files_list:
+                file_paths = [f"{course_id}/{f['name']}" for f in files_list]
+                supabase.storage.from_("course-files").remove(file_paths)
+        except Exception as e:
+            print(f"Warning: Storage cleanup failed: {e}")
+        
+        return True
+    except Exception as e:
+        print(f"Error deleting course {course_id}: {e}")
+        return False

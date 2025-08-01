@@ -8,5 +8,20 @@
   "busi101": {
     "title": "marketing",
     "files": []
+  },
+  "cosc222": {
+    "title": "Data Structures",
+    "files": [
+      "lecture2_algorithm_analysis.pdf",
+      "lecture3_arraylist_linked lists.pdf",
+      "lecture4_Stacks.pdf",
+      "lecture5_Queue.pdf",
+      "lecture6_trees_part1 - tree terminology and recursion review.pdf",
+      "lecture6_trees_part2 - binary tree traversals.pdf"
+    ]
+  },
+  "math100": {
+    "title": "CALC 1",
+    "files": []
   }
 }
