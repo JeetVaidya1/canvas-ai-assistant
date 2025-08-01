@@ -1,7 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
-from ingest import process_file
 from query_engine import ask_question
 import os
 import json
@@ -15,6 +14,7 @@ import os
 from dotenv import load_dotenv
 from query_engine import ask_question
 from storage import upload_file
+from ingest import process_file
 
 # 1. Load the secret note (.env)
 load_dotenv()
@@ -129,86 +129,102 @@ async def upload_files(
     files: List[UploadFile] = File(...),
     course_id: str = Form(...)
 ):
+    print(f"🚀 Upload request received for course: {course_id}")
+    print(f"📁 Number of files: {len(files)}")
+    
     # Check if course exists
     try:
+        print(f"🔍 Checking if course {course_id} exists...")
         course_check = supabase.table("courses").select("*").eq("course_id", course_id).execute()
+        print(f"📊 Course check result: {course_check.data}")
         if not course_check.data:
+            print("❌ Course not found!")
             raise HTTPException(400, detail="Course not found")
+        print("✅ Course exists!")
     except Exception as e:
+        print(f"❌ Course check failed: {e}")
         raise HTTPException(400, detail=f"Invalid course_id: {e}")
 
     uploaded_files = []
     chunks_preview = []
     errors = []
     
-    for file in files:
+    for i, file in enumerate(files):
+        print(f"\n📄 Processing file {i+1}/{len(files)}: {file.filename}")
+        
         try:
             # 1) Check if file already exists
+            print("🔍 Checking for existing file...")
             existing_file = supabase.table("files").select("*").eq("course_id", course_id).eq("filename", file.filename).execute()
+            print(f"📊 Existing file check: {len(existing_file.data)} matches found")
             
             if existing_file.data:
-                # File exists - handle it
-                user_choice = "replace"  # For now, auto-replace. Later you can add user confirmation
+                print(f"🔄 File {file.filename} already exists, replacing...")
                 
-                if user_choice == "replace":
-                    # Delete existing file completely
-                    print(f"Replacing existing file: {file.filename}")
-                    
-                    # Delete from embeddings
-                    supabase.table("embeddings").delete().eq("course_id", course_id).eq("doc_name", file.filename).execute()
-                    
-                    # Delete from files table
-                    supabase.table("files").delete().eq("course_id", course_id).eq("filename", file.filename).execute()
-                    
-                    # Delete from storage
-                    storage_path = f"{course_id}/{file.filename}"
-                    try:
-                        supabase.storage.from_("course-files").remove([storage_path])
-                    except Exception as storage_error:
-                        print(f"Storage deletion warning: {storage_error}")
-                        
-                elif user_choice == "skip":
-                    uploaded_files.append({
-                        "filename": file.filename,
-                        "status": "skipped",
-                        "message": "File already exists"
-                    })
-                    continue
+                # Delete existing file completely
+                print("🗑️ Deleting from embeddings...")
+                supabase.table("embeddings").delete().eq("course_id", course_id).eq("doc_name", file.filename).execute()
+                
+                print("🗑️ Deleting from files table...")
+                supabase.table("files").delete().eq("course_id", course_id).eq("filename", file.filename).execute()
+                
+                # Delete from storage
+                storage_path = f"{course_id}/{file.filename}"
+                try:
+                    print(f"🗑️ Deleting from storage: {storage_path}")
+                    supabase.storage.from_("course-files").remove([storage_path])
+                except Exception as storage_error:
+                    print(f"⚠️ Storage deletion warning: {storage_error}")
 
             # 2) Read the file bytes  
+            print("📖 Reading file content...")
             content = await file.read()
+            print(f"📏 File size: {len(content)} bytes")
 
             # 3) Upload to Supabase Storage
             storage_path = f"{course_id}/{file.filename}"
+            print(f"☁️ Uploading to storage: {storage_path}")
             try:
+                from storage import upload_file
                 public_url = upload_file("course-files", content, storage_path)
+                print(f"✅ Storage upload successful: {public_url}")
             except Exception as e:
+                print(f"❌ Storage upload failed: {e}")
                 errors.append(f"Storage upload failed for {file.filename}: {e}")
                 continue
 
             # 4) Record metadata in Supabase files table
+            print("💾 Saving file metadata to database...")
             try:
-                result = supabase.table("files").insert({
+                file_record = {
                     "course_id": course_id,
                     "filename": file.filename,
                     "storage_path": storage_path,
                     "file_type": file.filename.rsplit(".", 1)[-1] if "." in file.filename else "unknown",
                     "uploaded_at": "now()"
-                }).execute()
+                }
+                print(f"📝 File record: {file_record}")
+                
+                result = supabase.table("files").insert(file_record).execute()
+                print(f"✅ Database insert successful: {result.data}")
                 file_metadata = result.data[0] if result.data else {}
             except Exception as e:
+                print(f"❌ Database insert failed: {e}")
                 errors.append(f"Database insert failed for {file.filename}: {e}")
                 continue
 
             # 5) Process file for vector embeddings
+            print("🧠 Processing file for AI embeddings...")
             try:
                 chunks = process_file(file.filename, content, course_id)
+                print(f"✅ Processed into {len(chunks)} chunks")
                 chunks_preview.extend(chunks[:2])  # Preview first 2 chunks per file
             except Exception as e:
-                print(f"Warning: Vector processing failed for {file.filename}: {e}")
+                print(f"❌ Vector processing failed: {e}")
                 chunks_preview.append({"chunk": f"Processing failed for {file.filename}: {e}"})
 
             # 6) Also save to local storage for backward compatibility
+            print("💿 Saving to local storage...")
             try:
                 courses = load_courses()
                 if course_id not in courses:
@@ -224,8 +240,9 @@ async def upload_files(
                     f.write(content)
                 
                 save_courses(courses)
+                print("✅ Local storage successful")
             except Exception as e:
-                print(f"Warning: Local storage failed for {file.filename}: {e}")
+                print(f"⚠️ Local storage warning: {e}")
 
             uploaded_files.append({
                 "filename": file.filename,
@@ -233,8 +250,13 @@ async def upload_files(
                 "metadata": file_metadata,
                 "status": "success"
             })
+            
+            print(f"🎉 File {file.filename} processed successfully!")
 
         except Exception as e:
+            print(f"💥 Failed to process {file.filename}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             errors.append(f"Failed to process {file.filename}: {str(e)}")
             continue
 
@@ -250,6 +272,7 @@ async def upload_files(
         response["errors"] = errors
         response["status"] = "partial" if uploaded_files else "failed"
     
+    print(f"📤 Final response: {response}")
     return response
 
 @app.post("/ask")
