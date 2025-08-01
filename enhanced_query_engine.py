@@ -1,4 +1,4 @@
-# enhanced_query_engine.py - Phase 1: Multimodal awareness
+# enhanced_query_engine.py - Clean, natural conversational responses
 
 import os
 import json
@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 from dotenv import load_dotenv
 from openai import OpenAI
 from vector_store import VectorStore
-from response_formatter import format_response_basic
+from response_formatter import format_ai_response  # Updated import
 
 # Load keys
 load_dotenv()
@@ -31,9 +31,46 @@ def classify_question_simple(question: str) -> str:
     else:
         return 'explanation'
 
+def generate_natural_prompt(question: str, question_type: str, context: str) -> str:
+    """Create a natural, conversational prompt that produces clean responses"""
+    
+    # Simple, natural instructions based on question type
+    if question_type == 'definition':
+        instruction = """Provide a clear definition and explanation. Keep it conversational and natural."""
+    elif question_type == 'explanation':
+        instruction = """Explain this concept clearly and naturally, like you're talking to a student. Use examples when helpful."""
+    elif question_type == 'example':
+        instruction = """Provide clear examples and explain why they're relevant. Keep it conversational."""
+    elif question_type == 'comparison':
+        instruction = """Compare these concepts naturally, highlighting key differences and similarities."""
+    else:
+        instruction = """Answer the question clearly and naturally, as if you're having a conversation with a student."""
+
+    # Clean, natural prompt without excessive formatting instructions
+    enhanced_prompt = f"""You're a knowledgeable tutor having a conversation with a student. Answer their question naturally and clearly.
+
+Student's question: {question}
+
+Course materials available:
+{context}
+
+Instructions: {instruction}
+
+Guidelines:
+- Write naturally and conversationally
+- Use the course materials as your primary source
+- Reference specific diagrams or images when relevant (e.g., "The diagram shows...")
+- Keep explanations clear but not overly structured
+- Use examples to illustrate points
+- Be helpful and educational
+
+Answer the student's question:"""
+    
+    return enhanced_prompt
+
 def enhanced_ask_question(question: str, course_id: str) -> str:
     """
-    Enhanced question answering with multimodal awareness and better formatting
+    Enhanced question answering with clean, natural formatting
     """
     try:
         print(f"🤖 Enhanced RAG processing: {question}")
@@ -87,59 +124,8 @@ def enhanced_ask_question(question: str, course_id: str) -> str:
         
         context = "\n".join(context_parts)
         
-        # Step 6: Create enhanced prompt based on question type
-        if question_type == 'definition':
-            instruction = """Provide a clear, comprehensive definition. Include:
-            1. Simple explanation in plain language
-            2. Technical definition if applicable  
-            3. Key characteristics or components
-            4. Why this concept matters"""
-        elif question_type == 'explanation':
-            instruction = """Explain the concept thoroughly with:
-            1. Step-by-step breakdown
-            2. The underlying principles
-            3. Real-world analogies when helpful
-            4. Reference any diagrams or visuals if available"""
-        elif question_type == 'example':
-            instruction = """Provide concrete examples:
-            1. 2-3 clear, relevant examples
-            2. Explain why each example works
-            3. Show different contexts or applications
-            4. Use any visual content to illustrate examples"""
-        elif question_type == 'comparison':
-            instruction = """Compare the concepts by:
-            1. Identifying key similarities and differences
-            2. Using clear comparison structure
-            3. Explaining when to use each approach
-            4. Reference any comparative diagrams if available"""
-        else:
-            instruction = """Provide a comprehensive response that:
-            1. Addresses the question directly
-            2. Uses both text and visual information when available
-            3. Provides clear explanations and examples
-            4. Connects concepts for better understanding"""
-
-        enhanced_prompt = f"""You are an expert tutor helping a student learn. Your goal is to provide the most helpful, accurate, and educational response possible.
-
-QUESTION TYPE: {question_type}
-STUDENT QUESTION: {question}
-
-INSTRUCTIONS: {instruction}
-
-COURSE MATERIALS:
-{context}
-
-RESPONSE GUIDELINES:
-- Write clearly and conversationally, as if explaining to a student
-- Use the course materials as your primary source of truth
-- **When you have visual content, reference it explicitly** (e.g., "As shown in the diagram...")
-- Include specific examples and analogies when helpful
-- Structure your response with clear sections
-- If materials don't fully answer the question, acknowledge this
-- End with a brief summary
-- Suggest follow-up questions when relevant
-
-Provide your response:"""
+        # Step 6: Create natural, conversational prompt
+        enhanced_prompt = generate_natural_prompt(question, question_type, context)
         
         # Step 7: Generate response
         response = openai_client.chat.completions.create(
@@ -151,8 +137,8 @@ Provide your response:"""
         
         answer = response.choices[0].message.content
         
-        # Step 8: Format the response for better readability
-        formatted_answer = format_response_basic(answer, question_type)
+        # Step 8: Format the response naturally and cleanly
+        formatted_answer = format_ai_response(answer, question_type)
         
         print("✅ Enhanced response generated!")
         return formatted_answer
