@@ -31,10 +31,24 @@
     "title": "CALC 1",
     "files": []
   },
-  "cosc310": {
-    "title": "Soft Eng",
+  "span102": {
+    "title": "Spanish 102",
     "files": [
-      "W4_Design-Architectural.pdf"
+      "SPAN 102 Semana 1_Clase 1_3 de julio_2025.pdf"
+    ]
+  },
+  "psyc304": {
+    "title": "Brain and Behaviour",
+    "files": [
+      "Lecture1_Intro2BnB_Neurons.pdf",
+      "Lecture2_Neurons&Neurophysiology1.pdf",
+      "Lecture3_Neurophysiology.pdf",
+      "Lecture4_Neurophysiology&NeuroAnatomy.pdf",
+      "Lecture5_NeuroEdocrinology.pdf",
+      "Lecture6_NeuroEdocrinology2.pdf",
+      "Lecture7_Sensation&Perception.pdf",
+      "Lecture8_Vision2.pdf",
+      "Lecture9_DorsalStream_Hearing.pdf"
     ]
   }
 }

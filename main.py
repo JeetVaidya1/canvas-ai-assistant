@@ -17,6 +17,11 @@ from storage import upload_file
 from ingest import process_file
 from quiz_assistant_engine import assist_with_quiz_question
 from notes_engine import generate_notes_from_files, save_notes_to_db, get_notes_from_db, delete_note_from_db
+from learning_analytics import LearningAnalyticsEngine
+from practice_generator import PracticeGenerator
+
+analytics_engine = LearningAnalyticsEngine()
+practice_generator = PracticeGenerator()
 
 # NEW: Try to import enhanced modules
 try:
@@ -568,11 +573,16 @@ def get_system_status():
             "intelligent_parsing": True,
             "confidence_scoring": True,
             "study_recommendations": True,
-            "notes_generation": True,  # NEW!
-            "comprehensive_notes": True,  # NEW!
-            "notes_management": True  # NEW!
+            "notes_generation": True,
+            "comprehensive_notes": True,
+            "notes_management": True,
+            "learning_analytics": True,  # NEW!
+            "practice_mode": True,       # NEW!
+            "progress_tracking": True,   # NEW!
+            "adaptive_difficulty": True, # NEW!
+            "spaced_repetition": True    # NEW!
         },
-        "version": "2.1.0" if ENHANCED_MODE else "1.0.0"
+        "version": "3.0.0" if ENHANCED_MODE else "2.0.0"
     }
 
 @app.post("/quiz-assist")
@@ -856,3 +866,147 @@ async def delete_note_endpoint(note_id: str):
     except Exception as e:
         print(f"❌ Note deletion error: {e}")
         raise HTTPException(500, detail=f"Note deletion failed: {str(e)}")
+
+@app.get("/analytics/{course_id}/{user_id}")
+async def get_learning_analytics(course_id: str, user_id: str):
+    """Get learning analytics for a student in a specific course"""
+    try:
+        print(f"Getting analytics for user {user_id} in course {course_id}")
+        
+        analytics = analytics_engine.get_learning_analytics(user_id, course_id)
+        
+        # Add course-specific context
+        analytics["course_id"] = course_id
+        
+        return {"analytics": analytics}
+    except Exception as e:
+        print(f"Analytics error for course {course_id}, user {user_id}: {e}")
+        return {"analytics": {
+            "topics_progress": [],
+            "study_streak": 0,
+            "weak_areas": [],
+            "study_recommendations": [f"Start studying {course_id} to see analytics!"],
+            "total_questions": 0,
+            "avg_confidence": 0.0,
+            "study_time_trend": [],
+            "course_id": course_id
+        }}
+
+@app.get("/analytics-topics/{course_id}")  
+async def get_analytics_topics(course_id: str):
+    """Get topics that have been studied in this course"""
+    try:
+        # Get topics from learning progress table for this specific course  
+        from supabase import create_client
+        SUPABASE_URL = os.getenv("SUPABASE_URL")
+        SUPABASE_KEY = os.getenv("SUPABASE_KEY") 
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        
+        # Get unique topics from learning progress for this course
+        progress_query = supabase.table("learning_progress") \
+            .select("topic") \
+            .eq("course_id", course_id) \
+            .execute()
+        
+        if progress_query.data:
+            studied_topics = list(set([item["topic"] for item in progress_query.data]))
+            print(f"Found studied topics for course {course_id}: {studied_topics}")
+            return {"topics": studied_topics}
+        else:
+            # If no progress yet, try to get topics from course content
+            topics = practice_generator.extract_topics_from_course(course_id)
+            return {"topics": topics}
+            
+    except Exception as e:
+        print(f"Failed to get analytics topics for course {course_id}: {e}")
+        return {"topics": []}
+
+@app.post("/generate-practice")
+async def generate_practice_problems(
+    course_id: str = Form(...),
+    topic: str = Form(...),
+    difficulty: str = Form("medium"),
+    count: int = Form(5)
+):
+    """Generate practice problems"""
+    try:
+        problems = practice_generator.generate_practice_problems(course_id, topic, difficulty, count)
+        return {"problems": problems}
+    except Exception as e:
+        print(f"Practice generation error: {e}")
+        # Return fallback problems
+        return {"problems": [{
+            "question": f"Sample practice question about {topic}",
+            "options": ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+            "correct_answer": "A",
+            "explanation": "This is a sample explanation",
+            "estimated_time": "3-5 minutes",
+            "difficulty": difficulty,
+            "topic": topic
+        }]}
+
+@app.post("/track-interaction")
+async def track_user_interaction(
+    user_id: str = Form(...),
+    course_id: str = Form(...),
+    question: str = Form(...),
+    answer: str = Form(...),
+    confidence: float = Form(...),
+    response_time: int = Form(...)
+):
+    """Track a user interaction for analytics"""
+    try:
+        success = analytics_engine.track_interaction(
+            user_id, course_id, question, answer, confidence, response_time
+        )
+        return {"success": success}
+    except Exception as e:
+        print(f"Tracking error: {e}")
+        return {"success": False}
+
+@app.post("/track-practice-session")
+async def track_practice_session(
+    user_id: str = Form(...),
+    course_id: str = Form(...),
+    topic: str = Form(...),
+    problems_attempted: int = Form(...),
+    problems_correct: int = Form(...),
+    duration_minutes: int = Form(...),
+    difficulty_level: str = Form(...)
+):
+    """Track a completed practice session"""
+    try:
+        # For now, just update learning progress
+        confidence = problems_correct / problems_attempted if problems_attempted > 0 else 0.5
+        analytics_engine.update_learning_progress(user_id, course_id, topic, confidence)
+        
+        return {"status": "success", "session_id": "temp_session_id"}
+        
+    except Exception as e:
+        print(f"Failed to track practice session: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.get("/practice-topics/{course_id}")
+async def get_practice_topics(course_id: str):
+    """Get available topics for practice based on ACTUAL course content"""
+    try:
+        print(f"Getting topics for course: {course_id}")
+        
+        # Use the practice generator to extract real topics
+        topics = practice_generator.extract_topics_from_course(course_id)
+        
+        print(f"Extracted topics: {topics}")
+        
+        return {"topics": topics}
+        
+    except Exception as e:
+        print(f"Failed to get practice topics for course {course_id}: {e}")
+        # Return fallback topics with clear indication
+        return {
+            "topics": [
+                "Course Content Analysis", 
+                "General Review",
+                "Key Concepts"
+            ],
+            "error": "Could not analyze course content for topics"
+        }
