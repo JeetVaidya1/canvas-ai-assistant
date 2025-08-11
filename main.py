@@ -12,6 +12,7 @@ from supabase import create_client
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 from query_engine import ask_question
 from storage import upload_file
 from ingest import process_file
@@ -69,7 +70,7 @@ async def upload(course_id: str, file: UploadFile = File(...)):
             "filename":    file.filename,
             "storage_path": storage_path,
             "file_type":   file.filename.rsplit(".", 1)[-1],
-            "uploaded_at": "now()"
+            "uploaded_at": datetime.utcnow().isoformat()
         }).execute()
         metadata = result.data
     except Exception as e:
@@ -233,7 +234,7 @@ async def upload_files(
                     "filename": file.filename,
                     "storage_path": storage_path,
                     "file_type": file.filename.rsplit(".", 1)[-1] if "." in file.filename else "unknown",
-                    "uploaded_at": "now()"
+                    "uploaded_at": datetime.utcnow().isoformat()
                 }
                 print(f"📝 File record: {file_record}")
                 
@@ -1010,3 +1011,20 @@ async def get_practice_topics(course_id: str):
             ],
             "error": "Could not analyze course content for topics"
         }
+
+@app.get("/health/rag")
+def rag_health():
+    try:
+        row = supabase.table("embeddings").select("course_id, embedding").limit(1).execute()
+        if not row.data:
+            return {"ok": False, "reason": "no embeddings yet"}
+        course_id = row.data[0]["course_id"]
+        e_txt = str(row.data[0]["embedding"])  # vector -> text (PostgREST serializes it)
+        res = supabase.rpc("match_embeddings", {
+            "query_embedding": e_txt,
+            "course_id_param": course_id,
+            "match_count": 1
+        }).execute()
+        return {"ok": True, "rows": len(res.data or []), "course_id": course_id}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}

@@ -1,150 +1,180 @@
-# enhanced_query_engine.py - Clean, natural conversational responses
+# enhanced_query_engine.py — Hybrid RAG + GPT-5 Augmentation (world-class study mode)
 
 import os
-import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from dotenv import load_dotenv
 from openai import OpenAI
 from vector_store import VectorStore
-from response_formatter import format_ai_response  # Updated import
+from response_formatter import format_ai_response  # your post-formatter
 
-# Load keys
+# ── Init ──────────────────────────────────────────────────────────────────────
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 vector_store = VectorStore()
 
-def classify_question_simple(question: str) -> str:
-    """Simple question classification"""
-    question_lower = question.lower()
-    
-    if any(word in question_lower for word in ['what is', 'define', 'definition', 'meaning']):
-        return 'definition'
-    elif any(word in question_lower for word in ['how', 'explain', 'why', 'process']):
-        return 'explanation'  
-    elif any(word in question_lower for word in ['example', 'show me', 'demonstrate']):
-        return 'example'
-    elif any(word in question_lower for word in ['compare', 'difference', 'versus', 'vs']):
-        return 'comparison'
-    elif any(word in question_lower for word in ['apply', 'use', 'implement']):
-        return 'application'
-    else:
-        return 'explanation'
+# ── Config (env-overridable) ─────────────────────────────────────────────────
+MODEL_DEFAULT   = os.getenv("MODEL_DEFAULT", "gpt-5-mini")
+MODEL_COMPLEX   = os.getenv("MODEL_COMPLEX", "gpt-5")
+EMBED_MODEL     = os.getenv("EMBEDDINGS_MODEL", "text-embedding-3-large")
+MAX_TOKENS_DEF  = int(os.getenv("MAX_TOKENS_DEFAULT", "3500"))
+MAX_TOKENS_CX   = int(os.getenv("MAX_TOKENS_COMPLEX", "5500"))
+TOP_K           = int(os.getenv("RAG_TOP_K", "8"))
+ALLOW_GENERAL   = os.getenv("ALLOW_GENERAL", "true").lower() == "true"  # enable augmentation
 
-def generate_natural_prompt(question: str, question_type: str, context: str) -> str:
-    """Create a natural, conversational prompt that produces clean responses"""
-    
-    # Simple, natural instructions based on question type
-    if question_type == 'definition':
-        instruction = """Provide a clear definition and explanation. Keep it conversational and natural."""
-    elif question_type == 'explanation':
-        instruction = """Explain this concept clearly and naturally, like you're talking to a student. Use examples when helpful."""
-    elif question_type == 'example':
-        instruction = """Provide clear examples and explain why they're relevant. Keep it conversational."""
-    elif question_type == 'comparison':
-        instruction = """Compare these concepts naturally, highlighting key differences and similarities."""
-    else:
-        instruction = """Answer the question clearly and naturally, as if you're having a conversation with a student."""
+# ── Lightweight classifier ───────────────────────────────────────────────────
+def classify_question_simple(q: str) -> str:
+    ql = q.lower()
+    if any(w in ql for w in ['what is', 'define', 'definition', 'meaning']): return 'definition'
+    if any(w in ql for w in ['compare', 'difference', 'versus', 'vs']):      return 'comparison'
+    if any(w in ql for w in ['example', 'show me', 'demonstrate']):          return 'example'
+    if any(w in ql for w in ['apply', 'use', 'implement', 'prove', 'derive', 'solve']): return 'application'
+    if any(w in ql for w in ['how', 'explain', 'why', 'process']):           return 'explanation'
+    return 'explanation'
 
-    # Clean, natural prompt without excessive formatting instructions
-    enhanced_prompt = f"""You're a knowledgeable tutor having a conversation with a student. Answer their question naturally and clearly.
+# ── Prompt builders ──────────────────────────────────────────────────────────
+def build_context(chunks: List[Dict[str, Any]]) -> Tuple[str, List[Dict[str, Any]]]:
+    """Create compact, labeled context and keep a map for inline source tags."""
+    text_chunks, image_chunks, sources = [], [], []
+    for i, r in enumerate(chunks):
+        c = r.get("content", "")
+        src = {
+            "id": r.get("id") or f"src{i+1}",
+            "file": r.get("file") or r.get("source") or "unknown",
+            "page": r.get("page") or r.get("page_num") or None
+        }
+        sources.append(src)
+        if "[IMAGE CONTENT" in c:
+            image_chunks.append((i, c.strip(), src))
+        else:
+            text_chunks.append((i, c.strip(), src))
 
-Student's question: {question}
+    context_parts = []
+    if text_chunks:
+        context_parts.append("=== TEXT FROM COURSE MATERIALS ===")
+        for rank, (i, c, src) in enumerate(text_chunks[:5], 1):
+            tag = f"[{rank}:{src['file']}{':' + str(src['page']) if src['page'] else ''}]"
+            context_parts.append(f"Text {rank} {tag}: {c}")
+    if image_chunks:
+        context_parts.append("\n=== VISUAL CONTENT FROM COURSE MATERIALS ===")
+        for rank, (i, c, src) in enumerate(image_chunks[:3], 1):
+            tag = f"[V{rank}:{src['file']}{':' + str(src['page']) if src['page'] else ''}]"
+            context_parts.append(f"Visual {rank} {tag}: {c}")
 
-Course materials available:
+    return "\n".join(context_parts), sources
+
+SYSTEM_STYLE = (
+    "You are a world-class university tutor. Provide a single, polished final answer only—"
+    "no hidden steps, no chain-of-thought. Prefer clarity over verbosity."
+)
+
+def user_prompt(question: str, qtype: str, context: str, allow_general: bool) -> str:
+    """Hybrid grounding: prefer course; optionally augment if coverage is weak."""
+    return f"""
+STUDENT QUESTION:
+{question}
+
+COURSE CONTEXT (primary source of truth):
 {context}
 
-Instructions: {instruction}
+INSTRUCTIONS:
+- First, answer strictly using COURSE CONTEXT. Cite inline with the provided tags like [1:file:page].
+- If essential info is missing AND augmentation is allowed: seamlessly fill gaps with general knowledge (mark those lines with (GN)).
+- Keep a smooth, conversational tone. Use short paragraphs and bullets when helpful.
+- Include concrete examples if useful.
+- Provide a brief 'Check your understanding' item if appropriate.
 
-Guidelines:
-- Write naturally and conversationally
-- Use the course materials as your primary source
-- Reference specific diagrams or images when relevant (e.g., "The diagram shows...")
-- Keep explanations clear but not overly structured
-- Use examples to illustrate points
-- Be helpful and educational
+OUTPUT SECTIONS (use these exact headings if both appear):
+1) From your course
+2) General knowledge fill-ins (only if used)
 
-Answer the student's question:"""
-    
-    return enhanced_prompt
+CONSTRAINTS:
+- Do NOT fabricate citations. Only use inline tags from the context for grounded claims.
+- If you used general knowledge, add a 1–2 line note on what was missing from the course files.
 
+AIM:
+- Accurate, helpful, and easy to read.
+- Final answer only (no scratch work).
+"""
+
+# ── Routing ──────────────────────────────────────────────────────────────────
+def _route(question: str, qtype: str):
+    long_query = len(question) > 240
+    complex_hint = any(k in question.lower() for k in [
+        "prove","derive","multi-step","step by step","design","optimize","time complexity",
+        "algorithm","diagram","equation","trade-off","wavefunction","fourier","big-o"
+    ])
+    if qtype in ("definition","example") and not long_query and not complex_hint:
+        return MODEL_DEFAULT, MAX_TOKENS_DEF, {"effort":"low"}, "medium"
+    if qtype in ("comparison","explanation","application") and (long_query or complex_hint):
+        return MODEL_COMPLEX, MAX_TOKENS_CX, {"effort":"high"}, "high"
+    return MODEL_DEFAULT, MAX_TOKENS_DEF, {"effort":"medium"}, "high"
+
+# ── Engine ───────────────────────────────────────────────────────────────────
 def enhanced_ask_question(question: str, course_id: str) -> str:
-    """
-    Enhanced question answering with clean, natural formatting
-    """
     try:
-        print(f"🤖 Enhanced RAG processing: {question}")
-        
-        # Step 1: Classify question type
-        question_type = classify_question_simple(question)
-        print(f"📝 Question type: {question_type}")
-        
-        # Step 2: Get embeddings and search
-        emb_resp = openai_client.embeddings.create(
-            model="text-embedding-ada-002",
-            input=[question]
-        )
-        query_embedding = emb_resp.data[0].embedding
-        
-        # Step 3: Search with higher k to get both text and images
+        print(f"🤖 Hybrid RAG for: {question}")
+        qtype = classify_question_simple(question)
+        print(f"📝 Type: {qtype}")
+
+        # Embedding
+        emb = openai_client.embeddings.create(model=EMBED_MODEL, input=[question])
+        qvec = emb.data[0].embedding
+
+        # Vector search
         try:
-            results = vector_store.query(course_id, query_embedding, top_k=8) or []
-            print(f"🔍 Found {len(results)} results")
+            results = vector_store.query(course_id, qvec, top_k=TOP_K) or []
         except Exception:
             results = []
-        
-        if not results:
-            return "I don't have enough information in your course materials to answer this question. Please make sure you've uploaded relevant files for this topic."
-        
-        # Step 4: Separate text and visual content
-        text_chunks = []
-        image_chunks = []
-        
-        for result in results:
-            content = result.get("content", "")
-            if "[IMAGE CONTENT" in content:
-                image_chunks.append(result)
-            else:
-                text_chunks.append(result)
-        
-        print(f"📄 Text chunks: {len(text_chunks)}, 🖼️ Image chunks: {len(image_chunks)}")
-        
-        # Step 5: Build enhanced context
-        context_parts = []
-        
-        if text_chunks:
-            context_parts.append("=== TEXT FROM COURSE MATERIALS ===")
-            for i, chunk in enumerate(text_chunks[:5]):
-                context_parts.append(f"Text {i+1}: {chunk.get('content', '')}")
-        
-        if image_chunks:
-            context_parts.append("\n=== VISUAL CONTENT FROM COURSE MATERIALS ===")
-            for i, chunk in enumerate(image_chunks[:3]):
-                context_parts.append(f"Visual {i+1}: {chunk.get('content', '')}")
-        
-        context = "\n".join(context_parts)
-        
-        # Step 6: Create natural, conversational prompt
-        enhanced_prompt = generate_natural_prompt(question, question_type, context)
-        
-        # Step 7: Generate response
-        response = openai_client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": enhanced_prompt}],
-            temperature=0.1,
-            max_tokens=2000
+
+        if not results and not ALLOW_GENERAL:
+            return ("I couldn’t find enough in your course files to answer this. "
+                    "Upload relevant slides/notes and try again.")
+
+        # Build context + source map
+        context, sources = build_context(results) if results else ("(no matching course content)", [])
+
+        # Route model
+        model, max_tokens, reasoning_effort, verbosity = _route(question, qtype)
+
+        # Compose messages
+        messages = [
+            {"role": "system", "content": SYSTEM_STYLE},
+            {"role": "user", "content": user_prompt(question, qtype, context, ALLOW_GENERAL)}
+        ]
+
+        # Call GPT-5
+        resp = openai_client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=0.2,                 # crisp + consistent
+            max_tokens=max_tokens,
+            extra_body={
+                "reasoning": reasoning_effort,  # {"effort":"low|medium|high"}
+                "verbosity": verbosity          # "low"|"medium"|"high"
+            }
         )
-        
-        answer = response.choices[0].message.content
-        
-        # Step 8: Format the response naturally and cleanly
-        formatted_answer = format_ai_response(answer, question_type)
-        
-        print("✅ Enhanced response generated!")
-        return formatted_answer
-        
+        answer = resp.choices[0].message.content
+
+        # Post-format to your house style (still smooth, keeps sections)
+        final = format_ai_response(answer, qtype)
+
+        print("✅ Answer generated (hybrid).")
+        return final
+
     except Exception as e:
-        print(f"❌ Enhanced processing failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return "I encountered an error while processing your question. Please try rephrasing your question or check if your course materials are properly uploaded."
+        print(f"❌ Engine error: {e}")
+        import traceback; traceback.print_exc()
+        return ("I hit an error while processing your question. "
+                "Please try again or verify your uploads.")
+
+# ── Optional: tiny helper for explicit “course-only” calls ───────────────────
+def ask_course_only(question: str, course_id: str) -> str:
+    """Force grounded-only mode for exams that require citing slides."""
+    global ALLOW_GENERAL
+    prev = ALLOW_GENERAL
+    ALLOW_GENERAL = False
+    try:
+        return enhanced_ask_question(question, course_id)
+    finally:
+        ALLOW_GENERAL = prev
