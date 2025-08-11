@@ -20,6 +20,8 @@ from quiz_assistant_engine import assist_with_quiz_question
 from notes_engine import generate_notes_from_files, save_notes_to_db, get_notes_from_db, delete_note_from_db
 from learning_analytics import LearningAnalyticsEngine
 from practice_generator import PracticeGenerator
+from typing import Dict, List, Any, Optional
+import asyncio
 
 analytics_engine = LearningAnalyticsEngine()
 practice_generator = PracticeGenerator()
@@ -1028,3 +1030,730 @@ def rag_health():
         return {"ok": True, "rows": len(res.data or []), "course_id": course_id}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+@app.get("/practice-topics/{course_id}")
+async def get_practice_topics(course_id: str):
+    """Get available topics for practice based on ACTUAL course content - works for any subject"""
+    try:
+        print(f"🔍 Getting practice topics for course: {course_id}")
+        
+        # Validate course exists and has content
+        validation_result = await validate_course_for_practice(course_id)
+        if validation_result["error"]:
+            return validation_result
+        
+        # Extract topics using the generic practice generator
+        try:
+            print(f"📖 Starting topic extraction for course: {course_id}")
+            topics = practice_generator.extract_topics_from_course(course_id)
+            
+            if not topics or len(topics) == 0:
+                print("⚠️ No topics extracted, using intelligent fallback")
+                topics = await get_intelligent_fallback_topics(course_id)
+            
+            print(f"✅ Successfully extracted {len(topics)} topics: {topics}")
+            
+            return {
+                "topics": topics,
+                "course_files_count": validation_result["files_count"],
+                "extraction_method": "generic_multi_strategy",
+                "status": "success"
+            }
+            
+        except Exception as e:
+            print(f"❌ Topic extraction failed: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # Intelligent fallback based on course content
+            fallback_topics = await get_intelligent_fallback_topics(course_id)
+            
+            return {
+                "topics": fallback_topics,
+                "error": f"Extraction failed, using fallback: {str(e)}",
+                "fallback": True,
+                "status": "partial_success"
+            }
+        
+    except Exception as e:
+        print(f"❌ Complete failure in get_practice_topics: {e}")
+        return {
+            "topics": ["System Error"],
+            "error": f"System error: {str(e)}",
+            "status": "error"
+        }
+
+async def validate_course_for_practice(course_id: str) -> dict:
+    """Validate that a course exists and has content for practice generation"""
+    try:
+        # Check if course exists
+        course_check = supabase.table("courses").select("*").eq("course_id", course_id).execute()
+        if not course_check.data:
+            print(f"❌ Course {course_id} not found")
+            return {
+                "error": "Course not found",
+                "topics": ["Course Not Found"],
+                "status": "error"
+            }
+        
+        # Check if course has uploaded files
+        files_check = supabase.table("files").select("filename").eq("course_id", course_id).execute()
+        if not files_check.data:
+            print(f"❌ No files found for course {course_id}")
+            return {
+                "error": "No files uploaded. Please upload course materials first.",
+                "topics": ["No Files Uploaded"],
+                "status": "error"
+            }
+        
+        # Check if files have been processed (have embeddings)
+        embeddings_check = supabase.table("embeddings").select("id").eq("course_id", course_id).limit(1).execute()
+        if not embeddings_check.data:
+            print(f"⚠️ Course {course_id} files not yet processed for AI analysis")
+            return {
+                "error": "Course files are still being processed. Please try again in a moment.",
+                "topics": ["Processing Files"],
+                "status": "processing"
+            }
+        
+        print(f"✅ Course {course_id} validation passed - {len(files_check.data)} files found")
+        return {
+            "error": None,
+            "files_count": len(files_check.data),
+            "status": "valid"
+        }
+        
+    except Exception as e:
+        print(f"❌ Course validation error: {e}")
+        return {
+            "error": f"Validation error: {str(e)}",
+            "topics": ["Validation Error"],
+            "status": "error"
+        }
+
+async def get_intelligent_fallback_topics(course_id: str) -> list:
+    """Generate intelligent fallback topics based on available course info"""
+    try:
+        # Try to get course title for subject hints
+        course_info = supabase.table("courses").select("title").eq("course_id", course_id).execute()
+        course_title = ""
+        if course_info.data:
+            course_title = course_info.data[0].get("title", "").lower()
+        
+        # Try to get some filenames for topic hints
+        files_info = supabase.table("files").select("filename").eq("course_id", course_id).execute()
+        filenames = []
+        if files_info.data:
+            filenames = [f["filename"].lower() for f in files_info.data]
+        
+        # Generate subject-appropriate fallback topics
+        fallback_topics = generate_subject_fallback_topics(course_title, filenames)
+        
+        print(f"📋 Generated intelligent fallback topics: {fallback_topics}")
+        return fallback_topics
+        
+    except Exception as e:
+        print(f"❌ Fallback topic generation failed: {e}")
+        return [
+            "Course Fundamentals",
+            "Key Concepts",
+            "Core Material",
+            "Main Topics",
+            "Essential Knowledge"
+        ]
+
+def generate_subject_fallback_topics(course_title: str, filenames: list) -> list:
+    """Generate fallback topics based on course title and filenames - subject aware"""
+    
+    # Combine course title and filenames for analysis
+    text_to_analyze = f"{course_title} {' '.join(filenames)}"
+    
+    # Subject detection patterns (can be expanded)
+    subject_patterns = {
+        "computer_science": {
+            "keywords": ["programming", "algorithm", "data", "structure", "software", "code", "java", "python", "cs", "computer"],
+            "topics": ["Programming Fundamentals", "Algorithm Analysis", "Data Structures", "Software Development", "Problem Solving", "Computational Thinking"]
+        },
+        "mathematics": {
+            "keywords": ["calculus", "algebra", "geometry", "statistics", "math", "equation", "theorem", "proof", "derivative", "integral"],
+            "topics": ["Mathematical Concepts", "Problem Solving", "Theoretical Foundations", "Applied Mathematics", "Mathematical Analysis", "Computational Methods"]
+        },
+        "biology": {
+            "keywords": ["biology", "cell", "organism", "genetics", "evolution", "ecology", "physiology", "anatomy", "molecular", "bio"],
+            "topics": ["Biological Systems", "Cell Biology", "Genetics and Evolution", "Physiology", "Ecological Concepts", "Molecular Biology"]
+        },
+        "chemistry": {
+            "keywords": ["chemistry", "chemical", "reaction", "molecule", "atom", "organic", "inorganic", "lab", "compound", "chem"],
+            "topics": ["Chemical Principles", "Molecular Structure", "Chemical Reactions", "Organic Chemistry", "Inorganic Chemistry", "Laboratory Techniques"]
+        },
+        "physics": {
+            "keywords": ["physics", "mechanics", "thermodynamics", "electromagnetic", "quantum", "force", "energy", "motion", "wave"],
+            "topics": ["Mechanics", "Thermodynamics", "Electromagnetism", "Wave Physics", "Modern Physics", "Applied Physics"]
+        },
+        "history": {
+            "keywords": ["history", "historical", "century", "war", "civilization", "culture", "society", "period", "ancient", "modern"],
+            "topics": ["Historical Events", "Cultural Analysis", "Historical Periods", "Social Movements", "Historical Methods", "Comparative History"]
+        },
+        "literature": {
+            "keywords": ["literature", "poetry", "novel", "author", "writing", "literary", "text", "analysis", "criticism", "english"],
+            "topics": ["Literary Analysis", "Literary Themes", "Writing Techniques", "Literary History", "Critical Reading", "Textual Interpretation"]
+        },
+        "psychology": {
+            "keywords": ["psychology", "behavior", "cognitive", "mental", "brain", "learning", "memory", "perception", "psych"],
+            "topics": ["Cognitive Psychology", "Behavioral Psychology", "Research Methods", "Psychological Theories", "Human Development", "Mental Processes"]
+        },
+        "economics": {
+            "keywords": ["economics", "market", "economy", "finance", "business", "trade", "money", "supply", "demand", "econ"],
+            "topics": ["Economic Principles", "Market Analysis", "Microeconomics", "Macroeconomics", "Economic Policy", "Financial Systems"]
+        },
+        "engineering": {
+            "keywords": ["engineering", "design", "system", "technical", "mechanical", "electrical", "civil", "project", "analysis"],
+            "topics": ["Engineering Design", "System Analysis", "Technical Problem Solving", "Engineering Principles", "Project Management", "Applied Engineering"]
+        }
+    }
+    
+    # Detect subject based on keywords
+    detected_subject = None
+    max_matches = 0
+    
+    for subject, info in subject_patterns.items():
+        matches = sum(1 for keyword in info["keywords"] if keyword in text_to_analyze)
+        if matches > max_matches:
+            max_matches = matches
+            detected_subject = subject
+    
+    # Return subject-specific topics or generic ones
+    if detected_subject and max_matches > 0:
+        return subject_patterns[detected_subject]["topics"]
+    else:
+        # Generic academic topics
+        return [
+            "Course Fundamentals",
+            "Key Concepts and Definitions", 
+            "Core Principles",
+            "Practical Applications",
+            "Theoretical Foundations",
+            "Problem-Solving Methods"
+        ]
+
+@app.get("/debug-course-content/{course_id}")
+async def debug_course_content(course_id: str):
+    """Debug endpoint to see what content is available for any course"""
+    try:
+        # Get course info
+        course_info = supabase.table("courses").select("*").eq("course_id", course_id).execute()
+        course_data = course_info.data[0] if course_info.data else None
+        
+        # Get files info
+        files_result = supabase.table("files").select("*").eq("course_id", course_id).execute()
+        files_info = files_result.data or []
+        
+        # Get embeddings info
+        embeddings_result = supabase.table("embeddings").select("doc_name, content, page, slide").eq("course_id", course_id).limit(15).execute()
+        embeddings_info = embeddings_result.data or []
+        
+        # Analyze content diversity
+        content_analysis = analyze_course_content_diversity(embeddings_info)
+        
+        # Sample content from different sources
+        sample_content = []
+        seen_docs = set()
+        for emb in embeddings_info:
+            doc_name = emb.get("doc_name", "unknown")
+            if doc_name not in seen_docs and len(sample_content) < 5:
+                content = emb.get("content", "")
+                sample_content.append({
+                    "doc": doc_name,
+                    "page": emb.get("page"),
+                    "slide": emb.get("slide"),
+                    "content_preview": content[:300] + "..." if len(content) > 300 else content,
+                    "content_length": len(content)
+                })
+                seen_docs.add(doc_name)
+        
+        return {
+            "course_id": course_id,
+            "course_info": {
+                "title": course_data.get("title") if course_data else "Unknown",
+                "created_at": course_data.get("created_at") if course_data else None
+            },
+            "files_summary": {
+                "count": len(files_info),
+                "files": [{"name": f["filename"], "type": f.get("file_type"), "uploaded": f.get("uploaded_at")} for f in files_info]
+            },
+            "content_analysis": content_analysis,
+            "sample_content": sample_content,
+            "vector_store_status": {
+                "populated": len(embeddings_info) > 0,
+                "total_chunks": len(embeddings_info),
+                "unique_documents": len(seen_docs)
+            }
+        }
+        
+    except Exception as e:
+        return {"error": str(e), "course_id": course_id}
+
+def analyze_course_content_diversity(embeddings_info: list) -> dict:
+    """Analyze the diversity and richness of course content"""
+    if not embeddings_info:
+        return {"status": "no_content"}
+    
+    # Count documents
+    doc_counts = {}
+    total_content_length = 0
+    page_info = {"has_pages": False, "page_range": []}
+    slide_info = {"has_slides": False, "slide_range": []}
+    
+    for emb in embeddings_info:
+        doc_name = emb.get("doc_name", "unknown")
+        content = emb.get("content", "")
+        page = emb.get("page")
+        slide = emb.get("slide")
+        
+        # Count by document
+        doc_counts[doc_name] = doc_counts.get(doc_name, 0) + 1
+        total_content_length += len(content)
+        
+        # Track page info
+        if page:
+            page_info["has_pages"] = True
+            page_info["page_range"].append(page)
+        
+        # Track slide info
+        if slide:
+            slide_info["has_slides"] = True
+            slide_info["slide_range"].append(slide)
+    
+    # Calculate content richness
+    avg_chunk_length = total_content_length / len(embeddings_info) if embeddings_info else 0
+    content_richness = "rich" if avg_chunk_length > 800 else "moderate" if avg_chunk_length > 400 else "sparse"
+    
+    return {
+        "total_chunks": len(embeddings_info),
+        "unique_documents": len(doc_counts),
+        "document_distribution": doc_counts,
+        "average_chunk_length": round(avg_chunk_length),
+        "content_richness": content_richness,
+        "page_info": {
+            "has_pages": page_info["has_pages"],
+            "page_range": f"{min(page_info['page_range'])}-{max(page_info['page_range'])}" if page_info["page_range"] else None
+        },
+        "slide_info": {
+            "has_slides": slide_info["has_slides"],
+            "slide_range": f"{min(slide_info['slide_range'])}-{max(slide_info['slide_range'])}" if slide_info["slide_range"] else None
+        }
+    }
+
+@app.post("/regenerate-practice-topics")
+async def regenerate_practice_topics(course_id: str = Form(...)):
+    """Force regeneration of practice topics for any course"""
+    try:
+        print(f"🔄 Force regenerating topics for course: {course_id}")
+        
+        # Validate course first
+        validation = await validate_course_for_practice(course_id)
+        if validation["error"]:
+            return {
+                "status": "error",
+                "message": validation["error"],
+                "topics": validation["topics"]
+            }
+        
+        # Force fresh extraction
+        topics = practice_generator.extract_topics_from_course(course_id)
+        
+        if not topics:
+            topics = await get_intelligent_fallback_topics(course_id)
+            return {
+                "status": "partial_success",
+                "topics": topics,
+                "message": f"Used intelligent fallback - generated {len(topics)} topics for course {course_id}",
+                "fallback": True
+            }
+        
+        return {
+            "status": "success",
+            "topics": topics,
+            "message": f"Successfully regenerated {len(topics)} topics for course {course_id}",
+            "extraction_method": "full_analysis"
+        }
+        
+    except Exception as e:
+        print(f"❌ Topic regeneration failed: {e}")
+        fallback_topics = await get_intelligent_fallback_topics(course_id)
+        return {
+            "status": "error",
+            "message": str(e),
+            "topics": fallback_topics,
+            "fallback": True
+        }
+
+@app.get("/course-subject-detection/{course_id}")
+async def detect_course_subject(course_id: str):
+    """Detect what subject area a course covers - useful for UI and analytics"""
+    try:
+        # Get course info
+        course_info = supabase.table("courses").select("title").eq("course_id", course_id).execute()
+        course_title = course_info.data[0].get("title", "") if course_info.data else ""
+        
+        # Get filenames
+        files_info = supabase.table("files").select("filename").eq("course_id", course_id).execute()
+        filenames = [f["filename"] for f in files_info.data] if files_info.data else []
+        
+        # Get sample content
+        embeddings_sample = supabase.table("embeddings").select("content").eq("course_id", course_id).limit(5).execute()
+        sample_content = " ".join([e["content"][:200] for e in embeddings_sample.data]) if embeddings_sample.data else ""
+        
+        # Analyze subject
+        combined_text = f"{course_title} {' '.join(filenames)} {sample_content}".lower()
+        
+        # Subject detection logic
+        subject_scores = {}
+        subject_patterns = {
+            "Computer Science": ["programming", "algorithm", "data", "structure", "software", "code", "java", "python", "cs"],
+            "Mathematics": ["calculus", "algebra", "geometry", "statistics", "math", "equation", "theorem", "proof"],
+            "Biology": ["biology", "cell", "organism", "genetics", "evolution", "ecology", "physiology", "bio"],
+            "Chemistry": ["chemistry", "chemical", "reaction", "molecule", "atom", "organic", "inorganic", "chem"],
+            "Physics": ["physics", "mechanics", "thermodynamics", "electromagnetic", "quantum", "force", "energy"],
+            "History": ["history", "historical", "century", "war", "civilization", "culture", "society", "period"],
+            "Literature": ["literature", "poetry", "novel", "author", "writing", "literary", "text", "analysis"],
+            "Psychology": ["psychology", "behavior", "cognitive", "mental", "brain", "learning", "memory", "psych"],
+            "Economics": ["economics", "market", "economy", "finance", "business", "trade", "money", "econ"],
+            "Engineering": ["engineering", "design", "system", "technical", "mechanical", "electrical", "civil"]
+        }
+        
+        for subject, keywords in subject_patterns.items():
+            score = sum(1 for keyword in keywords if keyword in combined_text)
+            if score > 0:
+                subject_scores[subject] = score
+        
+        # Find best match
+        if subject_scores:
+            detected_subject = max(subject_scores, key=subject_scores.get)
+            confidence = subject_scores[detected_subject]
+        else:
+            detected_subject = "General Studies"
+            confidence = 0
+        
+        return {
+            "course_id": course_id,
+            "detected_subject": detected_subject,
+            "confidence_score": confidence,
+            "all_scores": subject_scores,
+            "course_title": course_title,
+            "files_analyzed": len(filenames)
+        }
+        
+    except Exception as e:
+        return {
+            "course_id": course_id,
+            "detected_subject": "Unknown",
+            "error": str(e)
+        }
+
+@app.get("/debug-topic-extraction/{course_id}")
+async def debug_topic_extraction(course_id: str):
+    """Debug endpoint to see exactly what's happening in topic extraction"""
+    try:
+        print(f"🔍 DEBUGGING topic extraction for course: {course_id}")
+        
+        # Step 1: Check files in database
+        files_result = supabase.table("files").select("filename").eq("course_id", course_id).execute()
+        filenames = [f["filename"] for f in files_result.data] if files_result.data else []
+        print(f"📁 Files in database: {filenames}")
+        
+        # Step 2: Test filename extraction manually
+        filename_topics = []
+        for filename in filenames:
+            extracted_topic = extract_topic_from_filename_debug(filename)
+            filename_topics.append({
+                "original_filename": filename,
+                "extracted_topic": extracted_topic
+            })
+        
+        print(f"📝 Filename topic extraction results: {filename_topics}")
+        
+        # Step 3: Check vector store content
+        embeddings_result = supabase.table("embeddings").select("doc_name, content").eq("course_id", course_id).limit(10).execute()
+        embeddings_info = embeddings_result.data or []
+        
+        content_sample = []
+        for emb in embeddings_info[:3]:
+            content_sample.append({
+                "doc_name": emb.get("doc_name"),
+                "content_preview": emb.get("content", "")[:200] + "..."
+            })
+        
+        # Step 4: Try the practice generator methods individually
+        debug_results = {
+            "course_id": course_id,
+            "files_found": len(filenames),
+            "filenames": filenames,
+            "filename_extraction_results": filename_topics,
+            "embeddings_found": len(embeddings_info),
+            "content_sample": content_sample,
+        }
+        
+        # Step 5: Test each extraction method
+        try:
+            # Test filename extraction
+            clean_filename_topics = [item["extracted_topic"] for item in filename_topics if item["extracted_topic"]]
+            debug_results["clean_filename_topics"] = clean_filename_topics
+            
+            # Test practice generator filename method
+            pg_filename_topics = practice_generator.extract_topics_from_filenames(course_id)
+            debug_results["practice_generator_filename_topics"] = pg_filename_topics
+            
+            # Test content extraction if we have embeddings
+            if embeddings_info:
+                from vector_store import VectorStore
+                vector_store = VectorStore()
+                pg_content_topics = practice_generator.extract_topics_from_content(course_id, vector_store)
+                debug_results["practice_generator_content_topics"] = pg_content_topics
+            
+            # Test full extraction
+            full_topics = practice_generator.extract_topics_from_course(course_id)
+            debug_results["full_extraction_result"] = full_topics
+            
+        except Exception as e:
+            debug_results["extraction_error"] = str(e)
+            import traceback
+            debug_results["extraction_traceback"] = traceback.format_exc()
+        
+        return debug_results
+        
+    except Exception as e:
+        return {
+            "error": str(e),
+            "course_id": course_id
+        }
+
+def extract_topic_from_filename_debug(filename: str) -> str:
+    """Debug version of filename topic extraction with detailed logging"""
+    print(f"  🔍 Processing filename: {filename}")
+    
+    # Remove file extension
+    clean_name = re.sub(r'\.(pdf|docx|pptx|txt|md)$', '', filename, flags=re.IGNORECASE)
+    print(f"    After extension removal: {clean_name}")
+    
+    # Remove common academic prefixes
+    clean_name = re.sub(r'^(lecture|chapter|week|unit|lesson|section|module|assignment|homework|hw|lab|tutorial)\s*\d*\s*[-_:]?\s*', '', clean_name, flags=re.IGNORECASE)
+    print(f"    After prefix removal: {clean_name}")
+    
+    # Remove common suffixes
+    clean_name = re.sub(r'\s*(part|section|chapter)\s*\d+$', '', clean_name, flags=re.IGNORECASE)
+    clean_name = re.sub(r'\s*(in_class_activity|activity|exercise|solutions?|notes?)$', '', clean_name, flags=re.IGNORECASE)
+    print(f"    After suffix removal: {clean_name}")
+    
+    # Clean up separators and formatting
+    clean_name = re.sub(r'[-_]+', ' ', clean_name)
+    clean_name = re.sub(r'\s+', ' ', clean_name)
+    clean_name = clean_name.strip()
+    print(f"    After separator cleanup: {clean_name}")
+    
+    # Capitalize properly
+    if len(clean_name) > 2:
+        # Handle special cases like "BSTs" or acronyms
+        words = clean_name.split()
+        formatted_words = []
+        for word in words:
+            if len(word) <= 4 and word.isupper():
+                formatted_words.append(word)  # Keep acronyms as-is
+            else:
+                formatted_words.append(word.capitalize())
+        
+        result = ' '.join(formatted_words)
+        print(f"    Final result: {result}")
+        return result
+    
+    print(f"    Final result: (empty - too short)")
+    return ""
+
+# Add this debug endpoint to your main.py to see what content is being found
+
+@app.get("/debug-practice-content/{course_id}/{topic}")
+async def debug_practice_content(course_id: str, topic: str):
+    """Debug what content is found when generating practice questions for a topic"""
+    try:
+        from vector_store import VectorStore
+        from openai import OpenAI
+        
+        vector_store = VectorStore()
+        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        print(f"🔍 Debugging content retrieval for topic: '{topic}' in course: {course_id}")
+        
+        # Test the search queries that practice generator uses
+        search_queries = [
+            topic,
+            f"{topic} examples",
+            f"{topic} concepts", 
+            f"{topic} definition"
+        ]
+        
+        debug_results = {
+            "course_id": course_id,
+            "topic": topic,
+            "search_results": {},
+            "combined_results": [],
+            "context_preview": "",
+            "total_chunks_found": 0
+        }
+        
+        all_results = []
+        
+        for query in search_queries:
+            try:
+                print(f"  🔍 Searching for: '{query}'")
+                
+                # Create embedding
+                emb_resp = openai_client.embeddings.create(
+                    model="text-embedding-ada-002",
+                    input=[query]
+                )
+                
+                # Search vector store
+                results = vector_store.query(course_id, emb_resp.data[0].embedding, top_k=5)
+                
+                search_info = {
+                    "query": query,
+                    "results_count": len(results) if results else 0,
+                    "results": []
+                }
+                
+                if results:
+                    for i, result in enumerate(results):
+                        search_info["results"].append({
+                            "doc_name": result.get("doc_name", "unknown"),
+                            "page": result.get("page"),
+                            "similarity": result.get("similarity", 0),
+                            "content_preview": result.get("content", "")[:200] + "..." if result.get("content") else "",
+                            "content_length": len(result.get("content", ""))
+                        })
+                        all_results.append(result)
+                    
+                    print(f"    ✅ Found {len(results)} results")
+                else:
+                    print(f"    ❌ No results found")
+                
+                debug_results["search_results"][query] = search_info
+                
+            except Exception as e:
+                print(f"    ❌ Search failed: {e}")
+                debug_results["search_results"][query] = {
+                    "query": query,
+                    "error": str(e),
+                    "results_count": 0
+                }
+        
+        # Deduplicate results (same logic as practice generator)
+        seen_content = set()
+        unique_results = []
+        
+        for result in all_results:
+            content = result.get("content", "").strip()
+            content_hash = hash(content[:200])
+            
+            if content and content_hash not in seen_content:
+                seen_content.add(content_hash)
+                unique_results.append(result)
+                if len(unique_results) >= 8:
+                    break
+        
+        debug_results["combined_results"] = [
+            {
+                "doc_name": r.get("doc_name"),
+                "page": r.get("page"),
+                "content_preview": r.get("content", "")[:300] + "..." if r.get("content") else "",
+                "content_length": len(r.get("content", ""))
+            }
+            for r in unique_results
+        ]
+        
+        debug_results["total_chunks_found"] = len(unique_results)
+        
+        # Create context preview (same as practice generator)
+        if unique_results:
+            context_parts = [f"COURSE MATERIALS ABOUT {topic.upper()}:"]
+            
+            for i, result in enumerate(unique_results[:6], 1):
+                content = result.get("content", "").strip()
+                doc = result.get("doc_name", "unknown")
+                page = result.get("page")
+                
+                source_info = f"[Source {i}: {doc}"
+                if page:
+                    source_info += f", page {page}"
+                source_info += "]"
+                
+                context_parts.append(f"\n{source_info}")
+                context_parts.append(content[:500] + "..." if len(content) > 500 else content)
+                context_parts.append("---")
+            
+            debug_results["context_preview"] = "\n".join(context_parts)[:2000] + "..." if len("\n".join(context_parts)) > 2000 else "\n".join(context_parts)
+        else:
+            debug_results["context_preview"] = "No relevant content found"
+        
+        # Check if we have any files that should contain this topic
+        files_result = supabase.table("files").select("filename").eq("course_id", course_id).execute()
+        relevant_files = []
+        
+        if files_result.data:
+            topic_lower = topic.lower()
+            for file_info in files_result.data:
+                filename = file_info["filename"].lower()
+                if any(word in filename for word in topic_lower.split()):
+                    relevant_files.append(file_info["filename"])
+        
+        debug_results["relevant_files"] = relevant_files
+        debug_results["should_have_content"] = len(relevant_files) > 0
+        
+        return debug_results
+        
+    except Exception as e:
+        return {
+            "error": str(e),
+            "course_id": course_id,
+            "topic": topic
+        }
+
+# Also add this simpler endpoint to check what's in the vector store
+@app.get("/debug-vector-content/{course_id}")
+async def debug_vector_content(course_id: str, limit: int = 20):
+    """See what content is actually in the vector store for a course"""
+    try:
+        # Get sample of embeddings
+        embeddings_result = supabase.table("embeddings").select("doc_name, content, page, slide").eq("course_id", course_id).limit(limit).execute()
+        
+        if not embeddings_result.data:
+            return {
+                "error": "No embeddings found for this course",
+                "course_id": course_id
+            }
+        
+        # Group by document
+        by_document = {}
+        for emb in embeddings_result.data:
+            doc_name = emb.get("doc_name", "unknown")
+            if doc_name not in by_document:
+                by_document[doc_name] = []
+            
+            by_document[doc_name].append({
+                "page": emb.get("page"),
+                "slide": emb.get("slide"),
+                "content_preview": emb.get("content", "")[:200] + "..." if emb.get("content") else "",
+                "content_length": len(emb.get("content", ""))
+            })
+        
+        return {
+            "course_id": course_id,
+            "total_chunks_sampled": len(embeddings_result.data),
+            "documents_found": list(by_document.keys()),
+            "content_by_document": by_document
+        }
+        
+    except Exception as e:
+        return {
+            "error": str(e),
+            "course_id": course_id
+        }
