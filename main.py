@@ -1851,31 +1851,41 @@ async def generate_practice_exam(
     topic_focus: str = Form(""),
     user_id: str = Form("anonymous")
 ):
-    """Generate a practice exam based on course materials and past paper patterns"""
+    """Generate a practice exam"""
     try:
-        print(f"🎯 Generating practice exam for course: {course_id}")
+        # Enhanced debugging
+        print(f"🎯 EXAM GENERATION REQUEST:")
+        print(f"   Course ID: {course_id}")
+        print(f"   Question Count: {question_count}")
+        print(f"   Difficulty: {difficulty}")
+        print(f"   User ID: {user_id}")
         
-        # Validate inputs
-        if question_count < 1 or question_count > 50:
-            raise HTTPException(400, detail="Question count must be between 1 and 50")
-        
-        if time_limit < 5 or time_limit > 300:
-            raise HTTPException(400, detail="Time limit must be between 5 and 300 minutes")
-        
-        # Parse question types
+        # Parse question types with better error handling
         try:
             question_types_list = json.loads(question_types)
-        except json.JSONDecodeError:
-            raise HTTPException(400, detail="Invalid question_types format")
+            print(f"   Question Types: {question_types_list}")
+        except json.JSONDecodeError as e:
+            print(f"   ⚠️ Invalid question_types JSON: {question_types}")
+            question_types_list = ["multiple_choice", "calculation", "short_answer"]
         
-        # Check if course exists and has content
-        course_check = supabase.table("courses").select("*").eq("course_id", course_id).execute()
-        if not course_check.data:
-            raise HTTPException(400, detail="Course not found")
-        
-        files_check = supabase.table("files").select("filename").eq("course_id", course_id).execute()
-        if not files_check.data:
-            raise HTTPException(400, detail="No course materials found. Upload files first.")
+        # Check if course has files with detailed logging
+        try:
+            result = supabase.table("files").select("*").eq("course_id", course_id).execute()
+            file_count = len(result.data) if result.data else 0
+            print(f"   📁 Files found for course: {file_count}")
+            
+            if file_count == 0:
+                print(f"   ❌ No files found for course {course_id}")
+                raise HTTPException(400, detail=f"No files found for course '{course_id}'. Upload course materials first.")
+                
+            # List the files for debugging
+            for file in result.data[:3]:  # Show first 3 files
+                print(f"      - {file.get('filename', 'unknown')}")
+                
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"   ⚠️ Could not check course files: {e}")
         
         # Build exam specifications
         exam_specs = {
@@ -1890,27 +1900,45 @@ async def generate_practice_exam(
             "created_by": user_id
         }
         
-        # Generate the exam
+        print(f"   📋 Exam specs prepared: {exam_specs['name']}")
+        
+        # Generate the exam with timing
+        start_time = datetime.now()
         result = exam_generator.generate_practice_exam(course_id, exam_specs)
+        generation_time = (datetime.now() - start_time).total_seconds()
+        
+        print(f"   ⏱️ Generation took: {generation_time:.2f} seconds")
         
         if result.get("status") == "error":
+            print(f"   ❌ Generation failed: {result.get('message')}")
             raise HTTPException(500, detail=result.get("message", "Exam generation failed"))
         
         exam_data = result["exam"]
         
-        print(f"✅ Generated exam with {len(exam_data['questions'])} questions")
+        print(f"   ✅ Generated exam with {len(exam_data['questions'])} questions")
         
-        return {
+        # Enhanced response
+        response_data = {
             "status": "success",
             "exam": exam_data,
-            "message": f"Generated {exam_data['question_count']} question exam"
+            "message": f"Generated {exam_data['question_count']} question exam",
+            "debug": {
+                "generation_time_seconds": generation_time,
+                "course_files_count": file_count,
+                "request_timestamp": datetime.now().isoformat()
+            }
         }
+        
+        return response_data
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Exam generation failed: {e}")
+        print(f"   ❌ Exam generation failed: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(500, detail=f"Generation failed: {str(e)}")
+
 
 @app.post("/api/create-exam-session")
 async def create_exam_session(
@@ -2297,3 +2325,33 @@ async def auto_submit_expired_exams():
     except Exception as e:
         print(f"❌ Auto-submit failed: {e}")
         raise HTTPException(500, detail=f"Auto-submit failed: {str(e)}")
+
+@app.get("/api/exam-status")
+async def exam_status():
+    """Check if exam system is properly initialized"""
+    try:
+        # Test exam generator
+        exam_gen_ok = exam_generator is not None
+        session_mgr_ok = exam_session_manager is not None
+        
+        # Test database connection
+        db_ok = False
+        try:
+            test_result = supabase.table("courses").select("course_id").limit(1).execute()
+            db_ok = True
+        except Exception as e:
+            print(f"DB test failed: {e}")
+        
+        return {
+            "status": "success",
+            "exam_generator_ready": exam_gen_ok,
+            "session_manager_ready": session_mgr_ok,
+            "database_connected": db_ok,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }

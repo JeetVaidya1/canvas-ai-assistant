@@ -105,8 +105,7 @@ class ExamGenerator:
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=1500,
+                max_completion_tokens=1500,
                 response_format={"type": "json_object"}
             )
             
@@ -221,25 +220,20 @@ class ExamGenerator:
     def extract_mc_options(self, text: str) -> List[str]:
         """Extract multiple choice options"""
         options = []
-        
-        # Common MC patterns
         patterns = [
             r'[A-E]\)\s*([^\n]+)',
             r'\([A-E]\)\s*([^\n]+)',
             r'[A-E]\.\s*([^\n]+)'
         ]
-        
         for pattern in patterns:
             matches = re.findall(pattern, text)
-            if matches and len(matches) >= 2:  # At least 2 options
+            if matches and len(matches) >= 2:
                 options = [match.strip() for match in matches]
                 break
-        
-        return options[:5]  # Limit to 5 options
+        return options[:5]
     
     def extract_points(self, text: str) -> int:
         """Extract point value from question text"""
-        # Look for point indicators
         point_patterns = [
             r'\[(\d+)\s*point?s?\]',
             r'\((\d+)\s*point?s?\)',
@@ -247,15 +241,12 @@ class ExamGenerator:
             r'\[(\d+)\s*mark?s?\]',
             r'\((\d+)\s*mark?s?\)'
         ]
-        
         for pattern in point_patterns:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 return int(match.group(1))
-        
-        # Default based on question length/complexity
         if len(text) > 500:
-            return 5  # Long questions worth more
+            return 5
         elif len(text) > 200:
             return 3
         else:
@@ -265,45 +256,33 @@ class ExamGenerator:
         """Estimate time needed for question in minutes"""
         base_times = {
             "multiple_choice": 2,
-            "calculation": 5,
-            "short_answer": 4,
-            "essay": 15,
-            "proof": 10,
-            "diagram": 8
+            "calculation": 7,   # harder bias
+            "short_answer": 6,  # harder bias
+            "essay": 18,
+            "proof": 15,
+            "diagram": 10
         }
-        
-        base_time = base_times.get(question_type, 3)
-        
-        # Adjust based on length
+        base_time = base_times.get(question_type, 6)
         if len(text) > 500:
             base_time += 3
         elif len(text) > 300:
             base_time += 1
-        
         return base_time
     
     def estimate_difficulty(self, text: str) -> str:
         """Estimate question difficulty"""
         text_lower = text.lower()
-        
-        # Hard indicators
-        hard_words = ['derive', 'prove', 'analyze', 'synthesize', 'evaluate', 'complex', 'advanced']
+        hard_words = ['derive', 'prove', 'analyze', 'synthesize', 'evaluate', 'complex', 'advanced', 'optimize', 'asymptotic', 'rigorous']
         if any(word in text_lower for word in hard_words):
             return "hard"
-        
-        # Easy indicators
         easy_words = ['define', 'list', 'identify', 'state', 'basic', 'simple']
         if any(word in text_lower for word in easy_words):
             return "easy"
-        
-        return "medium"
+        return "hard"  # default bias to harder
     
     def extract_topic(self, text: str) -> str:
         """Extract topic/subject from question text"""
-        # This could be enhanced with NLP or course-specific topic detection
         text_lower = text.lower()
-        
-        # Physics topics
         physics_topics = {
             'mechanics': ['force', 'motion', 'velocity', 'acceleration', 'momentum'],
             'thermodynamics': ['heat', 'temperature', 'entropy', 'gas', 'thermal'],
@@ -311,70 +290,60 @@ class ExamGenerator:
             'waves': ['wave', 'frequency', 'amplitude', 'oscillation', 'sound'],
             'optics': ['light', 'reflection', 'refraction', 'lens', 'mirror']
         }
-        
-        # CS topics
         cs_topics = {
-            'algorithms': ['algorithm', 'complexity', 'sorting', 'searching'],
-            'data structures': ['array', 'list', 'tree', 'graph', 'stack', 'queue'],
+            'algorithms': ['algorithm', 'complexity', 'sorting', 'searching', 'big-o', 'asymptotic'],
+            'data structures': ['array', 'list', 'tree', 'graph', 'stack', 'queue', 'hash'],
             'programming': ['code', 'function', 'variable', 'loop', 'recursion']
         }
-        
         all_topics = {**physics_topics, **cs_topics}
-        
         for topic, keywords in all_topics.items():
             if any(keyword in text_lower for keyword in keywords):
                 return topic.title()
-        
         return "General"
     
     def clean_question_text(self, text: str) -> str:
         """Clean and format question text"""
-        # Remove point indicators, question numbers, etc.
         cleaned = re.sub(r'\[?\d+\s*point?s?\]?', '', text, flags=re.IGNORECASE)
         cleaned = re.sub(r'\[?\d+\s*mark?s?\]?', '', cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r'^\d+\.\s*', '', cleaned)  # Remove leading numbers
+        cleaned = re.sub(r'^\d+\.\s*', '', cleaned)
         cleaned = re.sub(r'Question\s+\d+[:.]\s*', '', cleaned, flags=re.IGNORECASE)
-        
-        # Clean whitespace
         cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-        
         return cleaned
     
     def ai_extract_questions(self, exam_text: str) -> List[Dict[str, Any]]:
-        """Use AI to extract questions when regex fails"""
+        """Use AI to extract questions when regex fails (bias to harder, non-MC)"""
         try:
             prompt = f"""
-            Extract up to 10 individual questions from this exam text. 
+            Extract up to 10 individual NON-multiple-choice questions from this exam text.
+            Prefer hard 'calculation', 'short_answer', 'proof', or 'essay' questions suitable for upper-division exams.
             
             EXAM TEXT:
             {exam_text[:4000]}
             
-            Return JSON array with this structure:
-            [{{
-                "id": "q1",
-                "type": "multiple_choice|calculation|short_answer|essay|proof|diagram",
-                "question": "clean question text without numbering",
-                "options": ["A", "B", "C", "D"] or null,
-                "points": estimated_points,
-                "time_estimate": estimated_minutes,
-                "difficulty": "easy|medium|hard",
-                "topic": "subject area"
-            }}]
-            
-            Focus on extracting complete, well-formed questions that could be used for practice.
+            Return JSON with:
+            {{
+              "questions": [
+                {{
+                  "id": "q1",
+                  "type": "calculation|short_answer|essay|proof|diagram",
+                  "question": "clean question text without numbering",
+                  "options": null,
+                  "points": estimated_points,
+                  "time_estimate": estimated_minutes,
+                  "difficulty": "hard",
+                  "topic": "subject area"
+                }}
+              ]
+            }}
             """
-            
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.2,
-                max_tokens=3000,
+                max_completion_tokens=3000,
                 response_format={"type": "json_object"}
             )
-            
             result = json.loads(response.choices[0].message.content)
             return result.get("questions", [])
-            
         except Exception as e:
             print(f"AI question extraction error: {e}")
             return []
@@ -384,7 +353,7 @@ class ExamGenerator:
         try:
             print(f"🎯 Generating practice exam for course: {course_id}")
             
-            # Get course materials for context
+            # Get course materials for context (diverse across all files)
             course_content = self.get_course_content_sample(course_id)
             
             # Generate questions based on specifications
@@ -394,7 +363,6 @@ class ExamGenerator:
                 course_id
             )
             
-            # Create exam metadata
             exam_data = {
                 "id": f"exam_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                 "name": exam_specs.get("name", f"Practice Exam - {datetime.now().strftime('%Y-%m-%d')}"),
@@ -403,108 +371,184 @@ class ExamGenerator:
                 "time_limit": exam_specs.get("time_limit", 120),
                 "total_points": sum(q.get("points", 0) for q in questions),
                 "question_count": len(questions),
-                "difficulty": exam_specs.get("difficulty", "mixed"),
+                "difficulty": exam_specs.get("difficulty", "hard"),  # default bias to hard
                 "created_at": datetime.now().isoformat(),
                 "instructions": self.generate_exam_instructions(exam_specs)
             }
-            
             print(f"✅ Generated exam with {len(questions)} questions")
             return {"status": "success", "exam": exam_data}
-            
         except Exception as e:
             print(f"❌ Exam generation failed: {e}")
             return {"status": "error", "message": str(e)}
     
     def get_course_content_sample(self, course_id: str) -> str:
-        """Get sample content from course materials"""
+        """Build a diverse, multi-document context sample for the exam generator.
+
+        Strategy:
+        1) Pull many rows from the embeddings table for this course.
+        2) Group by document and pick a representative (longest) chunk per doc.
+        3) Concatenate a capped number of documents to keep the prompt compact.
+        4) Fallback to vector store with several seed queries if DB access fails.
+        """
         try:
-            # Get diverse content from vector store
-            sample_embedding = [0.0] * 1536  # Dummy for sampling
-            results = self.vector_store.query(course_id, sample_embedding, top_k=20) or []
-            
-            if not results:
-                return "No course content available"
-            
-            # Group by document and sample
-            content_parts = []
-            seen_docs = set()
-            
-            for result in results:
-                doc_name = result.get("doc_name", "unknown")
-                if doc_name not in seen_docs:
-                    content = result.get("content", "").strip()
-                    if content and len(content) > 100:
-                        content_parts.append(f"From {doc_name}: {content[:800]}")
-                        seen_docs.add(doc_name)
-                        if len(content_parts) >= 8:  # Limit samples
-                            break
-            
-            return "\n\n---\n\n".join(content_parts)
-            
+            from supabase import create_client
+            SUPABASE_URL = os.getenv("SUPABASE_URL")
+            SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+            sb = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+            resp = sb.table("embeddings") \
+                     .select("doc_name, content") \
+                     .eq("course_id", course_id) \
+                     .limit(1000) \
+                     .execute()
+
+            rows = resp.data or []
+            if not rows:
+                raise RuntimeError("No embeddings found for this course")
+
+            # Group by document
+            by_doc: Dict[str, List[str]] = {}
+            for r in rows:
+                doc = (r.get("doc_name") or "unknown").strip()
+                content = (r.get("content") or "").strip()
+                if not content:
+                    continue
+                by_doc.setdefault(doc, []).append(content)
+
+            # Pick one strong chunk per document (prefer the longest)
+            parts: List[str] = []
+            for doc in sorted(by_doc.keys(), key=lambda d: len(by_doc[d]), reverse=True):
+                chunks = by_doc[doc]
+                best = max(chunks, key=len)
+                if len(best) < 80 and len(chunks) > 1:
+                    best = sorted(chunks, key=len, reverse=True)[0]
+                parts.append(f"From {doc}: {best[:800]}")
+                if len(parts) >= 12:
+                    break
+
+            context = "\n\n---\n\n".join(parts).strip()
+            return context if context else "No course content available"
+
         except Exception as e:
-            print(f"Course content sampling error: {e}")
-            return "Limited course content available"
+            print(f"Course content sampling error (DB path). Falling back to vector store: {e}")
+            try:
+                seeds = [
+                    "overview of course",
+                    "key definitions",
+                    "main theorems and proofs",
+                    "worked examples",
+                    "common pitfalls",
+                    "summary"
+                ]
+                seen_docs = set()
+                parts = []
+                for q in seeds:
+                    emb = self.openai_client.embeddings.create(
+                        model=os.getenv("EMBEDDINGS_MODEL", "text-embedding-3-large"),
+                        input=[q]
+                    )
+                    vec = emb.data[0].embedding
+                    hits = self.vector_store.query(course_id, vec, top_k=6) or []
+                    for h in hits:
+                        doc = (h.get("doc_name") or "unknown").strip()
+                        if doc in seen_docs:
+                            continue
+                        content = (h.get("content") or "").strip()
+                        if not content or len(content) < 80:
+                            continue
+                        parts.append(f"From {doc}: {content[:800]}")
+                        seen_docs.add(doc)
+                        if len(parts) >= 12:
+                            break
+                    if len(parts) >= 12:
+                        break
+
+                return "\n\n---\n\n".join(parts) if parts else "Limited course content available"
+            except Exception as e2:
+                print(f"Vector-store fallback also failed: {e2}")
+                return "Limited course content available"
     
     def generate_exam_questions(self, course_content: str, exam_specs: Dict[str, Any], course_id: str) -> List[Dict[str, Any]]:
-        """Generate exam questions using AI based on course content and specifications"""
+        """Generate exam questions using AI based on course content and specifications (hard bias, avoid MC)."""
         try:
             question_count = exam_specs.get("question_count", 10)
-            difficulty = exam_specs.get("difficulty", "mixed")
-            question_types = exam_specs.get("question_types", ["multiple_choice", "calculation", "short_answer"])
-            
+
+            # Make it harder by default
+            requested_difficulty = exam_specs.get("difficulty", "hard")
+            effective_difficulty = "hard" if requested_difficulty in ("mixed", "", None) else requested_difficulty
+
+            # Avoid multiple choice by default; if FE explicitly wants MC, it can still pass it.
+            incoming_types = exam_specs.get("question_types", ["calculation", "short_answer", "essay", "proof"])
+            effective_types = [t for t in incoming_types if t != "multiple_choice"]
+            if not effective_types:
+                effective_types = ["calculation", "short_answer", "proof"]
+
             # Build detailed prompt
             prompt = f"""
-            Generate {question_count} exam questions based on the course materials provided.
-            
-            COURSE CONTENT:
+            Generate {question_count} HARD exam questions based on the course materials below.
+            Prefer non-multiple-choice questions (calculation, short_answer, proof, essay).
+            Require multi-step reasoning, edge cases, rigor, and where relevant, asymptotic or formal analysis.
+
+            COURSE MATERIALS (multi-document sample):
             {course_content[:6000]}
-            
+
             EXAM SPECIFICATIONS:
-            - Question count: {question_count}
-            - Difficulty: {difficulty}
-            - Types allowed: {question_types}
-            - Time limit: {exam_specs.get('time_limit', 120)} minutes
-            - Subject: {exam_specs.get('subject', 'Academic')}
-            
-            REQUIREMENTS:
-            - Questions must be based on the course content provided
-            - Mix question types as specified
-            - Ensure appropriate difficulty progression
-            - Include point values and time estimates
-            - For multiple choice, provide 4-5 plausible options
-            - For calculations, include units and show work requirements
-            
-            Return JSON array:
-            [{{
-                "id": "q1",
-                "type": "multiple_choice|calculation|short_answer|essay|proof|diagram",
-                "question": "Complete question text",
-                "options": ["option1", "option2", "option3", "option4"] or null,
-                "correct_answer": "A" or "detailed answer",
-                "explanation": "Why this is correct + solution steps if applicable",
-                "points": point_value,
-                "time_estimate": minutes,
-                "difficulty": "easy|medium|hard",
-                "topic": "specific topic area",
-                "solution_steps": ["step1", "step2"] or null
-            }}]
-            
-            Make questions challenging but fair, suitable for exam conditions.
+            - Difficulty target: {effective_difficulty} (lean hard)
+            - Allowed types only: {effective_types}
+            - Time limit (whole exam): {exam_specs.get('time_limit', 120)} minutes
+            - Subject (if known): {exam_specs.get('subject', 'Academic')}
+
+            Constraints:
+            - DO NOT create multiple_choice questions.
+            - Each problem should be self-contained and unambiguous.
+            - Include point values and realistic time estimates.
+            - For calculations/proofs, include a concise solution outline (not full chain-of-thought).
+
+            Return JSON with:
+            {{
+              "questions": [
+                {{
+                  "id": "q1",
+                  "type": "calculation|short_answer|essay|proof|diagram",
+                  "question": "Complete question text",
+                  "options": null,
+                  "correct_answer": "short final answer or brief solution outline",
+                  "explanation": "Key reasoning or steps (concise, no hidden chain-of-thought)",
+                  "points": point_value,
+                  "time_estimate": minutes,
+                  "difficulty": "hard",
+                  "topic": "specific topic area",
+                  "solution_steps": ["step1", "step2"] or null
+                }}
+              ]
+            }}
             """
-            
+
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                max_tokens=4000,
+                max_completion_tokens=4000,
                 response_format={"type": "json_object"}
             )
             
             result = json.loads(response.choices[0].message.content)
             questions = result.get("questions", [])
-            
+
             # Validate and clean questions
-            return self.validate_and_clean_questions(questions)
+            cleaned = self.validate_and_clean_questions(questions)
+
+            # Final enforcement: no MC + hard bias
+            for q in cleaned:
+                if q.get("type") == "multiple_choice":
+                    q["type"] = "short_answer"
+                    q.pop("options", None)
+                q["difficulty"] = "hard"
+
+                # Slightly bump points/time to reflect hardness if not set
+                q["points"] = max(q.get("points", 0), 4)
+                q["time_estimate"] = max(q.get("time_estimate", 0), 6)
+
+            return cleaned
             
         except Exception as e:
             print(f"Question generation error: {e}")
@@ -513,53 +557,45 @@ class ExamGenerator:
     def validate_and_clean_questions(self, questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Validate and clean generated questions"""
         valid_questions = []
-        
         for i, q in enumerate(questions):
             try:
-                # Ensure required fields
                 if not q.get("question") or len(q.get("question", "")) < 10:
                     continue
-                
-                # Clean and validate
                 cleaned_q = {
                     "id": q.get("id", f"q{i+1}"),
                     "type": q.get("type", "short_answer"),
                     "question": q.get("question", "").strip(),
-                    "points": max(1, int(q.get("points", 2))),
-                    "time_estimate": max(1, int(q.get("time_estimate", 3))),
-                    "difficulty": q.get("difficulty", "medium"),
+                    "points": max(1, int(q.get("points", 4))),              # harder default
+                    "time_estimate": max(3, int(q.get("time_estimate", 6))), # harder default
+                    "difficulty": q.get("difficulty", "hard"),
                     "topic": q.get("topic", "General"),
                     "correct_answer": q.get("correct_answer"),
                     "explanation": q.get("explanation", ""),
                     "solution_steps": q.get("solution_steps")
                 }
-                
-                # Handle options for multiple choice
-                if q.get("type") == "multiple_choice" and q.get("options"):
-                    cleaned_q["options"] = q["options"][:5]  # Limit to 5 options
-                
+                # Never keep MC options (we’re avoiding MC)
+                if cleaned_q["type"] == "multiple_choice":
+                    cleaned_q["type"] = "short_answer"
                 valid_questions.append(cleaned_q)
-                
             except Exception as e:
                 print(f"Question validation error: {e}")
                 continue
-        
-        return valid_questions[:20]  # Limit total questions
+        return valid_questions[:20]
     
     def create_fallback_questions(self, exam_specs: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Create basic fallback questions if generation fails"""
+        """Create basic fallback questions if generation fails (hard, non-MC)"""
         return [
             {
                 "id": "fallback_1",
-                "type": "multiple_choice",
-                "question": "This is a sample question. Which of the following best describes the concept being tested?",
-                "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correct_answer": "A",
-                "explanation": "This is a fallback question generated when the system cannot create questions from course materials.",
-                "points": 2,
-                "time_estimate": 3,
-                "difficulty": "medium",
-                "topic": "Sample"
+                "type": "short_answer",
+                "question": "Prove that for any connected, undirected graph G=(V,E), the number of edges in every spanning tree is |V|-1.",
+                "correct_answer": "A spanning tree connects all |V| vertices with no cycles; acyclicity implies exactly |V|-1 edges.",
+                "explanation": "Show that a tree on n vertices has n-1 edges by induction; any extra edge would create a cycle.",
+                "points": 5,
+                "time_estimate": 8,
+                "difficulty": "hard",
+                "topic": "Graph Theory",
+                "solution_steps": ["Base case n=1", "Induction on adding a vertex", "Cyclicity argument"]
             }
         ]
     
@@ -568,19 +604,15 @@ class ExamGenerator:
         instructions = [
             "Read all questions carefully before beginning.",
             "Answer all questions to the best of your ability.",
-            "Show your work for calculation problems.",
+            "Show your work for calculation and proof problems.",
             "Manage your time effectively across all questions."
         ]
-        
         if exam_specs.get("time_limit"):
             instructions.insert(0, f"You have {exam_specs['time_limit']} minutes to complete this exam.")
-        
-        if "calculation" in exam_specs.get("question_types", []):
+        if "calculation" in (exam_specs.get("question_types") or []):
             instructions.append("Include proper units in your final answers for calculation problems.")
-        
-        if "essay" in exam_specs.get("question_types", []):
+        if "essay" in (exam_specs.get("question_types") or []):
             instructions.append("For essay questions, provide detailed explanations with supporting evidence.")
-        
         return instructions
     
     def save_past_paper_analysis(self, course_id: str, analysis: Dict[str, Any]) -> bool:
@@ -590,17 +622,13 @@ class ExamGenerator:
             SUPABASE_URL = os.getenv("SUPABASE_URL")
             SUPABASE_KEY = os.getenv("SUPABASE_KEY")
             supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-            
-            # Save analysis to database
             supabase.table("past_paper_analyses").insert({
                 "course_id": course_id,
                 "filename": analysis.get("filename"),
                 "analysis_data": analysis,
                 "created_at": datetime.now().isoformat()
             }).execute()
-            
             return True
-            
         except Exception as e:
             print(f"Failed to save analysis: {e}")
             return False
@@ -646,9 +674,10 @@ class ExamGenerator:
     def _rag_context(self, course_id: str, query: str, top_k: int = 8) -> str:
         """Retrieve relevant course snippets for grounding."""
         try:
-            # Embed the query
-            emb = self.openai_client.embeddings.create(model=os.getenv("EMBEDDINGS_MODEL","text-embedding-3-large"),
-                                                       input=[query])
+            emb = self.openai_client.embeddings.create(
+                model=os.getenv("EMBEDDINGS_MODEL","text-embedding-3-large"),
+                input=[query]
+            )
             vec = emb.data[0].embedding
             hits = self.vector_store.query(course_id, vec, top_k=top_k) or []
             chunks = []
@@ -672,12 +701,12 @@ class ExamGenerator:
                                    pages: Optional[List[int]] = None,
                                    want_hint: bool = False) -> Dict[str, Any]:
         """
-        Use GPT-5 vision + RAG to solve a question. Supports diagrams via PDF page images.
+        Use GPT-5/4o vision + RAG to solve a question. Supports diagrams via PDF page images.
         Returns dict with: {'answer','steps','choice','units','used_pages'}
         """
         try:
-            vision_model = os.getenv("VISION_MODEL", "gpt-5")
-            text_model = os.getenv("TEXT_MODEL", "gpt-5-mini")
+            vision_model = os.getenv("VISION_MODEL", "gpt-5-vision")
+            text_model = os.getenv("TEXT_MODEL", "gpt-5")
 
             # Build RAG context
             context = self._rag_context(course_id, question_text, top_k=8)
@@ -686,14 +715,12 @@ class ExamGenerator:
             image_blocks = []
             used_pages = []
             if file_bytes:
-                # Try pdfplumber text first (for extra context)
                 pp_text = self.extract_text_from_pdf(file_bytes)
                 if not pp_text or len(pp_text.strip()) < 80:
                     pp_text = self.ocr_pdf_text(file_bytes, pages=pages)
 
                 if pages:
                     used_pages = pages
-                # Attach images for vision
                 b64s = self.pdf_pages_to_images(file_bytes, pages=pages)
                 for b in b64s:
                     image_blocks.append({
@@ -701,7 +728,6 @@ class ExamGenerator:
                         "image_url": { "url": f"data:image/png;base64,{b}" }
                     })
 
-            # Prompt: require structured JSON so FE can render cleanly
             task = "Give a helpful hint only (no final numeric/letter answer)" if want_hint else "Provide the final answer"
             user_content = [
                 {"type":"text","text":
@@ -721,13 +747,12 @@ Instructions:
 - Return strict JSON with keys:
   {{
     "final_answer": "...",       # or "" if hint mode
-    "steps": ["...", "..."],     # concise steps; or hint bullets
+    "steps": ["...", "..."],
     "choice": "A|B|C|D|null",
     "units": "m|s|N|...|null"
   }}
                  """}
             ]
-            # Insert images after text
             user_content.extend(image_blocks)
 
             resp = self.openai_client.chat.completions.create(
@@ -736,7 +761,6 @@ Instructions:
                     {"role":"system","content":"You are a precise exam solver. Return JSON only, no extra prose."},
                     {"role":"user","content": user_content}
                 ],
-                temperature=0.2,
                 max_completion_tokens=1200
             )
 
@@ -744,7 +768,6 @@ Instructions:
             try:
                 obj = json.loads(raw)
             except Exception:
-                # Fallback: wrap into JSON if model slipped prose
                 obj = {"final_answer": raw, "steps": [], "choice": None, "units": None}
 
             obj.setdefault("choice", None)

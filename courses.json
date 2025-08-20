@@ -35,5 +35,25 @@
   "math100": {
     "title": "CALC 1",
     "files": []
+  },
+  "pyhs303": {
+    "title": "Brain and Behaviour",
+    "files": [
+      "Lecture1_Intro2BnB_Neurons.pdf",
+      "Lecture2_Neurons&Neurophysiology1.pdf",
+      "Lecture3_Neurophysiology.pdf",
+      "Lecture4_Neurophysiology&NeuroAnatomy.pdf",
+      "Lecture5_NeuroEdocrinology.pdf",
+      "Lecture6_NeuroEdocrinology2.pdf",
+      "Lecture7_Sensation&Perception.pdf",
+      "Lecture8_Vision2.pdf",
+      "Lecture9_DorsalStream_Hearing.pdf",
+      "S2_Lecture5_Attention_Conciousness.pdf",
+      "S2_Lecture6_Lateralization_Language.pdf",
+      "S2_Lecture7_EmotionStressAgression.pdf",
+      "S2_Lecture8_Stress_DrugsAddiction1.pdf",
+      "S2_Lecture9_DrugsAddiction2.pdf",
+      "S2_Lecture10_Psychopathology.pdf"
+    ]
   }
 }
