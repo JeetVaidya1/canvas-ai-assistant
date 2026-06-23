@@ -29,6 +29,7 @@ import {
 
 import Flashcards from './FlashCards'
 import ConfirmDialog from './shared/ConfirmDialog'
+import { useUser } from '@/hooks/useUser'
 
 interface NotesCreatorProps {
   courseId: string
@@ -138,6 +139,7 @@ const parseFlashcardsFromText = (text: string): { q: string; a: string }[] => {
 }
 
 export default function NotesCreator({ courseId, courseName }: NotesCreatorProps) {
+  const userId = useUser()
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
   const [availableFiles, setAvailableFiles] = useState<string[]>([])
   const [topic, setTopic] = useState('')
@@ -515,7 +517,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
                     {flashcards.length}
                   </span>
                 </h3>
-                <Flashcards cards={flashcards} />
+                <Flashcards cards={flashcards} courseId={courseId} userId={userId} />
               </div>
             )}
 
@@ -703,7 +705,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
             </div>
 
             {savedFlashcards.length > 0 ? (
-              <Flashcards cards={savedFlashcards} />
+              <Flashcards cards={savedFlashcards} courseId={courseId} userId={userId} />
             ) : (
               <div className="text-zinc-400">No flashcards found in this note.</div>
             )}
