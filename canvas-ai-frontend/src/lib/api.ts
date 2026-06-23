@@ -398,6 +398,25 @@ export async function saveNotes(
   return data.note;
 }
 
+export async function updateNote(
+  noteId: string,
+  courseId: string,
+  title: string,
+  content: string,
+  sourceFiles: string[] = [],
+  topic: string = ''
+): Promise<SavedNote> {
+  const form = new FormData();
+  form.append('course_id', courseId);
+  form.append('title', title);
+  form.append('content', content);
+  form.append('source_files', JSON.stringify(sourceFiles));
+  form.append('topic', topic);
+
+  const data = await apiFetch(`/notes/${encodeURIComponent(noteId)}`, { method: 'PUT', body: form });
+  return data.note;
+}
+
 export async function getNotes(courseId: string): Promise<SavedNote[]> {
   const data = await apiFetch(`/notes/${encodeURIComponent(courseId)}`);
   return data.notes || [];

@@ -20,6 +20,7 @@ import {
 import {
   generateNotes,
   saveNotes as apiSaveNotes,
+  updateNote as apiUpdateNote,
   getNotes as apiGetNotes,
   deleteNotes as apiDeleteNotes,
   listFiles,
@@ -234,14 +235,10 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
     setSaving(true)
     setErrMsg(null)
     try {
-      const savedNote = await apiSaveNotes(
-        courseId,
-        noteTitle.trim(),
-        generatedNotes,
-        selectedFiles,
-        topic,
-        currentNoteId
-      )
+      // Editing an existing note -> update in place (PUT); otherwise create (POST).
+      const savedNote = currentNoteId
+        ? await apiUpdateNote(currentNoteId, courseId, noteTitle.trim(), generatedNotes, selectedFiles, topic)
+        : await apiSaveNotes(courseId, noteTitle.trim(), generatedNotes, selectedFiles, topic)
       await loadSavedNotes()
       setCurrentNoteId(savedNote.id)
     } catch (error: any) {
@@ -475,12 +472,12 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
+                      {currentNoteId ? 'Updating...' : 'Saving...'}
                     </>
                   ) : (
                     <>
                       <Save className="w-4 h-4" />
-                      Save
+                      {currentNoteId ? 'Update Note' : 'Save'}
                     </>
                   )}
                 </button>

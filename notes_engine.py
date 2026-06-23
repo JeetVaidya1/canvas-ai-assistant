@@ -160,8 +160,34 @@ def _notes_instruction(style: str, topic: str, allow_gn: bool) -> str:
     gn = ("If essential detail is missing, you may add brief general knowledge seamlessly (no label), "
           "but prefer course sources and do not invent citations.") if allow_gn else \
          ("If a detail is missing from sources, say so briefly; do not add general knowledge.")
-    return f"""
-Write clean, exam-ready lecture notes a top student would keep.
+
+    common_rules = f"""Rules:
+- Prefer COURSE SOURCES; when you rely on them, cite inline like [1:file:page].
+- {gn}
+- No headings like “From your course”; just write the notes.
+- No chain-of-thought.
+{focus}"""
+
+    if style == "summary":
+        body = """Write a concise summary (≤ 500 words) a student can skim before an exam.
+
+Structure:
+## Overview
+3–5 sentences on what this topic is and why it matters.
+## Key Points
+6–10 tight bullets covering the most important facts, definitions, and results
+(cite with [i:file:page] when grounded).
+
+Keep it short and high-signal; omit worked examples, mnemonics, and study plans."""
+    elif style == "outline":
+        body = """Write a structured outline using nested bullets only (no prose paragraphs).
+
+- Use markdown nested bullets (indent with two spaces per level), 2–3 levels deep.
+- Top-level bullets are the major topics; sub-bullets are key terms, facts, and results.
+- Cite grounded points inline like [i:file:page].
+- Be comprehensive but terse — fragments, not sentences. No worked examples or study plans."""
+    else:  # "detailed" (default) — the full 11-section format
+        body = """Write clean, exam-ready lecture notes a top student would keep.
 
 Sections (in order, with concise content):
 1. Overview — 3–5 bullets: what this topic is and why it matters.
@@ -176,17 +202,10 @@ Sections (in order, with concise content):
 10. Mnemonics — a couple memory hooks.
 11. Quick study plans — 30 / 60 / 120 min.
 
-Rules:
-- Prefer COURSE SOURCES; when you rely on them, cite inline like [1:file:page].
-- {gn}
-- Keep tone friendly and precise; short paragraphs; tidy bullets.
-- No headings like “From your course”; just write the notes.
-- No chain-of-thought.
+Keep tone friendly and precise; short paragraphs; tidy bullets.
+Use markdown headings (##) for sections; bullets where helpful; avoid walls of text."""
 
-Formatting:
-- Use markdown headings (##) for sections; bullets where helpful; avoid walls of text.
-{focus}
-"""
+    return f"\n{body}\n\n{common_rules}\n"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Core generation + QA polish
@@ -220,9 +239,16 @@ Return only the final notes content (markdown). Keep it smooth and readable; cit
         )
         draft = (r.choices[0].message.content or "").strip()
 
-        # QA / polish pass — keep structure, fix small issues
+        # QA / polish pass — keep structure, fix small issues. Style-aware so we
+        # don't re-impose headings on an outline or pad a summary.
+        if style == "outline":
+            structure_rule = "- Keep the nested-bullet outline format; do NOT add prose paragraphs or '##' headings."
+        elif style == "summary":
+            structure_rule = "- Keep it concise (≤ 500 words); keep the '## Overview' and '## Key Points' sections."
+        else:
+            structure_rule = "- Ensure section headings use '## ' and are in the specified order."
         qa_prompt = f"""Edit the notes to improve clarity and flow without changing meaning.
-- Ensure section headings use '## ' and are in the specified order.
+{structure_rule}
 - Keep paragraphs short; prefer tidy bullets.
 - Leave inline source tags like [1:file:page] where used.
 Return the improved notes only.
