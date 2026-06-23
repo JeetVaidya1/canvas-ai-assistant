@@ -98,9 +98,9 @@ Rules:
             r = self.openai_client.chat.completions.create(
                 model=MODEL_DEFAULT,
                 messages=[{"role": "user", "content": prompt}],
-                max_completion_tokens=60
+                max_tokens=60
             )
-            out = (r.choices[0].message.content or "").trim()
+            out = (r.choices[0].message.content or "").strip()
             print(f"🔍 Enhanced query: {out}")
             return out if out else question
         except Exception as e:
@@ -174,7 +174,7 @@ Return JSON list of indices most→least relevant, e.g. [3,1,2,...]. No comments
                     rr = self.openai_client.chat.completions.create(
                         model=MODEL_DEFAULT,
                         messages=[{"role": "user", "content": rerank_prompt}],
-                        max_completion_tokens=80
+                        max_tokens=80
                     )
                     order = json.loads((rr.choices[0].message.content or "[]").strip())
                     # Reorder
@@ -342,7 +342,7 @@ WRITE ONE NATURAL, CONCISE ANSWER:
             resp = self.openai_client.chat.completions.create(
                 model=model,
                 messages=messages,
-                max_completion_tokens=max_tokens
+                max_tokens=max_tokens
             )
             answer = resp.choices[0].message.content or ""
             return self.clean_response(answer)
