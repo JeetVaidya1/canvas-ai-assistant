@@ -6,7 +6,7 @@ import hashlib
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from providers import make_client
+from providers import make_client, structured_call
 from vector_store import VectorStore
 import pdfplumber
 import io
@@ -19,6 +19,52 @@ except Exception:
     OCR_OK = False
 
 load_dotenv()
+
+# Difficulty guidance shared by exam generation (mirrors quiz/practice wording).
+EXAM_DIFFICULTY_SPECS = {
+    "easy": "Recall, definitions, and single-concept understanding (Bloom: Remember/Understand).",
+    "medium": "Application and analysis with multi-step reasoning across connected concepts (Bloom: Apply/Analyze).",
+    "hard": "Synthesis, evaluation, rigor, edge cases, and formal/asymptotic analysis (Bloom: Evaluate/Create).",
+}
+
+# Schema for guaranteed-structure exam question generation. Supports both
+# multiple-choice (with options) and free-response (calculation/short_answer/
+# essay/proof/diagram) question types.
+EXAM_QUESTION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "questions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": ["multiple_choice", "calculation", "short_answer", "essay", "proof", "diagram"],
+                    },
+                    "question": {"type": "string", "description": "Complete, self-contained question text."},
+                    "options": {
+                        "type": ["array", "null"],
+                        "items": {"type": "string"},
+                        "description": "For multiple_choice only: four options prefixed 'A) '..'D) '. Null otherwise.",
+                    },
+                    "correct_answer": {
+                        "type": "string",
+                        "description": "For multiple_choice: the letter (A/B/C/D). Otherwise a short final answer or solution outline.",
+                    },
+                    "explanation": {"type": "string", "description": "Concise key reasoning (no hidden chain-of-thought)."},
+                    "points": {"type": "integer"},
+                    "time_estimate": {"type": "integer", "description": "Estimated minutes."},
+                    "difficulty": {"type": "string", "enum": ["easy", "medium", "hard"]},
+                    "topic": {"type": "string", "description": "Specific topic area."},
+                },
+                "required": ["type", "question", "correct_answer", "explanation", "points", "topic"],
+            },
+        }
+    },
+    "required": ["questions"],
+}
+
 
 class ExamGenerator:
     """Generate practice exams from past papers and course materials"""
@@ -278,7 +324,7 @@ class ExamGenerator:
         easy_words = ['define', 'list', 'identify', 'state', 'basic', 'simple']
         if any(word in text_lower for word in easy_words):
             return "easy"
-        return "hard"  # default bias to harder
+        return "medium"  # neutral default; respect the requested difficulty elsewhere
     
     def extract_topic(self, text: str) -> str:
         """Extract topic/subject from question text"""
@@ -371,7 +417,7 @@ class ExamGenerator:
                 "time_limit": exam_specs.get("time_limit", 120),
                 "total_points": sum(q.get("points", 0) for q in questions),
                 "question_count": len(questions),
-                "difficulty": exam_specs.get("difficulty", "hard"),  # default bias to hard
+                "difficulty": exam_specs.get("difficulty", "medium"),  # respect requested difficulty
                 "created_at": datetime.now().isoformat(),
                 "instructions": self.generate_exam_instructions(exam_specs)
             }
@@ -469,113 +515,130 @@ class ExamGenerator:
                 return "Limited course content available"
     
     def generate_exam_questions(self, course_content: str, exam_specs: Dict[str, Any], course_id: str) -> List[Dict[str, Any]]:
-        """Generate exam questions using AI based on course content and specifications (hard bias, avoid MC)."""
+        """Generate exam questions, respecting the requested difficulty and types.
+
+        Uses guaranteed-schema tool use (structured_call) and grounds questions in
+        retrieved course material. Multiple-choice is supported when requested.
+        """
         try:
             question_count = exam_specs.get("question_count", 10)
 
-            # Make it harder by default
-            requested_difficulty = exam_specs.get("difficulty", "hard")
-            effective_difficulty = "hard" if requested_difficulty in ("mixed", "", None) else requested_difficulty
+            # Respect the requested difficulty. "mixed"/blank => let the model vary
+            # difficulty per question; a concrete level => target that level.
+            requested_difficulty = (exam_specs.get("difficulty") or "medium").lower()
+            mixed = requested_difficulty in ("mixed", "", "any")
+            target_difficulty = "medium" if mixed else requested_difficulty
+            if target_difficulty not in EXAM_DIFFICULTY_SPECS:
+                target_difficulty = "medium"
 
-            # Avoid multiple choice by default; if FE explicitly wants MC, it can still pass it.
-            incoming_types = exam_specs.get("question_types", ["calculation", "short_answer", "essay", "proof"])
-            effective_types = [t for t in incoming_types if t != "multiple_choice"]
-            if not effective_types:
-                effective_types = ["calculation", "short_answer", "proof"]
+            # Respect requested question types, including multiple_choice.
+            allowed_types = exam_specs.get("question_types") or [
+                "calculation", "short_answer", "essay", "proof", "multiple_choice"
+            ]
+            allow_mc = "multiple_choice" in allowed_types
 
-            # Build detailed prompt
-            prompt = f"""
-            Generate {question_count} HARD exam questions based on the course materials below.
-            Prefer non-multiple-choice questions (calculation, short_answer, proof, essay).
-            Require multi-step reasoning, edge cases, rigor, and where relevant, asymptotic or formal analysis.
+            # Add grounded retrieval on top of the broad multi-document sample.
+            grounded = self._grounded_exam_context(course_id, exam_specs)
+            context = (grounded + "\n\n" + course_content) if grounded else course_content
 
-            COURSE MATERIALS (multi-document sample):
-            {course_content[:6000]}
-
-            EXAM SPECIFICATIONS:
-            - Difficulty target: {effective_difficulty} (lean hard)
-            - Allowed types only: {effective_types}
-            - Time limit (whole exam): {exam_specs.get('time_limit', 120)} minutes
-            - Subject (if known): {exam_specs.get('subject', 'Academic')}
-
-            Constraints:
-            - DO NOT create multiple_choice questions.
-            - Each problem should be self-contained and unambiguous.
-            - Include point values and realistic time estimates.
-            - For calculations/proofs, include a concise solution outline (not full chain-of-thought).
-
-            Return JSON with:
-            {{
-              "questions": [
-                {{
-                  "id": "q1",
-                  "type": "calculation|short_answer|essay|proof|diagram",
-                  "question": "Complete question text",
-                  "options": null,
-                  "correct_answer": "short final answer or brief solution outline",
-                  "explanation": "Key reasoning or steps (concise, no hidden chain-of-thought)",
-                  "points": point_value,
-                  "time_estimate": minutes,
-                  "difficulty": "hard",
-                  "topic": "specific topic area",
-                  "solution_steps": ["step1", "step2"] or null
-                }}
-              ]
-            }}
-            """
-
-            response = self.openai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": "user", "content": prompt}],
-                max_completion_tokens=4000,
-                response_format={"type": "json_object"}
+            difficulty_line = (
+                "Vary difficulty across easy/medium/hard for good coverage."
+                if mixed else
+                f"Target {target_difficulty.upper()} difficulty: {EXAM_DIFFICULTY_SPECS[target_difficulty]}"
             )
-            
-            result = json.loads(response.choices[0].message.content)
-            questions = result.get("questions", [])
+            mc_line = (
+                "- Multiple-choice questions are allowed: when type is 'multiple_choice', provide exactly four "
+                "options prefixed 'A) '..'D) ' and set correct_answer to the letter (A/B/C/D)."
+                if allow_mc else
+                "- Do NOT create multiple_choice questions."
+            )
 
-            # Validate and clean questions
-            cleaned = self.validate_and_clean_questions(questions)
+            prompt = f"""Generate {question_count} exam questions based STRICTLY on the course materials below.
 
-            # Final enforcement: no MC + hard bias
-            for q in cleaned:
-                if q.get("type") == "multiple_choice":
-                    q["type"] = "short_answer"
-                    q.pop("options", None)
-                q["difficulty"] = "hard"
+COURSE MATERIALS (multi-document sample):
+{context[:6000]}
 
-                # Slightly bump points/time to reflect hardness if not set
-                q["points"] = max(q.get("points", 0), 4)
-                q["time_estimate"] = max(q.get("time_estimate", 0), 6)
+EXAM SPECIFICATIONS:
+- {difficulty_line}
+- Allowed question types: {allowed_types}
+- Subject (if known): {exam_specs.get('subject', 'Academic')}
 
-            return cleaned
-            
+CONSTRAINTS:
+{mc_line}
+- Each problem must be self-contained, unambiguous, and grounded in the materials.
+- Include realistic point values and per-question time estimates (minutes).
+- For calculations/proofs, give a concise solution outline in correct_answer (no hidden chain-of-thought).
+- Set each question's "difficulty" to its actual level."""
+
+            out = structured_call(
+                [{"role": "user", "content": prompt}],
+                schema=EXAM_QUESTION_SCHEMA,
+                tool_name="exam_questions",
+                model=os.getenv("MODEL_COMPLEX"),
+                max_tokens=4000,
+            )
+            questions = out.get("questions", []) if isinstance(out, dict) else []
+
+            cleaned = self.validate_and_clean_questions(
+                questions, default_difficulty=target_difficulty, allow_mc=allow_mc
+            )
+            return cleaned or self.create_fallback_questions(exam_specs)
+
         except Exception as e:
             print(f"Question generation error: {e}")
             return self.create_fallback_questions(exam_specs)
-    
-    def validate_and_clean_questions(self, questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Validate and clean generated questions"""
+
+    def _grounded_exam_context(self, course_id: str, exam_specs: Dict[str, Any]) -> str:
+        """Retrieve grounded context for the exam subject/topics via the canonical
+        hybrid + reranked retriever. Best-effort; returns '' on any failure."""
+        try:
+            from rag.retrieval import retrieve
+            query = (exam_specs.get("subject")
+                     or " ".join(exam_specs.get("topics", []))
+                     or "key concepts, definitions, theorems, and worked examples")
+            rows = retrieve(query, course_id, top_k=6)
+            parts = []
+            for r in rows:
+                doc = r.get("doc_name", "unknown")
+                page = r.get("page") or r.get("slide")
+                head = f"From {doc}" + (f" (p.{page})" if page else "")
+                parts.append(f"{head}: {(r.get('content') or '').strip()[:700]}")
+            return "\n\n---\n\n".join(parts)
+        except Exception as e:  # noqa: BLE001
+            print(f"Grounded exam context failed (non-fatal): {e}")
+            return ""
+
+    def validate_and_clean_questions(self, questions: List[Dict[str, Any]],
+                                     default_difficulty: str = "medium",
+                                     allow_mc: bool = True) -> List[Dict[str, Any]]:
+        """Validate and clean generated questions, preserving MC + options."""
         valid_questions = []
         for i, q in enumerate(questions):
             try:
                 if not q.get("question") or len(q.get("question", "")) < 10:
                     continue
+                q_type = q.get("type", "short_answer")
+                options = q.get("options")
+                # Drop MC only if it wasn't requested; otherwise keep options intact.
+                if q_type == "multiple_choice" and not allow_mc:
+                    q_type = "short_answer"
+                    options = None
+                difficulty = q.get("difficulty") or default_difficulty
+                if difficulty not in EXAM_DIFFICULTY_SPECS:
+                    difficulty = default_difficulty
                 cleaned_q = {
                     "id": q.get("id", f"q{i+1}"),
-                    "type": q.get("type", "short_answer"),
+                    "type": q_type,
                     "question": q.get("question", "").strip(),
-                    "points": max(1, int(q.get("points", 4))),              # harder default
-                    "time_estimate": max(3, int(q.get("time_estimate", 6))), # harder default
-                    "difficulty": q.get("difficulty", "hard"),
+                    "options": options if q_type == "multiple_choice" else None,
+                    "points": max(1, int(q.get("points", 4))),
+                    "time_estimate": max(2, int(q.get("time_estimate", 5))),
+                    "difficulty": difficulty,
                     "topic": q.get("topic", "General"),
                     "correct_answer": q.get("correct_answer"),
                     "explanation": q.get("explanation", ""),
-                    "solution_steps": q.get("solution_steps")
+                    "solution_steps": q.get("solution_steps"),
                 }
-                # Never keep MC options (we’re avoiding MC)
-                if cleaned_q["type"] == "multiple_choice":
-                    cleaned_q["type"] = "short_answer"
                 valid_questions.append(cleaned_q)
             except Exception as e:
                 print(f"Question validation error: {e}")
