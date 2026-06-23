@@ -395,6 +395,67 @@ async def ask_endpoint(
         "answer": answer
     }
 
+
+@app.post("/ask/stream")
+async def ask_stream_endpoint(
+    question: str = Form(...),
+    course_id: str = Form(...),
+    session_id: str | None = Form(None),
+    user_id: str = Form("anonymous"),
+):
+    """Streaming chat: emits Server-Sent Events with answer text deltas."""
+    from fastapi.responses import StreamingResponse
+    from conversational_rag_engine import conversational_ask_stream
+
+    # 1) Ensure a chat session exists, then record the question (same as /ask).
+    if not session_id:
+        try:
+            resp = supabase.table("chat_sessions").insert({
+                "user_id": user_id,
+                "course_id": course_id,
+                "title": question[:50],
+                "created_at": datetime.utcnow().isoformat(),
+            }).execute()
+            session_id = resp.data[0]["id"]
+        except Exception as e:
+            raise HTTPException(500, detail=f"Couldn't create session: {e}")
+    try:
+        supabase.table("messages").insert({
+            "session_id": session_id,
+            "role": "user",
+            "content": question,
+            "timestamp": datetime.utcnow().isoformat(),
+        }).execute()
+    except Exception as e:
+        raise HTTPException(500, detail=f"Couldn't save question: {e}")
+
+    def event_stream():
+        # First event carries the session id so the client can track it.
+        yield f"data: {json.dumps({'session_id': session_id})}\n\n"
+        collected = []
+        try:
+            for delta in conversational_ask_stream(question, course_id, session_id):
+                collected.append(delta)
+                yield f"data: {json.dumps({'delta': delta})}\n\n"
+        except Exception as e:
+            print(f"❌ Stream failed: {e}")
+            yield f"data: {json.dumps({'delta': ' (stream interrupted)'})}\n\n"
+        answer = "".join(collected).strip()
+        # Persist the assistant message once the stream completes.
+        try:
+            supabase.table("messages").insert({
+                "session_id": session_id,
+                "role": "assistant",
+                "content": answer,
+                "timestamp": datetime.utcnow().isoformat(),
+            }).execute()
+        except Exception as e:
+            print(f"Couldn't save streamed answer: {e}")
+        yield f"data: {json.dumps({'done': True, 'session_id': session_id})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
 @app.get("/list-courses")
 def list_courses():
     try:

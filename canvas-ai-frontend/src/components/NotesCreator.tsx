@@ -1,5 +1,6 @@
 // src/components/NotesCreator.tsx — GPT-5 aligned, robust (Saved Notes practice button always visible)
 import { useState, useEffect, useMemo } from 'react'
+import { Markdown } from '@/components/ui/Markdown'
 import {
   FileText,
   Save,
@@ -496,9 +497,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
               </div>
             ) : previewMode ? (
               <div className="prose prose-lg prose-invert max-w-none">
-                <div className="whitespace-pre-wrap leading-relaxed text-zinc-400">
-                  {generatedNotes}
-                </div>
+                <Markdown content={generatedNotes} className="text-zinc-300" />
               </div>
             ) : (
               <textarea

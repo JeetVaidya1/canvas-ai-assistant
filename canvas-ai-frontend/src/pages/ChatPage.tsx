@@ -10,12 +10,13 @@ import {
   CheckCircle,
   Bot,
 } from 'lucide-react'
+import { Markdown } from '@/components/ui/Markdown'
 import { useUser } from '@/hooks/useUser'
 import { useCourses } from '@/hooks/useCourses'
 import { useCourseFiles } from '@/hooks/useCourseFiles'
 import { trackVisit } from '@/hooks/useRecentActivity'
 import {
-  askQuestion,
+  askQuestionStream,
   getChatSessions,
   getSessionMessages,
   deleteSession,
@@ -92,20 +93,43 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, userMessage])
 
     try {
-      const resp = await askQuestion(userQuestion, courseId, activeSession?.id, userId)
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        session_id: resp.session_id || activeSession?.id || '',
-        role: 'assistant',
-        content: resp.answer,
-        timestamp: new Date().toISOString(),
-      }
-      setMessages((prev) => [...prev, assistantMessage])
+      const assistantId = `assistant-${Date.now()}`
+      let started = false
+      let newSessionId = activeSession?.id
 
-      if (!activeSession && resp.session_id) {
+      await askQuestionStream(userQuestion, courseId, activeSession?.id, userId, {
+        onSession: (id) => {
+          newSessionId = id
+        },
+        onToken: (delta) => {
+          if (!started) {
+            started = true
+            setIsTyping(false)
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: assistantId,
+                session_id: newSessionId || '',
+                role: 'assistant',
+                content: delta,
+                timestamp: new Date().toISOString(),
+              },
+            ])
+          } else {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + delta } : m)),
+            )
+          }
+        },
+        onDone: (id) => {
+          if (id) newSessionId = id
+        },
+      })
+
+      if (!activeSession && newSessionId) {
         await loadSessions()
         const refreshed = await getChatSessions(userId)
-        const newSess = refreshed.find((s) => s.id === resp.session_id)
+        const newSess = refreshed.find((s) => s.id === newSessionId)
         if (newSess) setActiveSession(newSess)
       }
     } catch {
@@ -256,7 +280,11 @@ export default function ChatPage() {
                           : 'bg-zinc-800 text-zinc-200 border border-zinc-700'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap leading-relaxed text-sm">{msg.content}</p>
+                      {msg.role === 'user' ? (
+                        <p className="whitespace-pre-wrap leading-relaxed text-sm">{msg.content}</p>
+                      ) : (
+                        <Markdown content={msg.content} className="text-sm" />
+                      )}
                     </div>
                     <p className="text-xs text-zinc-600 mt-1 px-1">
                       {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
