@@ -914,13 +914,26 @@ export async function exportPlannerIcal(courseId: string): Promise<Blob> {
 }
 
 /** ===== Canvas LMS Import ===== */
+export interface CanvasImportResult {
+  syllabus_imported: boolean
+  assignments: Array<{ name: string; due_at: string; is_exam: boolean }>
+  exam_dates: Array<{ name: string; due_at: string; is_exam: boolean }>
+  next_exam_date: string | null
+  materials_imported: number
+  errors: string[]
+}
+
 export async function importCanvasLms(
+  baseUrl: string,
   token: string,
-  canvasCourseId: string
-): Promise<{ status: string; message: string }> {
+  canvasCourseId: string,
+  courseId: string
+): Promise<CanvasImportResult> {
   const form = new FormData()
+  form.append('canvas_base_url', baseUrl)
   form.append('canvas_token', token)
   form.append('canvas_course_id', canvasCourseId)
-  return apiFetch('/api/import-canvas', { method: 'POST', body: form })
+  form.append('course_id', courseId)
+  return apiFetch('/api/import-canvas', { method: 'POST', body: form }, 300_000)
 }
 

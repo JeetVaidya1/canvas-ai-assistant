@@ -48,6 +48,9 @@ export default function PlannerPage() {
     void getStudyPlan(courseId).then((p) => {
       if (p) setPlan(p)
     })
+    // Prefill the exam date if a Canvas import detected one.
+    const detected = localStorage.getItem(`vindexa_exam_date_${courseId}`)
+    if (detected) setExamDate(detected)
   }, [courseId])
 
   const handleGenerate = async () => {
