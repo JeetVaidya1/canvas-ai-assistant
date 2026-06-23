@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Download, Github, Upload, ChevronDown, Sparkles, GraduationCap } from 'lucide-react'
-import { exportCourseMarkdown, githubPush, githubImport, getContextPack, importCanvasLms } from '@/lib/api'
+import { useState, useEffect } from 'react'
+import { Download, Github, Upload, ChevronDown, Sparkles, GraduationCap, Users, Copy } from 'lucide-react'
+import { exportCourseMarkdown, githubPush, githubImport, getContextPack, importCanvasLms, publishCourse, getShareInfo } from '@/lib/api'
 import { useUser } from '@/hooks/useUser'
 import { showError, showSuccess } from '@/lib/toast'
 
@@ -17,7 +17,29 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
   const [canvasUrl, setCanvasUrl] = useState('https://canvas.instructure.com')
   const [canvasToken, setCanvasToken] = useState('')
   const [canvasCourse, setCanvasCourse] = useState('')
-  const [busy, setBusy] = useState<'export' | 'push' | 'import' | 'context' | 'canvas' | null>(null)
+  const [busy, setBusy] = useState<'export' | 'push' | 'import' | 'context' | 'canvas' | 'publish' | null>(null)
+  const [shareCode, setShareCode] = useState<string | null>(null)
+  const [joinCount, setJoinCount] = useState(0)
+
+  useEffect(() => {
+    if (!courseId) return
+    getShareInfo(courseId).then((info) => {
+      if (info) { setShareCode(info.share_code); setJoinCount(info.join_count || 0) }
+    }).catch(() => { /* not published yet */ })
+  }, [courseId])
+
+  const handlePublish = async () => {
+    setBusy('publish')
+    try {
+      const r = await publishCourse(courseId, userId)
+      setShareCode(r.share_code)
+      showSuccess(r.republished ? 'Catalog listing updated' : `Published — share code ${r.share_code}`)
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Publish failed')
+    } finally {
+      setBusy(null)
+    }
+  }
 
   const handleCanvasImport = async () => {
     if (!canvasUrl || !canvasToken || !canvasCourse) {
@@ -116,6 +138,40 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
 
       {open && (
         <div className="px-4 pb-4 space-y-4 border-t border-zinc-700/40 pt-4">
+          <div className="border-b border-zinc-700/40 pb-4">
+            {shareCode ? (
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Users className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm font-medium text-zinc-100">Published to the class catalog</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="px-2.5 py-1 bg-zinc-900 border border-zinc-700 rounded text-emerald-400 text-sm font-mono tracking-widest">{shareCode}</code>
+                  <button
+                    onClick={() => { void navigator.clipboard.writeText(shareCode); showSuccess('Share code copied') }}
+                    className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg"
+                    title="Copy share code"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs text-zinc-500">{joinCount} classmate{joinCount === 1 ? '' : 's'} joined</span>
+                </div>
+                <p className="text-xs text-zinc-500 mt-1.5">Classmates enter this code to study the same course — each keeps their own progress.</p>
+              </div>
+            ) : (
+              <div>
+                <button
+                  onClick={() => void handlePublish()}
+                  disabled={busy === 'publish'}
+                  className="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-500 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
+                >
+                  <Users className="w-4 h-4" /> {busy === 'publish' ? 'Publishing…' : 'Share with your class'}
+                </button>
+                <p className="text-xs text-zinc-500 mt-1.5">Publish this course so classmates can join with a code. You stay the owner.</p>
+              </div>
+            )}
+          </div>
+
           <div>
             <button
               onClick={() => void handleCopyContext()}

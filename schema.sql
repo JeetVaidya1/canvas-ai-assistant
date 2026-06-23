@@ -187,6 +187,33 @@ create table if not exists practice_sessions (
 create index if not exists practice_sessions_idx on practice_sessions (user_id, course_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
+-- Shared class courses (Phase 5) — publish/join catalog + per-user membership
+-- ---------------------------------------------------------------------------
+create table if not exists shared_courses (
+    course_id    text primary key references courses(course_id) on delete cascade,
+    share_code   text unique,
+    title        text,
+    subject      text,
+    school       text,
+    term         text,
+    description  text,
+    published_by text,
+    join_count   integer default 0,
+    created_at   timestamptz not null default now()
+);
+create index if not exists shared_courses_code_idx on shared_courses (share_code);
+
+create table if not exists course_memberships (
+    id        bigint generated always as identity primary key,
+    user_id   text,
+    course_id text,
+    role      text default 'member',
+    joined_at timestamptz not null default now(),
+    unique (user_id, course_id)
+);
+create index if not exists course_memberships_user_idx on course_memberships (user_id);
+
+-- ---------------------------------------------------------------------------
 -- Concept prerequisite graph (Phase 4) — one DAG per course
 -- ---------------------------------------------------------------------------
 create table if not exists concept_graphs (
