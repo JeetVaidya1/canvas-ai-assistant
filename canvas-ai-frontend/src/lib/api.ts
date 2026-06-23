@@ -328,6 +328,12 @@ export async function submitQuiz(
   return apiFetch(`/quiz/${encodeURIComponent(quizId)}/submit`, { method: 'POST', body: form })
 }
 
+/** ===== Export to AIs (Phase 4) ===== */
+export async function getContextPack(courseId: string, userId: string = 'anonymous'): Promise<string> {
+  const data = await apiFetch(`/api/context-pack/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`, undefined, 120_000)
+  return data.markdown || ''
+}
+
 /** ===== GitHub / Markdown interop (Phase 4) ===== */
 export async function exportCourseMarkdown(courseId: string): Promise<Blob> {
   const ctrl = new AbortController()
