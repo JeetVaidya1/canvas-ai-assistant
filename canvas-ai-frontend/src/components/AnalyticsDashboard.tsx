@@ -1,6 +1,18 @@
 // src/components/AnalyticsDashboard.tsx
 import { useState, useEffect } from 'react'
 import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  CartesianGrid,
+} from 'recharts'
+import {
   TrendingUp,
   Target,
   Brain,
@@ -28,7 +40,26 @@ interface AnalyticsData {
   study_time_trend: Array<{
     date: string
     questions: number
+    duration_minutes?: number
+    avg_confidence?: number
   }>
+}
+
+const MASTERY_COLORS = ['#ef4444', '#f59e0b', '#06b6d4', '#10b981']
+
+function masteryColor(level: number): string {
+  if (level >= 0.8) return MASTERY_COLORS[3]
+  if (level >= 0.7) return MASTERY_COLORS[2]
+  if (level >= 0.5) return MASTERY_COLORS[1]
+  return MASTERY_COLORS[0]
+}
+
+function shortDate(iso: string): string {
+  try {
+    return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  } catch {
+    return iso
+  }
 }
 
 interface AnalyticsDashboardProps {
@@ -57,16 +88,6 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
       setLoading(false)
     }
   }
-
-  const getMasteryLabel = (level: number) => {
-    if (level >= 0.9) return { label: 'Expert', color: 'text-emerald-400 bg-emerald-500/10' }
-    if (level >= 0.8) return { label: 'Advanced', color: 'text-cyan-400 bg-cyan-500/10' }
-    if (level >= 0.7) return { label: 'Proficient', color: 'text-amber-400 bg-amber-500/10' }
-    if (level >= 0.5) return { label: 'Learning', color: 'text-amber-400 bg-amber-500/10' }
-    return { label: 'Beginner', color: 'text-red-400 bg-red-500/10' }
-  }
-
-  const getMasteryWidth = (level: number) => `${Math.round(level * 100)}%`
 
   if (loading) {
     return (
@@ -184,45 +205,93 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
             <p>No topics studied yet. Start asking questions to see progress!</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {analytics.topics_progress.map((topic, index) => {
-              const mastery = getMasteryLabel(topic.mastery_level)
-              return (
-                <div key={index} className="border border-zinc-700 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-zinc-50 capitalize">{topic.topic}</h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${mastery.color}`}>
-                        {mastery.label}
-                      </span>
-                    </div>
-                    <div className="text-sm text-zinc-400">
-                      {topic.review_count} reviews
-                    </div>
-                  </div>
-
-                  <div className="mb-2">
-                    <div className="flex justify-between text-sm text-zinc-400 mb-1">
-                      <span>Progress</span>
-                      <span>{Math.round(topic.mastery_level * 100)}%</span>
-                    </div>
-                    <div className="w-full bg-zinc-800 rounded-full h-2">
-                      <div
-                        className="bg-cyan-600 h-2 rounded-full transition-all duration-500"
-                        style={{ width: getMasteryWidth(topic.mastery_level) }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-zinc-400">
-                    Last reviewed: {new Date(topic.last_reviewed).toLocaleDateString()}
-                  </div>
-                </div>
-              )
-            })}
+          <div style={{ height: Math.max(160, analytics.topics_progress.length * 40) }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={analytics.topics_progress.map((t) => ({
+                  topic: t.topic,
+                  mastery: Math.round(t.mastery_level * 100),
+                }))}
+                layout="vertical"
+                margin={{ left: 8, right: 24, top: 4, bottom: 4 }}
+              >
+                <XAxis type="number" domain={[0, 100]} tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" unit="%" />
+                <YAxis type="category" dataKey="topic" width={150} tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" />
+                <Tooltip
+                  cursor={{ fill: '#27272a' }}
+                  contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
+                  formatter={(value) => [`${value}%`, 'Mastery']}
+                />
+                <Bar dataKey="mastery" radius={[0, 4, 4, 0]}>
+                  {analytics.topics_progress.map((t, i) => (
+                    <Cell key={i} fill={masteryColor(t.mastery_level)} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </div>
+
+      {/* Study Activity Trend */}
+      {analytics.study_time_trend.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
+            <h2 className="text-lg font-bold text-zinc-50 mb-4 flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-cyan-400" />
+              Study Time
+            </h2>
+            <div style={{ height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={analytics.study_time_trend.map((d) => ({
+                    date: shortDate(d.date),
+                    minutes: d.duration_minutes ?? 0,
+                    questions: d.questions,
+                  }))}
+                  margin={{ left: 0, right: 16, top: 8, bottom: 4 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis dataKey="date" tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" />
+                  <YAxis tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" />
+                  <Tooltip
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
+                    formatter={(value, name) => [name === 'minutes' ? `${value} min` : value, name === 'minutes' ? 'Study time' : 'Questions']}
+                  />
+                  <Line type="monotone" dataKey="minutes" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
+            <h2 className="text-lg font-bold text-zinc-50 mb-4 flex items-center gap-3">
+              <Target className="w-5 h-5 text-emerald-400" />
+              Confidence Over Time
+            </h2>
+            <div style={{ height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={analytics.study_time_trend.map((d) => ({
+                    date: shortDate(d.date),
+                    confidence: Math.round((d.avg_confidence ?? 0) * 100),
+                  }))}
+                  margin={{ left: 0, right: 16, top: 8, bottom: 4 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis dataKey="date" tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" />
+                  <YAxis domain={[0, 100]} tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" unit="%" />
+                  <Tooltip
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
+                    formatter={(value) => [`${value}%`, 'Avg confidence']}
+                  />
+                  <Line type="monotone" dataKey="confidence" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Weak Areas & Recommendations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

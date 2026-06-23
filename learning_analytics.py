@@ -40,6 +40,92 @@ class LearningAnalyticsEngine:
             print(f"Failed to track interaction: {e}")
             return False
     
+    def track_practice_session(self, user_id: str, course_id: str, topic: str,
+                               problems_attempted: int, problems_correct: int,
+                               duration_minutes: int, difficulty_level: str) -> bool:
+        """Persist a completed practice session and update topic mastery.
+
+        Stores a row in ``practice_sessions`` (real per-session duration powers the
+        study-time trend) and updates ``learning_progress`` using the explicit topic.
+        """
+        confidence = (problems_correct / problems_attempted) if problems_attempted > 0 else 0.5
+        try:
+            supabase.table("practice_sessions").insert({
+                "user_id": user_id,
+                "course_id": course_id,
+                "topic": topic,
+                "problems_attempted": problems_attempted,
+                "problems_correct": problems_correct,
+                "duration_minutes": duration_minutes,
+                "difficulty_level": difficulty_level,
+                "created_at": datetime.utcnow().isoformat(),
+            }).execute()
+            self.update_learning_progress(user_id, course_id, topic, confidence, topic=topic)
+            return True
+        except Exception as e:
+            print(f"Failed to track practice session: {e}")
+            return False
+
+    def get_study_time_trend(self, user_id: str, course_id: str, days: int = 30) -> List[Dict[str, Any]]:
+        """Per-day study activity over the last ``days`` days.
+
+        Returns [{date, questions, duration_minutes, avg_confidence}] sorted by date.
+        Questions + confidence come from user_interactions; duration comes from
+        practice_sessions (real timer) plus a small estimate per interaction so
+        chat/quiz-only days still register time.
+        """
+        try:
+            since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+
+            interactions = supabase.table("user_interactions") \
+                .select("confidence_score, timestamp") \
+                .eq("user_id", user_id).eq("course_id", course_id) \
+                .gte("timestamp", since).execute().data or []
+
+            sessions = supabase.table("practice_sessions") \
+                .select("duration_minutes, created_at") \
+                .eq("user_id", user_id).eq("course_id", course_id) \
+                .gte("created_at", since).execute().data or []
+
+            by_date: Dict[str, Dict[str, float]] = {}
+
+            def bucket(d: str) -> Dict[str, float]:
+                return by_date.setdefault(d, {"questions": 0, "duration_minutes": 0.0, "conf_sum": 0.0})
+
+            for it in interactions:
+                ts = it.get("timestamp")
+                if not ts:
+                    continue
+                day = str(ts)[:10]
+                b = bucket(day)
+                b["questions"] += 1
+                b["conf_sum"] += float(it.get("confidence_score") or 0.0)
+                # ~1 min per question as a floor so non-practice study still counts.
+                b["duration_minutes"] += 1.0
+
+            for s in sessions:
+                ts = s.get("created_at")
+                if not ts:
+                    continue
+                day = str(ts)[:10]
+                b = bucket(day)
+                b["duration_minutes"] += float(s.get("duration_minutes") or 0)
+
+            trend = []
+            for day in sorted(by_date.keys()):
+                b = by_date[day]
+                q = int(b["questions"])
+                trend.append({
+                    "date": day,
+                    "questions": q,
+                    "duration_minutes": round(b["duration_minutes"], 1),
+                    "avg_confidence": round(b["conf_sum"] / q, 2) if q else 0.0,
+                })
+            return trend
+        except Exception as e:
+            print(f"Failed to compute study time trend: {e}")
+            return []
+
     def track_quiz_answer(self, user_id: str, course_id: str, concept: str,
                           question: str, is_correct: bool, time_taken: float = 0.0) -> bool:
         """Track a single quiz answer and update mastery for the explicit concept.
@@ -155,7 +241,7 @@ class LearningAnalyticsEngine:
                 "study_recommendations": self.generate_recommendations(progress.data),
                 "total_questions": len(interactions.data),
                 "avg_confidence": self.calculate_avg_confidence(interactions.data),
-                "study_time_trend": self.calculate_study_trend(interactions.data)
+                "study_time_trend": self.get_study_time_trend(user_id, course_id)
             }
             
             return analytics

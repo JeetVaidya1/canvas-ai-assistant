@@ -93,12 +93,12 @@ async def track_practice_session(
 ):
     """Track a completed practice session"""
     try:
-        # For now, just update learning progress
-        confidence = problems_correct / problems_attempted if problems_attempted > 0 else 0.5
-        analytics_engine.update_learning_progress(user_id, course_id, topic, confidence)
-        
-        return {"status": "success", "session_id": "temp_session_id"}
-        
+        success = analytics_engine.track_practice_session(
+            user_id, course_id, topic, problems_attempted,
+            problems_correct, duration_minutes, difficulty_level
+        )
+        return {"status": "success" if success else "error"}
+
     except Exception as e:
         print(f"Failed to track practice session: {e}")
         return {"status": "error", "message": str(e)}
