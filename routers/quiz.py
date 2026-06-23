@@ -2,6 +2,8 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Q
 from fastapi.responses import Response, StreamingResponse
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import quiz_engine
+
 router = APIRouter()
 
 
@@ -111,4 +113,66 @@ async def quiz_assist_endpoint(
             "estimated_time": "",
             "relevant_sources": []
         }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Quiz runner: generate -> answer one-at-a-time -> submit (Phase 3)
+# ─────────────────────────────────────────────────────────────────────────────
+@router.post("/quiz/generate")
+async def generate_quiz_endpoint(
+    course_id: str = Form(...),
+    topic: str | None = Form(None),
+    num_questions: int = Form(10),
+    difficulty: str = Form("medium"),
+):
+    """Generate a grounded MCQ quiz and persist it. Returns quiz_id + questions
+    (without the answer key)."""
+    if not course_id:
+        raise HTTPException(400, detail="Course ID is required")
+
+    validation = await validate_course_for_practice(course_id)
+    if validation.get("status") != "valid":
+        raise HTTPException(400, detail=validation.get("error") or "Course not ready for quizzes")
+
+    num_questions = max(1, min(int(num_questions), 20))
+    if difficulty not in {"easy", "medium", "hard"}:
+        difficulty = "medium"
+    clean_topic = (topic or "").strip() or None
+
+    try:
+        return quiz_engine.generate_quiz(course_id, clean_topic, num_questions, difficulty)
+    except Exception as e:
+        print(f"Quiz generation failed: {e}")
+        raise HTTPException(500, detail=f"Quiz generation failed: {e}")
+
+
+@router.post("/quiz/{quiz_id}/answer")
+async def answer_quiz_endpoint(
+    quiz_id: str,
+    question_id: str = Form(...),
+    selected: str = Form(...),
+    time_taken: float = Form(0.0),
+    user_id: str = Form("anonymous"),
+):
+    """Grade one answer; returns correctness + explanation + source."""
+    try:
+        return quiz_engine.grade_answer(quiz_id, question_id, selected, time_taken, user_id)
+    except KeyError as e:
+        raise HTTPException(404, detail=str(e))
+    except Exception as e:
+        print(f"Quiz answer grading failed: {e}")
+        raise HTTPException(500, detail=f"Grading failed: {e}")
+
+
+@router.post("/quiz/{quiz_id}/submit")
+async def submit_quiz_endpoint(
+    quiz_id: str,
+    user_id: str = Form("anonymous"),
+):
+    """Finalize a quiz; returns score, per-topic breakdown, and weak areas."""
+    try:
+        return quiz_engine.submit_quiz(quiz_id, user_id)
+    except Exception as e:
+        print(f"Quiz submit failed: {e}")
+        raise HTTPException(500, detail=f"Submit failed: {e}")
 
