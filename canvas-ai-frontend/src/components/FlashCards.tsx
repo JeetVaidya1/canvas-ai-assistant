@@ -5,6 +5,7 @@ import {
   saveFlashcards,
   getFlashcardDeck,
   reviewFlashcard,
+  exportFlashcardsAnki,
   type DeckCard,
 } from '@/lib/api'
 import { showError, showSuccess } from '@/lib/toast'
@@ -99,6 +100,21 @@ export default function Flashcards({
     void loadDeck()
   }
 
+  const handleAnkiExport = async () => {
+    if (!courseId) return
+    try {
+      const blob = await exportFlashcardsAnki(courseId, userId)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${courseId}_flashcards.apkg`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Anki export failed')
+    }
+  }
+
   const shuffled = () => {
     const arr = [...order]
     for (let i = arr.length - 1; i > 0; i--) {
@@ -147,6 +163,13 @@ export default function Flashcards({
           </button>
           {courseId && (
             <>
+              <button
+                onClick={() => void handleAnkiExport()}
+                className="px-3 py-2 border border-zinc-700 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 flex items-center gap-2"
+                title="Export your saved deck to Anki, keeping spaced-repetition state"
+              >
+                <Download className="w-4 h-4" /> Anki
+              </button>
               <button
                 onClick={() => void handleSaveToDeck()}
                 disabled={saving}

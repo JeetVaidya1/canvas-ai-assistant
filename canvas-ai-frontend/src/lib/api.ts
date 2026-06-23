@@ -847,11 +847,12 @@ export async function exportNotesPdf(courseId: string): Promise<Blob> {
   }
 }
 
-export async function exportFlashcardsAnki(courseId: string): Promise<Blob> {
+export async function exportFlashcardsAnki(courseId: string, userId?: string): Promise<Blob> {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 120_000)
   try {
-    const resp = await fetch(`${BASE_URL}/api/export-flashcards-anki/${encodeURIComponent(courseId)}`, {
+    const qs = userId ? `?user_id=${encodeURIComponent(userId)}` : ''
+    const resp = await fetch(`${BASE_URL}/api/export-flashcards-anki/${encodeURIComponent(courseId)}${qs}`, {
       signal: ctrl.signal,
     })
     if (!resp.ok) throw new Error('Export failed')
