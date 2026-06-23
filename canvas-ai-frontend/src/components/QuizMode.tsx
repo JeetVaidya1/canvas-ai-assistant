@@ -519,6 +519,19 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
                 <div className={`text-sm ${feedback.is_correct ? 'text-emerald-400/80' : 'text-red-400/80'}`}>
                   <Markdown content={feedback.explanation} />
                 </div>
+                {!feedback.is_correct && feedback.mistake_explanation && (
+                  <div className="mt-2 rounded-lg bg-zinc-800/70 border border-zinc-700 p-2.5">
+                    <div className="text-xs font-medium text-amber-400 mb-0.5">Why you missed this</div>
+                    <div className="text-sm text-zinc-300"><Markdown content={feedback.mistake_explanation} /></div>
+                    {feedback.mistake_source?.doc_name && (
+                      <div className="mt-1.5 inline-flex items-center gap-1 text-xs text-zinc-500">
+                        <FileText className="w-3 h-3" />
+                        {feedback.mistake_source.doc_name}
+                        {feedback.mistake_source.page ? `, p.${feedback.mistake_source.page}` : ''}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {feedback.source?.doc_name && (
                   <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-zinc-400 bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1">
                     <FileText className="w-3 h-3" />

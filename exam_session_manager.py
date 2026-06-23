@@ -275,12 +275,15 @@ class ExamSessionManager:
             exam_data = session["exam_data"]
             user_answers = session.get("user_answers", {})
             questions = exam_data["questions"]
-            
+            course_id = session.get("course_id") or ""
+
             total_points = 0
             earned_points = 0
             correct_count = 0
             question_results = []
             topic_performance = {}
+            explained = 0
+            EXPLAIN_CAP = 8  # bound grounded-explanation LLM calls per submission
             
             for question in questions:
                 q_id = question["id"]
@@ -312,6 +315,22 @@ class ExamSessionManager:
                 if is_correct:
                     topic_performance[topic]["correct"] += 1
 
+                # Grounded "explain my mistake" for wrong answers (capped).
+                mistake_explanation = ""
+                mistake_source = {"doc_name": None, "page": None}
+                if not is_correct and user_answer and course_id and explained < EXPLAIN_CAP:
+                    try:
+                        import mistake_engine
+                        grounded = mistake_engine.explain_mistake(
+                            course_id, question.get("question", ""), topic,
+                            user_answer, correct_answer,
+                        )
+                        mistake_explanation = grounded.get("explanation") or ""
+                        mistake_source = grounded.get("source") or mistake_source
+                        explained += 1
+                    except Exception as e:  # noqa: BLE001
+                        print(f"exam explain_mistake failed: {e}")
+
                 question_results.append({
                     "question_id": q_id,
                     "question": question["question"],
@@ -325,6 +344,8 @@ class ExamSessionManager:
                     "topic": topic,
                     "difficulty": question.get("difficulty", "medium"),
                     "explanation": question.get("explanation", ""),
+                    "mistake_explanation": mistake_explanation,
+                    "mistake_source": mistake_source,
                     "time_spent": user_answer_data.get("time_spent", 0)
                 })
             

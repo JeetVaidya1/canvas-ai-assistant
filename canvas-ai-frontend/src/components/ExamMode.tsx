@@ -257,6 +257,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
             pointsEarned: r.points_earned,
             verdict: r.verdict,
             gradeReason: r.grade_reason,
+            mistakeExplanation: r.mistake_explanation,
             timeSpent: r.time_spent,
             topic: r.topic
           })) ?? []
@@ -442,6 +443,11 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
                     </div>
                     <p className="text-sm text-zinc-200 mb-1">{b.question}</p>
                     {b.gradeReason && <p className="text-xs text-zinc-400 italic">{b.gradeReason}</p>}
+                    {b.mistakeExplanation && (
+                      <p className="text-xs text-amber-400/90 mt-1">
+                        <span className="font-medium">Why you missed it: </span>{b.mistakeExplanation}
+                      </p>
+                    )}
                   </div>
                 )
               })}
