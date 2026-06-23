@@ -137,60 +137,19 @@ Rules:
 
         return "\n".join(parts), sources
 
-    # ── Retrieval (conversation-aware) ────────────────────────────────────────
+    # ── Retrieval (conversation-aware, hybrid + reranked) ─────────────────────
     def intelligent_retrieval(self, question: str, course_id: str, session_id: Optional[str] = None) -> List[Dict]:
-        # Enhance query with conversation
+        # Conversation-aware query rewrite, then the canonical RAG pipeline:
+        # BGE-prefixed dense + Postgres FTS, fused (RRF) and cross-encoder reranked.
         enhanced_query = self.enhance_query_with_context(question, session_id)
-
-        # Embed + search
         try:
-            emb = self.openai_client.embeddings.create(model=EMBED_MODEL, input=[enhanced_query])
-            qvec = emb.data[0].embedding
-            results = self.vector_store.query(course_id, qvec, top_k=RAG_TOP_K) or []
-            print(f"📚 Found {len(results)} course material results")
+            from rag.retrieval import retrieve
+            results = retrieve(enhanced_query, course_id, top_k=RAG_TOP_K) or []
+            print(f"📚 Retrieved {len(results)} chunks (hybrid + rerank)")
+            return results
         except Exception as e:
-            print(f"Course material search failed: {e}")
-            results = []
-
-        # Optional: quick conversation-aware rerank (JSON indices)
-        if session_id and results:
-            convo = self.get_conversation_context(session_id, 6)
-            if convo:
-                try:
-                    preview = "\n".join(
-                        [f"{i+1}. {(r.get('content','')[:260] or '').strip()}..." for i, r in enumerate(results[:8])]
-                    )
-                    rerank_prompt = f"""Rank these 1..N by relevance to the student's question given the conversation.
-
-Conversation:
-{convo}
-
-Question: {question}
-
-Results:
-{preview}
-
-Return JSON list of indices most→least relevant, e.g. [3,1,2,...]. No comments."""
-                    rr = self.openai_client.chat.completions.create(
-                        model=MODEL_DEFAULT,
-                        messages=[{"role": "user", "content": rerank_prompt}],
-                        max_tokens=80
-                    )
-                    order = json.loads((rr.choices[0].message.content or "[]").strip())
-                    # Reorder
-                    ranked = []
-                    for idx in order:
-                        if isinstance(idx, int) and 1 <= idx <= len(results):
-                            ranked.append(results[idx-1])
-                    for r in results:
-                        if r not in ranked:
-                            ranked.append(r)
-                    results = ranked
-                    print("🎯 Reranked by conversation relevance")
-                except Exception as e:
-                    print(f"Rerank failed, using baseline order: {e}")
-
-        return results
+            print(f"Retrieval failed: {e}")
+            return []
 
     # ── Few-shot style priming (keeps tone consistently “ChatGPT-like”) ───────
     def _few_shots(self) -> List[Dict[str, str]]:
