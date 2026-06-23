@@ -173,6 +173,19 @@ create table if not exists user_interactions (
 );
 create index if not exists user_interactions_idx on user_interactions (user_id, course_id);
 
+create table if not exists practice_sessions (
+    id                 bigint generated always as identity primary key,
+    user_id            text,
+    course_id          text,
+    topic              text,
+    problems_attempted integer,
+    problems_correct   integer,
+    duration_minutes   integer,
+    difficulty_level   text,
+    created_at         timestamptz not null default now()
+);
+create index if not exists practice_sessions_idx on practice_sessions (user_id, course_id, created_at desc);
+
 -- ---------------------------------------------------------------------------
 -- Notes
 -- ---------------------------------------------------------------------------
