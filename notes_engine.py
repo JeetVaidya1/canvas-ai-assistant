@@ -176,8 +176,6 @@ Sections (in order, with concise content):
 10. Mnemonics — a couple memory hooks.
 11. Quick study plans — 30 / 60 / 120 min.
 
-At the very end, include: FLASHCARDS (JSON) with 10 items: [{{"q": "...","a":"..."}}, ...].
-
 Rules:
 - Prefer COURSE SOURCES; when you rely on them, cite inline like [1:file:page].
 - {gn}
@@ -280,7 +278,7 @@ Notes excerpt:
         }
 
         if INCLUDE_FLASHCARDS:
-            fc = _extract_flashcards(notes_content)
+            fc = _generate_flashcards(notes_content)
             if fc:
                 result["flashcards"] = fc[:20]
 
@@ -320,25 +318,50 @@ Return JSON only: {"topics": ["topic1","topic2","..."]}."""
                  'theory','principle','theorem','model','equation','experiment']
         return [s.title() for s in seeds if s in " ".join(words)][:6] or ["General Topics"]
 
-def _extract_flashcards(notes: str) -> Optional[List[Dict[str, str]]]:
-    import re
-    m = re.search(r'FLASHCARDS\s*\(JSON\)\s*:\s*```?\s*json\s*(\[[\s\S]+?\])\s*```?', notes, re.IGNORECASE)
-    if not m:
-        m = re.search(r'FLASHCARDS\s*\(JSON\)\s*:\s*(\[[\s\S]+?\])', notes, re.IGNORECASE)
-    if not m:
-        return None
+_FLASHCARD_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "flashcards": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"q": {"type": "string"}, "a": {"type": "string"}},
+                "required": ["q", "a"],
+            },
+        }
+    },
+    "required": ["flashcards"],
+}
+
+
+def _generate_flashcards(notes: str) -> Optional[List[Dict[str, str]]]:
+    """Generate Q/A flashcards from notes via guaranteed-schema tool use (no regex)."""
+    from providers import structured_call
+
     try:
-        arr = json.loads(m.group(1))
-        clean = []
-        for item in arr:
-            if not _is_dict(item):
-                continue
-            q = (item.get("q") or "").strip()
-            a = (item.get("a") or "").strip()
-            if q and a:
-                clean.append({"q": q, "a": a})
+        out = structured_call(
+            [{
+                "role": "user",
+                "content": (
+                    "Create 10 concise exam-relevant flashcards from these study notes. "
+                    "Questions short; answers 1-3 sentences. Plain text, no markdown.\n\n"
+                    f"NOTES:\n{notes[:8000]}"
+                ),
+            }],
+            schema=_FLASHCARD_SCHEMA,
+            tool_name="flashcards",
+            model=MODEL_DEFAULT,
+            max_tokens=2000,
+        )
+        cards = out.get("flashcards") if isinstance(out, dict) else None
+        clean = [
+            {"q": str(c["q"]).strip(), "a": str(c["a"]).strip()}
+            for c in (cards or [])
+            if _is_dict(c) and c.get("q") and c.get("a")
+        ]
         return clean or None
-    except Exception:
+    except Exception as e:
+        print(f"❌ Flashcard generation failed: {e}")
         return None
 
 # ─────────────────────────────────────────────────────────────────────────────

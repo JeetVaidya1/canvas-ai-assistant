@@ -3,5 +3,6 @@
 from .client import CompatClient, make_client
 from .local_embeddings import EMBED_DIM
 from .anthropic_chat import stream_text
+from .structured import structured_call
 
-__all__ = ["CompatClient", "make_client", "EMBED_DIM", "stream_text"]
+__all__ = ["CompatClient", "make_client", "EMBED_DIM", "stream_text", "structured_call"]
