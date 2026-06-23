@@ -20,10 +20,14 @@ def export_notes_pdf(course_id: str):
 
 
 @router.get("/api/export-flashcards-anki/{course_id}")
-def export_flashcards_anki(course_id: str):
-    """Download course flashcards as an Anki .apkg deck."""
+def export_flashcards_anki(course_id: str, user_id: str | None = None):
+    """Download course flashcards as an Anki .apkg deck.
+
+    With user_id and a saved deck, exports that deck with each card's SM-2 state
+    (next-due, interval) baked in as scheduling info + tags, and stable GUIDs so
+    re-imports update rather than duplicate."""
     try:
-        apkg_bytes = exports.build_flashcards_apkg(course_id)
+        apkg_bytes = exports.build_flashcards_apkg(course_id, user_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Could not export flashcards: {e}")
     return Response(

@@ -11,7 +11,7 @@ import io
 import json
 import os
 import tempfile
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -178,28 +178,77 @@ def _generate_flashcards(course_id: str, supabase, count: int = 25) -> List[Dict
     return cleaned
 
 
-def build_flashcards_apkg(course_id: str) -> bytes:
+def _persisted_deck(course_id: str, supabase, user_id: Optional[str]) -> List[Dict[str, Any]]:
+    """The saved flashcard deck joined with a user's SM-2 review state. [] if empty."""
+    cards = (supabase.table("flashcards").select("*")
+             .eq("course_id", course_id).execute().data or [])
+    if not cards:
+        return []
+    reviews = {}
+    if user_id:
+        rows = (supabase.table("flashcard_reviews").select("*")
+                .eq("user_id", user_id).execute().data or [])
+        reviews = {r["card_id"]: r for r in rows}
+    out = []
+    for c in cards:
+        r = reviews.get(c["id"], {})
+        out.append({
+            "id": c["id"],
+            "q": c.get("q", ""),
+            "a": c.get("a", ""),
+            "due_date": r.get("due_date"),
+            "interval": r.get("interval"),
+            "ease": r.get("ease"),
+            "repetitions": r.get("repetitions"),
+        })
+    return out
+
+
+def build_flashcards_apkg(course_id: str, user_id: Optional[str] = None) -> bytes:
     import genanki
 
     supabase = _supabase()
     title = _course_title(course_id, supabase)
-    cards = _generate_flashcards(course_id, supabase)
+
+    # Prefer the student's *saved* deck (preserving SR state); fall back to
+    # generating a fresh set only when nothing has been saved yet.
+    persisted = _persisted_deck(course_id, supabase, user_id)
+    cards = persisted or _generate_flashcards(course_id, supabase)
 
     model = genanki.Model(
         _stable_id(f"model:{course_id}"),
         "Vindexa Basic",
-        fields=[{"name": "Question"}, {"name": "Answer"}],
+        fields=[{"name": "Question"}, {"name": "Answer"}, {"name": "Scheduling"}],
         templates=[
             {
                 "name": "Card",
                 "qfmt": "{{Question}}",
-                "afmt": '{{FrontSide}}<hr id="answer">{{Answer}}',
+                "afmt": '{{FrontSide}}<hr id="answer">{{Answer}}'
+                        '<div style="margin-top:12px;color:#888;font-size:12px">{{Scheduling}}</div>',
             }
         ],
     )
     deck = genanki.Deck(_stable_id(f"deck:{course_id}"), f"{title} — Flashcards")
     for card in cards:
-        deck.add_note(genanki.Note(model=model, fields=[card["q"], card["a"]]))
+        # Scheduling note + tags carry the SM-2 state across into Anki, and a stable
+        # GUID (per saved card) means re-importing updates rather than duplicates.
+        sched_bits = []
+        tags = []
+        if card.get("due_date"):
+            sched_bits.append(f"Next review: {str(card['due_date'])[:10]}")
+            tags.append(f"vindexa::due_{str(card['due_date'])[:10]}")
+        if card.get("interval") is not None:
+            sched_bits.append(f"Interval: {card['interval']}d")
+        if card.get("repetitions") is not None:
+            tags.append(f"vindexa::reps_{card['repetitions']}")
+        scheduling = " · ".join(sched_bits)
+        note = genanki.Note(
+            model=model,
+            fields=[card["q"], card["a"], scheduling],
+            tags=tags or None,
+            guid=genanki.guid_for(card["id"]) if card.get("id") else None,
+        )
+        deck.add_note(note)
 
     # genanki needs a real file path (sqlite); write to a temp file then read back.
     with tempfile.NamedTemporaryFile(suffix=".apkg", delete=False) as tmp:
