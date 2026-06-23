@@ -10,6 +10,7 @@ const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const CourseOverview = lazy(() => import('@/pages/CourseOverview'))
 const ChatPage = lazy(() => import('@/pages/ChatPage'))
+const TutorPage = lazy(() => import('@/pages/TutorPage'))
 const QuizPage = lazy(() => import('@/pages/QuizPage'))
 const PracticePage = lazy(() => import('@/pages/PracticePage'))
 const NotesPage = lazy(() => import('@/pages/NotesPage'))
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="dashboard" element={<Suspense fallback={<PageFallback />}><Dashboard /></Suspense>} />
           <Route path="course/:courseId" element={<Suspense fallback={<PageFallback />}><CourseOverview /></Suspense>} />
           <Route path="course/:courseId/chat" element={<Suspense fallback={<PageFallback />}><ChatPage /></Suspense>} />
+          <Route path="course/:courseId/tutor" element={<Suspense fallback={<PageFallback />}><ErrorBoundary><TutorPage /></ErrorBoundary></Suspense>} />
           <Route path="course/:courseId/quiz" element={<Suspense fallback={<PageFallback />}><ErrorBoundary><QuizPage /></ErrorBoundary></Suspense>} />
           <Route path="course/:courseId/practice" element={<Suspense fallback={<PageFallback />}><ErrorBoundary><PracticePage /></ErrorBoundary></Suspense>} />
           <Route path="course/:courseId/notes" element={<Suspense fallback={<PageFallback />}><ErrorBoundary><NotesPage /></ErrorBoundary></Suspense>} />

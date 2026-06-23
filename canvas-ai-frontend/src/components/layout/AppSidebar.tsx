@@ -14,6 +14,7 @@ import {
   BarChart3,
   Calendar,
   Headphones,
+  Lightbulb,
 } from 'lucide-react'
 import { useCourses } from '@/hooks/useCourses'
 
@@ -27,6 +28,7 @@ interface SubNavItem {
 const courseSubNav: SubNavItem[] = [
   { label: 'Overview', path: '', icon: BookOpen },
   { label: 'Chat', path: '/chat', icon: MessageCircle, group: 'Study' },
+  { label: 'Tutor', path: '/tutor', icon: Lightbulb },
   { label: 'Quiz', path: '/quiz', icon: Brain },
   { label: 'Practice', path: '/practice', icon: Target },
   { label: 'Notes', path: '/notes', icon: FileText, group: 'Create' },
