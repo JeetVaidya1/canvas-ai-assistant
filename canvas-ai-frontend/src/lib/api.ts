@@ -326,6 +326,21 @@ export async function submitQuiz(
   return apiFetch(`/quiz/${encodeURIComponent(quizId)}/submit`, { method: 'POST', body: form })
 }
 
+/** ===== Exam readiness (Phase 4) ===== */
+export interface Readiness {
+  score_pct: number
+  by_topic: Array<{ topic: string; mastery_pct: number; weight: number; has_data: boolean }>
+  gaps: string[]
+  confidence: 'low' | 'medium' | 'high'
+  has_past_papers: boolean
+  data_points?: number
+  message?: string
+}
+
+export async function getReadiness(courseId: string, userId: string = 'anonymous'): Promise<Readiness> {
+  return apiFetch(`/api/readiness/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`)
+}
+
 /** ===== Flashcards — spaced repetition (Phase 3) ===== */
 export interface DeckCard {
   id: string
