@@ -328,6 +328,37 @@ export async function submitQuiz(
   return apiFetch(`/quiz/${encodeURIComponent(quizId)}/submit`, { method: 'POST', body: form })
 }
 
+/** ===== GitHub / Markdown interop (Phase 4) ===== */
+export async function exportCourseMarkdown(courseId: string): Promise<Blob> {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 60_000)
+  try {
+    const resp = await fetch(`${BASE_URL}/api/export-markdown/${encodeURIComponent(courseId)}`, { signal: ctrl.signal })
+    if (!resp.ok) throw new Error('Markdown export failed')
+    return await resp.blob()
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export async function githubPush(courseId: string, repo: string, token: string, basePath = 'vindexa'): Promise<{ pushed: number; files: string[]; repo: string; branch: string }> {
+  const form = new FormData()
+  form.append('course_id', courseId)
+  form.append('repo', repo)
+  form.append('token', token)
+  form.append('base_path', basePath)
+  return apiFetch('/api/github/push', { method: 'POST', body: form }, 120_000)
+}
+
+export async function githubImport(courseId: string, repo: string, token?: string, subdir = ''): Promise<{ imported: number; skipped: number; files: string[]; message?: string }> {
+  const form = new FormData()
+  form.append('course_id', courseId)
+  form.append('repo', repo)
+  if (token) form.append('token', token)
+  if (subdir) form.append('subdir', subdir)
+  return apiFetch('/api/github/import', { method: 'POST', body: form }, 300_000)
+}
+
 /** ===== Concept prerequisite graph (Phase 4) ===== */
 export interface ConceptBlocker {
   concept: string

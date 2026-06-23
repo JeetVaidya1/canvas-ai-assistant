@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import IntegrationsPanel from '@/components/IntegrationsPanel'
 import {
   Upload,
   FileText,
@@ -79,6 +80,9 @@ export default function CourseOverview() {
           ))}
         </div>
       )}
+
+      {/* Export & integrations (Markdown / GitHub) */}
+      {hasFiles && <IntegrationsPanel courseId={courseId || ''} />}
 
       {/* Files Section or Onboarding */}
       {!hasFiles && !filesLoading ? (

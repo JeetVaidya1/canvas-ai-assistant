@@ -354,3 +354,61 @@ def build_planner_ics(course_id: str) -> bytes:
         ]
     lines.append("END:VCALENDAR")
     return ("\r\n".join(lines) + "\r\n").encode("utf-8")
+
+
+# ---------------------------------------------------------------------------
+# 4) Course -> Markdown bundle (study-as-code; GitHub-friendly)
+# ---------------------------------------------------------------------------
+def _slug(text: str) -> str:
+    import re as _re
+    s = _re.sub(r"[^a-z0-9]+", "-", (text or "untitled").lower()).strip("-")
+    return s or "untitled"
+
+
+def build_course_markdown(course_id: str) -> Dict[str, str]:
+    """Return {relative_path: markdown_content} for a course's notes, flashcards,
+    and latest study plan — the payload for a zip download or a GitHub commit."""
+    supabase = _supabase()
+    title = _course_title(course_id, supabase)
+    files: Dict[str, str] = {}
+
+    notes = (supabase.table("notes").select("title, content, created_at")
+             .eq("course_id", course_id).execute().data or [])
+    for n in notes:
+        name = _slug(n.get("title") or "note")
+        files[f"notes/{name}.md"] = f"# {n.get('title','Note')}\n\n{n.get('content','')}\n"
+
+    cards = (supabase.table("flashcards").select("q, a")
+             .eq("course_id", course_id).execute().data or [])
+    if cards:
+        lines = [f"# {title} — Flashcards\n"]
+        for c in cards:
+            lines.append(f"- **Q:** {c.get('q','')}\n  - **A:** {c.get('a','')}")
+        files["flashcards.md"] = "\n".join(lines) + "\n"
+
+    plan = (supabase.table("study_plans").select("plan")
+            .eq("course_id", course_id).order("created_at", desc=True).limit(1).execute().data)
+    if plan:
+        days = (plan[0].get("plan") or {}).get("days", [])
+        lines = [f"# {title} — Study Plan\n"]
+        for i, d in enumerate(days, 1):
+            lines.append(f"## Day {i} — {d.get('date','')} ({d.get('type','review')}, {d.get('duration_minutes',0)} min)")
+            for t in d.get("topics", []):
+                lines.append(f"- {t}")
+            lines.append("")
+        files["study-plan.md"] = "\n".join(lines) + "\n"
+
+    index = [f"# {title}\n", "Exported from Vindexa.\n", "## Contents"]
+    index += [f"- `{p}`" for p in sorted(files)]
+    files["README.md"] = "\n".join(index) + "\n"
+    return files
+
+
+def build_course_markdown_zip(course_id: str) -> bytes:
+    import zipfile
+    payload = build_course_markdown(course_id)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for path, content in payload.items():
+            zf.writestr(path, content)
+    return buf.getvalue()
