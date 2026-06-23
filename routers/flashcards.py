@@ -31,7 +31,7 @@ async def save_flashcards_endpoint(
 
 
 @router.get("/flashcards/{course_id}")
-async def get_flashcards_endpoint(course_id: str, user_id: str = "anonymous"):
+async def get_flashcards_endpoint(course_id: str, user_id: str = Depends(current_user_id)):
     """Return the course deck with per-user SR state, due cards first."""
     try:
         return flashcard_engine.get_deck(course_id, user_id)
@@ -44,7 +44,7 @@ async def get_flashcards_endpoint(course_id: str, user_id: str = "anonymous"):
 async def review_flashcard_endpoint(
     card_id: str = Form(...),
     grade: int = Form(...),
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
 ):
     """Apply an SM-2 review (grade 0-5) and return the updated schedule."""
     if not 0 <= grade <= 5:

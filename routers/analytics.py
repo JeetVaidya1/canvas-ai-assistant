@@ -8,7 +8,8 @@ router = APIRouter()
 
 
 @router.get("/api/readiness/{course_id}/{user_id}")
-async def get_readiness_endpoint(course_id: str, user_id: str):
+async def get_readiness_endpoint(course_id: str, user_id: str, _auth: str = Depends(current_user_id)):
+    user_id = _auth
     """Predicted exam-readiness score for a course/user."""
     try:
         return readiness_engine.get_readiness(course_id, user_id)
@@ -19,7 +20,8 @@ async def get_readiness_endpoint(course_id: str, user_id: str):
 
 
 @router.get("/analytics/{course_id}/{user_id}")
-async def get_learning_analytics(course_id: str, user_id: str):
+async def get_learning_analytics(course_id: str, user_id: str, _auth: str = Depends(current_user_id)):
+    user_id = _auth
     """Get learning analytics for a student in a specific course"""
     try:
         print(f"Getting analytics for user {user_id} in course {course_id}")
@@ -76,7 +78,7 @@ async def get_analytics_topics(course_id: str):
 
 @router.post("/track-interaction")
 async def track_user_interaction(
-    user_id: str = Form(...),
+    user_id: str = Depends(current_user_id),
     course_id: str = Form(...),
     question: str = Form(...),
     answer: str = Form(...),
@@ -96,7 +98,7 @@ async def track_user_interaction(
 
 @router.post("/track-practice-session")
 async def track_practice_session(
-    user_id: str = Form(...),
+    user_id: str = Depends(current_user_id),
     course_id: str = Form(...),
     topic: str = Form(...),
     problems_attempted: int = Form(...),

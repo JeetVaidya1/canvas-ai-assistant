@@ -12,7 +12,7 @@ async def quiz_assist_endpoint(
     question: str = Form(...),
     course_id: str = Form(...),
     session_id: str | None = Form(None),
-    user_id: str = Form("anonymous")
+    user_id: str = Depends(current_user_id)
 ):
     """Quiz assistance endpoint - handles any quiz question"""
     
@@ -152,7 +152,7 @@ async def answer_quiz_endpoint(
     question_id: str = Form(...),
     selected: str = Form(...),
     time_taken: float = Form(0.0),
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
 ):
     """Grade one answer; returns correctness + explanation + source."""
     try:
@@ -167,7 +167,7 @@ async def answer_quiz_endpoint(
 @router.post("/quiz/{quiz_id}/submit")
 async def submit_quiz_endpoint(
     quiz_id: str,
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
 ):
     """Finalize a quiz; returns score, per-topic breakdown, and weak areas."""
     try:

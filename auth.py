@@ -62,6 +62,12 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[
     return _verify(_bearer(authorization))
 
 
+async def current_user_id(authorization: Optional[str] = Header(None)) -> str:
+    """Dependency returning just the authenticated user id (drop-in for the old
+    spoofable ``user_id`` form param)."""
+    return _verify(_bearer(authorization))["id"]
+
+
 async def get_optional_user(authorization: Optional[str] = Header(None)) -> Optional[Dict[str, Any]]:
     """Like get_current_user but returns None instead of 401 when unauthenticated."""
     if not authorization:

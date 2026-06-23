@@ -9,7 +9,7 @@ router = APIRouter()
 @router.post("/api/courses/publish")
 async def publish_course_endpoint(
     course_id: str = Form(...),
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
     subject: str = Form(""),
     school: str = Form(""),
     term: str = Form(""),
@@ -48,7 +48,7 @@ async def share_info_endpoint(course_id: str):
 @router.post("/api/courses/join")
 async def join_course_endpoint(
     share_code: str = Form(...),
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
 ):
     """Join a published course by share code."""
     try:

@@ -9,7 +9,7 @@ router = APIRouter()
 async def upload_past_paper(
     course_id: str = Form(...),
     file: UploadFile = File(...),
-    user_id: str = Form("anonymous")
+    user_id: str = Depends(current_user_id)
 ):
     """Upload and analyze a past paper"""
     try:
@@ -78,7 +78,7 @@ async def generate_practice_exam(
     difficulty: str = Form("mixed"),
     question_types: str = Form('["multiple_choice", "calculation", "short_answer"]'),
     topic_focus: str = Form(""),
-    user_id: str = Form("anonymous")
+    user_id: str = Depends(current_user_id)
 ):
     """Generate a practice exam"""
     try:
@@ -172,7 +172,7 @@ async def generate_practice_exam(
 @router.post("/api/create-exam-session")
 async def create_exam_session(
     exam_data: str = Form(...),
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
     course_id: str = Form(...)
 ):
     """Create a new exam session"""

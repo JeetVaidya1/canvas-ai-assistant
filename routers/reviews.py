@@ -7,7 +7,7 @@ router = APIRouter()
 
 
 @router.get("/api/reviews/{course_id}")
-async def get_reviews_endpoint(course_id: str, user_id: str = "anonymous", include_all: bool = False):
+async def get_reviews_endpoint(course_id: str, user_id: str = Depends(current_user_id), include_all: bool = False):
     """The mistake-driven review queue for a course/user, due items first."""
     try:
         return review_engine.get_due(course_id, user_id, include_all=include_all)
@@ -20,7 +20,7 @@ async def get_reviews_endpoint(course_id: str, user_id: str = "anonymous", inclu
 async def grade_review_endpoint(
     item_id: str,
     grade: int = Form(...),
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
 ):
     """Apply an SM-2 review (grade 0-5) to a queue item."""
     if not 0 <= grade <= 5:

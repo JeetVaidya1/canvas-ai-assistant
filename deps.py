@@ -28,7 +28,9 @@ from exam_session_manager import ExamSessionManager
 from typing import Optional
 from ingest import delete_file_from_course, delete_course
 from fastapi.responses import Response
+from fastapi import Depends
 import exports
+from auth import get_current_user, current_user_id, require_course_access
 
 
 # ---- shared state ----

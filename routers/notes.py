@@ -11,7 +11,7 @@ async def generate_notes_endpoint(
     file_names: str = Form(...),  # JSON string of file names list
     topic: str = Form(""),
     style: str = Form("detailed"),
-    user_id: str = Form("anonymous")
+    user_id: str = Depends(current_user_id)
 ):
     """Generate comprehensive notes from lecture files"""
     
@@ -99,7 +99,7 @@ async def save_notes_endpoint(
     source_files: str = Form(...),  # JSON string of file names
     topic: str = Form(""),
     note_id: str = Form(None),
-    user_id: str = Form("anonymous")
+    user_id: str = Depends(current_user_id)
 ):
     """Save notes to database"""
     

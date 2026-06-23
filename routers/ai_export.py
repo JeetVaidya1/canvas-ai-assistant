@@ -8,7 +8,8 @@ router = APIRouter()
 
 
 @router.get("/api/context-pack/{course_id}/{user_id}")
-async def context_pack_endpoint(course_id: str, user_id: str):
+async def context_pack_endpoint(course_id: str, user_id: str, _auth: str = Depends(current_user_id)):
+    user_id = _auth
     """A paste-ready Markdown study brief (weak areas + grounded excerpts) for any AI."""
     try:
         return {"markdown": context_pack.build_context_pack(course_id, user_id)}
@@ -18,7 +19,8 @@ async def context_pack_endpoint(course_id: str, user_id: str):
 
 
 @router.get("/api/context-pack/{course_id}/{user_id}/download", response_class=PlainTextResponse)
-async def context_pack_download(course_id: str, user_id: str):
+async def context_pack_download(course_id: str, user_id: str, _auth: str = Depends(current_user_id)):
+    user_id = _auth
     """Same context pack as a downloadable .md file."""
     try:
         md = context_pack.build_context_pack(course_id, user_id)

@@ -11,7 +11,7 @@ async def generate_practice_problems(
     topic: str = Form(...),
     difficulty: str = Form("adaptive"),
     count: int = Form(5),
-    user_id: str = Form("anonymous")
+    user_id: str = Depends(current_user_id)
 ):
     """Generate practice problems. difficulty='adaptive' routes off the user's
     mastery of the topic (easy/medium/hard)."""

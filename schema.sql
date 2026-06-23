@@ -19,6 +19,7 @@ create extension if not exists pgcrypto;
 create table if not exists courses (
     course_id   text primary key,
     title       text,
+    owner_id    text,        -- Supabase auth uid of the course owner (Phase 6)
     created_at  timestamptz not null default now()
 );
 
