@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Download, Github, Upload, ChevronDown, Sparkles } from 'lucide-react'
-import { exportCourseMarkdown, githubPush, githubImport, getContextPack } from '@/lib/api'
+import { Download, Github, Upload, ChevronDown, Sparkles, GraduationCap } from 'lucide-react'
+import { exportCourseMarkdown, githubPush, githubImport, getContextPack, importCanvasLms } from '@/lib/api'
 import { useUser } from '@/hooks/useUser'
 import { showError, showSuccess } from '@/lib/toast'
 
@@ -14,7 +14,31 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
   const [repo, setRepo] = useState('')
   const [token, setToken] = useState('')
   const [subdir, setSubdir] = useState('')
-  const [busy, setBusy] = useState<'export' | 'push' | 'import' | 'context' | null>(null)
+  const [canvasUrl, setCanvasUrl] = useState('https://canvas.instructure.com')
+  const [canvasToken, setCanvasToken] = useState('')
+  const [canvasCourse, setCanvasCourse] = useState('')
+  const [busy, setBusy] = useState<'export' | 'push' | 'import' | 'context' | 'canvas' | null>(null)
+
+  const handleCanvasImport = async () => {
+    if (!canvasUrl || !canvasToken || !canvasCourse) {
+      showError('Canvas base URL, token, and course id are required')
+      return
+    }
+    setBusy('canvas')
+    try {
+      const r = await importCanvasLms(canvasUrl, canvasToken, canvasCourse, courseId)
+      if (r.next_exam_date) {
+        // Hand the detected exam date to the planner (prefills the form).
+        localStorage.setItem(`vindexa_exam_date_${courseId}`, r.next_exam_date)
+      }
+      const examNote = r.next_exam_date ? ` Next exam: ${r.next_exam_date}.` : ''
+      showSuccess(`Imported ${r.materials_imported} file(s)${r.syllabus_imported ? ' + syllabus' : ''}.${examNote}`)
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Canvas import failed')
+    } finally {
+      setBusy(null)
+    }
+  }
 
   const handleCopyContext = async () => {
     setBusy('context')
@@ -158,6 +182,41 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
             <p className="text-xs text-zinc-500">
               Tokens are sent only with your request and never stored. Importing pulls text/Markdown files into this course.
             </p>
+          </div>
+
+          <div className="space-y-2 border-t border-zinc-700/40 pt-4">
+            <label className="block text-xs font-medium text-zinc-500 flex items-center gap-1.5">
+              <GraduationCap className="w-3.5 h-3.5" /> Import from Canvas LMS
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                value={canvasUrl}
+                onChange={(e) => setCanvasUrl(e.target.value)}
+                placeholder="https://canvas.school.edu"
+                className="px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm"
+              />
+              <input
+                value={canvasCourse}
+                onChange={(e) => setCanvasCourse(e.target.value)}
+                placeholder="Canvas course id"
+                className="px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm"
+              />
+            </div>
+            <input
+              value={canvasToken}
+              onChange={(e) => setCanvasToken(e.target.value)}
+              type="password"
+              placeholder="Canvas access token"
+              className="w-full px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm"
+            />
+            <button
+              onClick={() => void handleCanvasImport()}
+              disabled={busy === 'canvas'}
+              className="bg-zinc-800 border border-zinc-700 text-zinc-200 px-3 py-2 rounded-lg hover:bg-zinc-700 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
+            >
+              <GraduationCap className="w-4 h-4" /> {busy === 'canvas' ? 'Importing…' : 'Import syllabus, materials & exam dates'}
+            </button>
+            <p className="text-xs text-zinc-500">Pulls your syllabus and files, and detects your next exam to prefill the planner.</p>
           </div>
         </div>
       )}
