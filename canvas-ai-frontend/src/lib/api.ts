@@ -346,6 +346,30 @@ export async function socraticTurn(
   return apiFetch('/api/socratic', { method: 'POST', body: form }, 90_000)
 }
 
+export interface FeynmanResult {
+  score_pct: number
+  verdict: 'solid' | 'partial' | 'shaky'
+  strengths: string[]
+  gaps: string[]
+  misconceptions: string[]
+  summary: string
+  review_items_added: number
+}
+
+export async function feynmanEvaluate(
+  courseId: string,
+  concept: string,
+  explanation: string,
+  userId: string = 'anonymous'
+): Promise<FeynmanResult> {
+  const form = new FormData()
+  form.append('course_id', courseId)
+  form.append('concept', concept)
+  form.append('explanation', explanation)
+  form.append('user_id', userId)
+  return apiFetch('/api/feynman', { method: 'POST', body: form }, 90_000)
+}
+
 /** ===== Export to AIs (Phase 4) ===== */
 export async function getContextPack(courseId: string, userId: string = 'anonymous'): Promise<string> {
   const data = await apiFetch(`/api/context-pack/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`, undefined, 120_000)
