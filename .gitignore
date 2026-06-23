@@ -1,1 +1,23 @@
+# Secrets
 .env
+.env.local
+.env.*.local
+*/.env
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Node / frontend
+canvas-ai-frontend/node_modules/
+canvas-ai-frontend/dist/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

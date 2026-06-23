@@ -5,12 +5,12 @@ import json
 import re
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
-from openai import OpenAI
+from providers import make_client
 from vector_store import VectorStore
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+openai_client = make_client()
 vector_store = VectorStore()
 
 # ── Config (env-overridable) ──────────────────────────────────────────────────

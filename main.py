@@ -1581,10 +1581,10 @@ async def debug_practice_content(course_id: str, topic: str):
     """Debug what content is found when generating practice questions for a topic"""
     try:
         from vector_store import VectorStore
-        from openai import OpenAI
+        from providers import make_client
         
         vector_store = VectorStore()
-        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        openai_client = make_client()
         
         print(f"🔍 Debugging content retrieval for topic: '{topic}' in course: {course_id}")
         
@@ -2355,3 +2355,50 @@ async def exam_status():
             "message": str(e),
             "timestamp": datetime.now().isoformat()
         }
+
+
+# ===================== EXPORTS (PDF / Anki / iCal) =====================
+from fastapi.responses import Response
+import exports
+
+
+@app.get("/api/export-notes-pdf/{course_id}")
+def export_notes_pdf(course_id: str):
+    """Download the course's study notes as a PDF."""
+    try:
+        pdf_bytes = exports.build_notes_pdf(course_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not export notes: {e}")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{course_id}_notes.pdf"'},
+    )
+
+
+@app.get("/api/export-flashcards-anki/{course_id}")
+def export_flashcards_anki(course_id: str):
+    """Download course flashcards as an Anki .apkg deck."""
+    try:
+        apkg_bytes = exports.build_flashcards_apkg(course_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not export flashcards: {e}")
+    return Response(
+        content=apkg_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{course_id}_flashcards.apkg"'},
+    )
+
+
+@app.get("/api/export-planner-ical/{course_id}")
+def export_planner_ical(course_id: str):
+    """Download a generated study plan as an iCalendar (.ics) file."""
+    try:
+        ics_bytes = exports.build_planner_ics(course_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not export planner: {e}")
+    return Response(
+        content=ics_bytes,
+        media_type="text/calendar",
+        headers={"Content-Disposition": f'attachment; filename="{course_id}_study_plan.ics"'},
+    )

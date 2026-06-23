@@ -3,7 +3,7 @@ import os, io, re, json, time, hashlib, tempfile
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from dotenv import load_dotenv
-from openai import OpenAI
+from providers import make_client
 from vector_store import VectorStore
 
 # Optional imports (fail gracefully if unavailable)
@@ -31,7 +31,7 @@ except Exception:
 
 # ── Env / clients ────────────────────────────────────────────────────────────
 load_dotenv()
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai_client = make_client()
 vector_store = VectorStore()
 
 # Supabase (used by delete helpers)
