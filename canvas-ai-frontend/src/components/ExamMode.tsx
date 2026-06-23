@@ -67,6 +67,8 @@ type SolveJSON = {
 
 export default function ExamMode({ courseId, userId }: ExamModeProps) {
   const [examSession, setExamSession] = useState<ExamSession | null>(null)
+  const [examDifficulty, setExamDifficulty] = useState<'easy' | 'medium' | 'hard' | 'mixed'>('mixed')
+  const [examQuestionCount, setExamQuestionCount] = useState(12)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [analysisSummary, setAnalysisSummary] = useState<any>(null)
@@ -116,8 +118,8 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
       const result = await generatePracticeExam({
         courseId,
         examType: 'practice',
-        difficulty: 'mixed' as any,
-        questionCount: 12,
+        difficulty: examDifficulty as any,
+        questionCount: examQuestionCount,
         timeLimit: 120,
         userId: userId || 'anonymous',
         questionTypes: ['multiple_choice','calculation','short_answer']
@@ -252,6 +254,10 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
             userAnswer: r.user_answer,
             correctAnswer: r.correct_answer,
             points: r.points_possible,
+            pointsEarned: r.points_earned,
+            verdict: r.verdict,
+            gradeReason: r.grade_reason,
+            timeSpent: r.time_spent,
             topic: r.topic
           })) ?? []
         })
@@ -413,6 +419,35 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
             </div>
           </div>
 
+          {/* Per-question breakdown with AI-judge verdicts */}
+          {Array.isArray(examResults.breakdown) && examResults.breakdown.length > 0 && (
+            <div className="mb-5 space-y-2">
+              <h3 className="text-sm font-medium text-zinc-300 mb-2">Question breakdown</h3>
+              {examResults.breakdown.map((b: any, i: number) => {
+                const verdict: string = b.verdict ?? (b.pointsEarned >= b.points ? 'correct' : b.pointsEarned > 0 ? 'partial' : 'incorrect')
+                const tone = verdict === 'correct'
+                  ? 'border-emerald-500/20 bg-emerald-500/5'
+                  : verdict === 'partial'
+                  ? 'border-amber-500/20 bg-amber-500/5'
+                  : 'border-red-500/20 bg-red-500/5'
+                const label = verdict === 'correct' ? 'text-emerald-400' : verdict === 'partial' ? 'text-amber-400' : 'text-red-400'
+                return (
+                  <div key={i} className={`border rounded-lg p-3 ${tone}`}>
+                    <div className="flex items-start justify-between gap-3 mb-1">
+                      <span className="text-xs text-zinc-400">Q{i + 1} · {b.topic}</span>
+                      <span className={`text-xs font-medium ${label}`}>
+                        {verdict} · {b.pointsEarned ?? 0}/{b.points} pts
+                        {typeof b.timeSpent === 'number' ? ` · ${b.timeSpent}s` : ''}
+                      </span>
+                    </div>
+                    <p className="text-sm text-zinc-200 mb-1">{b.question}</p>
+                    {b.gradeReason && <p className="text-xs text-zinc-400 italic">{b.gradeReason}</p>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           <div className="flex gap-3">
             <button
               onClick={() => {
@@ -453,6 +488,34 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
             <div className="bg-zinc-800 rounded-lg p-4">
               <h3 className="text-sm font-medium text-zinc-200 mb-1">Generate from course materials</h3>
               <p className="text-xs text-zinc-500 mb-3">AI creates a practice exam from your uploaded files</p>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">Difficulty</label>
+                  <select
+                    value={examDifficulty}
+                    onChange={(e) => setExamDifficulty(e.target.value as 'easy' | 'medium' | 'hard' | 'mixed')}
+                    className="w-full px-2 py-1.5 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-xs"
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                    <option value="mixed">Mixed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">Questions</label>
+                  <select
+                    value={examQuestionCount}
+                    onChange={(e) => setExamQuestionCount(Number(e.target.value))}
+                    className="w-full px-2 py-1.5 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-xs"
+                  >
+                    <option value={5}>5</option>
+                    <option value={8}>8</option>
+                    <option value={12}>12</option>
+                    <option value={15}>15</option>
+                  </select>
+                </div>
+              </div>
               <button
                 onClick={generateExamFromPastPaper}
                 disabled={loading || !courseId}

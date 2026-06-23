@@ -97,7 +97,8 @@ create table if not exists exam_sessions (
     is_paused        boolean default false,
     created_at       timestamptz not null default now(),
     updated_at       timestamptz not null default now(),
-    final_score      jsonb
+    final_score      jsonb,
+    current_question_start_time timestamptz   -- per-question timing (Phase 3)
 );
 create index if not exists exam_sessions_user_idx   on exam_sessions (user_id);
 create index if not exists exam_sessions_status_idx on exam_sessions (status);

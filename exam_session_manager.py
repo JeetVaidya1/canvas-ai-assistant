@@ -3,11 +3,40 @@ import os
 import json
 import uuid
 from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from supabase import create_client
 
 load_dotenv()
+
+
+def _utcnow() -> datetime:
+    """Timezone-aware current UTC time (matches Postgres timestamptz reads)."""
+    return datetime.now(timezone.utc)
+
+
+def _utcnow_iso() -> str:
+    return _utcnow().isoformat()
+
+
+def _parse_dt(value: str) -> datetime:
+    """Parse an ISO timestamp into a tz-aware datetime (assume UTC if naive)."""
+    dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+# Schema for the AI answer judge (free-response grading).
+ANSWER_JUDGE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "verdict": {"type": "string", "enum": ["correct", "partial", "incorrect"]},
+        "reason": {"type": "string", "description": "One or two sentences justifying the verdict."},
+    },
+    "required": ["verdict", "reason"],
+}
+
+# Fraction of a question's points awarded for each verdict.
+VERDICT_CREDIT = {"correct": 1.0, "partial": 0.5, "incorrect": 0.0}
+
 
 class ExamSessionManager:
     """Manage active exam sessions, timing, scoring, and persistence"""
@@ -35,8 +64,8 @@ class ExamSessionManager:
                 "end_time": None,
                 "time_remaining": exam_data.get("time_limit", 120) * 60,  # Convert to seconds
                 "is_paused": False,
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat()
+                "created_at": _utcnow_iso(),
+                "updated_at": _utcnow_iso()
             }
             
             # Save to database
@@ -66,11 +95,13 @@ class ExamSessionManager:
             if session["status"] != "created":
                 return {"status": "error", "message": "Session already started or completed"}
             
-            # Update session to started
+            # Update session to started; start the per-question timer too.
+            now_iso = _utcnow_iso()
             updated_data = {
                 "status": "active",
-                "start_time": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat()
+                "start_time": now_iso,
+                "current_question_start_time": now_iso,
+                "updated_at": now_iso
             }
             
             result = self.supabase.table("exam_sessions").update(updated_data).eq("id", session_id).execute()
@@ -103,7 +134,7 @@ class ExamSessionManager:
             
             updated_data = {
                 "is_paused": new_pause_state,
-                "updated_at": datetime.now().isoformat()
+                "updated_at": _utcnow_iso()
             }
             
             # If pausing, calculate remaining time
@@ -137,17 +168,24 @@ class ExamSessionManager:
             if session["status"] not in ["active"]:
                 return {"status": "error", "message": "Session not active"}
             
-            # Update user answers
+            # Time spent = seconds since the student arrived at this question.
+            # Accumulate across re-saves of the same question.
+            elapsed = self.calculate_question_time(session, question_id)
+            prev_spent = session.get("user_answers", {}).get(question_id, {}).get("time_spent", 0)
+
+            now_iso = _utcnow_iso()
             user_answers = session.get("user_answers", {})
             user_answers[question_id] = {
                 "answer": answer,
-                "timestamp": datetime.now().isoformat(),
-                "time_spent": self.calculate_question_time(session, question_id)
+                "timestamp": now_iso,
+                "time_spent": prev_spent + elapsed
             }
-            
+
             updated_data = {
                 "user_answers": user_answers,
-                "updated_at": datetime.now().isoformat()
+                # Reset the per-question timer so time isn't double-counted.
+                "current_question_start_time": now_iso,
+                "updated_at": now_iso
             }
             
             result = self.supabase.table("exam_sessions").update(updated_data).eq("id", session_id).execute()
@@ -172,13 +210,16 @@ class ExamSessionManager:
             if question_index < 0 or question_index >= len(exam_data["questions"]):
                 return {"status": "error", "message": "Invalid question index"}
             
+            now_iso = _utcnow_iso()
             updated_data = {
                 "current_question": question_index,
-                "updated_at": datetime.now().isoformat()
+                # Start timing the newly-displayed question.
+                "current_question_start_time": now_iso,
+                "updated_at": now_iso
             }
-            
+
             result = self.supabase.table("exam_sessions").update(updated_data).eq("id", session_id).execute()
-            
+
             return {"status": "success", "current_question": question_index}
                 
         except Exception as e:
@@ -204,9 +245,9 @@ class ExamSessionManager:
             # Update session to completed
             updated_data = {
                 "status": "completed",
-                "end_time": datetime.now().isoformat(),
+                "end_time": _utcnow_iso(),
                 "final_score": scoring_result,
-                "updated_at": datetime.now().isoformat()
+                "updated_at": _utcnow_iso()
             }
             
             result = self.supabase.table("exam_sessions").update(updated_data).eq("id", session_id).execute()
@@ -243,37 +284,41 @@ class ExamSessionManager:
                 total_points += question.get("points", 0)
                 
                 user_answer_data = user_answers.get(q_id, {})
-                user_answer = user_answer_data.get("answer", "").strip()
-                correct_answer = question.get("correct_answer", "").strip()
-                
-                # Determine if answer is correct
-                is_correct = self.evaluate_answer(user_answer, correct_answer, question["type"])
-                
-                points_earned = question.get("points", 0) if is_correct else 0
+                user_answer = (user_answer_data.get("answer") or "").strip()
+                correct_answer = (question.get("correct_answer") or "").strip()
+                possible = question.get("points", 0)
+
+                # Grade with partial credit where appropriate.
+                grade = self.grade_response(question, user_answer, correct_answer)
+                verdict = grade["verdict"]
+                is_correct = verdict == "correct"
+                points_earned = round(possible * VERDICT_CREDIT.get(verdict, 0.0), 2)
                 earned_points += points_earned
-                
+
                 if is_correct:
                     correct_count += 1
-                
-                # Track topic performance
+
+                # Track topic performance (points-based, so partial credit counts).
                 topic = question.get("topic", "General")
                 if topic not in topic_performance:
                     topic_performance[topic] = {"correct": 0, "total": 0, "points_earned": 0, "points_possible": 0}
-                
+
                 topic_performance[topic]["total"] += 1
-                topic_performance[topic]["points_possible"] += question.get("points", 0)
+                topic_performance[topic]["points_possible"] += possible
+                topic_performance[topic]["points_earned"] += points_earned
                 if is_correct:
                     topic_performance[topic]["correct"] += 1
-                    topic_performance[topic]["points_earned"] += question.get("points", 0)
-                
+
                 question_results.append({
                     "question_id": q_id,
                     "question": question["question"],
                     "user_answer": user_answer,
                     "correct_answer": correct_answer,
                     "is_correct": is_correct,
+                    "verdict": verdict,
+                    "grade_reason": grade.get("reason", ""),
                     "points_earned": points_earned,
-                    "points_possible": question.get("points", 0),
+                    "points_possible": possible,
                     "topic": topic,
                     "difficulty": question.get("difficulty", "medium"),
                     "explanation": question.get("explanation", ""),
@@ -297,37 +342,78 @@ class ExamSessionManager:
                 "question_results": question_results,
                 "topic_performance": topic_performance,
                 "time_metrics": time_metrics,
-                "completion_date": datetime.now().isoformat()
+                "completion_date": _utcnow_iso()
             }
             
         except Exception as e:
             print(f"❌ Score calculation failed: {e}")
             return {"error": str(e)}
     
-    def evaluate_answer(self, user_answer: str, correct_answer: str, question_type: str) -> bool:
-        """Evaluate if a user's answer is correct"""
-        if not user_answer or not correct_answer:
-            return False
-        
-        user_clean = user_answer.lower().strip()
-        correct_clean = correct_answer.lower().strip()
-        
+    def grade_response(self, question: Dict[str, Any], user_answer: str, correct_answer: str) -> Dict[str, Any]:
+        """Grade one response, returning {verdict, reason}.
+
+        - multiple_choice: exact letter match (correct/incorrect).
+        - calculation: numerical comparison with tolerance (correct/incorrect).
+        - short_answer/essay/proof/diagram: AI judge with partial credit.
+        """
+        question_type = question.get("type", "short_answer")
+
+        if not user_answer:
+            return {"verdict": "incorrect", "reason": "No answer provided."}
+
         if question_type == "multiple_choice":
-            # For MC, match the letter exactly
-            return user_clean == correct_clean
-        
-        elif question_type == "calculation":
-            # For calculations, be more flexible with numerical answers
-            return self.compare_numerical_answers(user_answer, correct_answer)
-        
-        elif question_type in ["short_answer", "essay"]:
-            # For text answers, use similarity matching
-            return self.compare_text_answers(user_answer, correct_answer)
-        
-        else:
-            # Default: exact match
-            return user_clean == correct_clean
-    
+            ok = self._normalize_letter(user_answer) == self._normalize_letter(correct_answer)
+            return {"verdict": "correct" if ok else "incorrect",
+                    "reason": "Selected the correct option." if ok else f"Correct option was {correct_answer}."}
+
+        if question_type == "calculation":
+            ok = self.compare_numerical_answers(user_answer, correct_answer)
+            return {"verdict": "correct" if ok else "incorrect",
+                    "reason": "Numerically matches the expected answer." if ok else "Does not match the expected value."}
+
+        # Free-response: use the AI judge.
+        return self.judge_text_answer(
+            question.get("question", ""), user_answer, correct_answer,
+            question.get("explanation", "")
+        )
+
+    def _normalize_letter(self, text: str) -> str:
+        """Reduce an MC answer to its option letter (handles 'B', 'b)', 'B) foo')."""
+        t = (text or "").strip().upper()
+        return t[0] if t and t[0] in "ABCD" else t
+
+    def judge_text_answer(self, question: str, user_answer: str, correct_answer: str,
+                          explanation: str = "") -> Dict[str, Any]:
+        """AI judge for free-response answers via guaranteed-schema tool use."""
+        try:
+            from providers import structured_call
+            reference = correct_answer or explanation or "(no reference provided)"
+            prompt = (
+                "You are grading a student's exam answer. Decide if it is correct, partially "
+                "correct, or incorrect relative to the reference. Award 'partial' when the answer "
+                "captures some but not all key ideas. Judge meaning, not exact wording.\n\n"
+                f"QUESTION:\n{question}\n\n"
+                f"REFERENCE ANSWER:\n{reference}\n\n"
+                f"STUDENT ANSWER:\n{user_answer}\n\n"
+                "Return your verdict and a one-sentence reason."
+            )
+            out = structured_call(
+                [{"role": "user", "content": prompt}],
+                schema=ANSWER_JUDGE_SCHEMA,
+                tool_name="answer_judge",
+                model=os.getenv("MODEL_DEFAULT"),
+                max_tokens=300,
+            )
+            verdict = out.get("verdict", "incorrect") if isinstance(out, dict) else "incorrect"
+            if verdict not in VERDICT_CREDIT:
+                verdict = "incorrect"
+            return {"verdict": verdict, "reason": out.get("reason", "") if isinstance(out, dict) else ""}
+        except Exception as e:  # noqa: BLE001  fall back to lenient keyword overlap
+            print(f"AI answer judge failed, falling back to keyword overlap: {e}")
+            ok = self.compare_text_answers(user_answer, correct_answer)
+            return {"verdict": "correct" if ok else "incorrect",
+                    "reason": "Graded by keyword overlap (AI judge unavailable)."}
+
     def compare_numerical_answers(self, user_answer: str, correct_answer: str) -> bool:
         """Compare numerical answers with tolerance"""
         try:
@@ -392,13 +478,10 @@ class ExamSessionManager:
         """Calculate time-related metrics"""
         try:
             start_time = session.get("start_time")
-            end_time = datetime.now().isoformat()
             time_limit = session["exam_data"]["time_limit"] * 60  # Convert to seconds
-            
+
             if start_time:
-                start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-                end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-                total_time_used = int((end_dt - start_dt).total_seconds())
+                total_time_used = int((_utcnow() - _parse_dt(start_time)).total_seconds())
             else:
                 total_time_used = 0
             
@@ -421,9 +504,7 @@ class ExamSessionManager:
             if not start_time:
                 return 0
             
-            start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-            now = datetime.now()
-            elapsed = (now - start_dt).total_seconds()
+            elapsed = (_utcnow() - _parse_dt(start_time)).total_seconds()
             return int(elapsed)
             
         except Exception as e:
@@ -431,10 +512,19 @@ class ExamSessionManager:
             return 0
     
     def calculate_question_time(self, session: Dict[str, Any], question_id: str) -> int:
-        """Calculate time spent on current question"""
-        # This would track time per question in a real implementation
-        # For now, return 0 as placeholder
-        return 0
+        """Seconds elapsed since the student arrived at the current question.
+
+        Reads ``current_question_start_time`` (set on start/navigate/save). Returns
+        0 if it isn't set yet (e.g. legacy sessions created before this field).
+        """
+        start = session.get("current_question_start_time")
+        if not start:
+            return 0
+        try:
+            return max(0, int((_utcnow() - _parse_dt(start)).total_seconds()))
+        except Exception as e:
+            print(f"Question time calculation error: {e}")
+            return 0
     
     def track_exam_completion(self, session: Dict[str, Any], results: Dict[str, Any]) -> None:
         """Track exam completion for analytics"""
@@ -518,7 +608,7 @@ class ExamSessionManager:
         """Auto-submit exams that have exceeded their time limit"""
         try:
             # Find active sessions that should have expired
-            cutoff_time = (datetime.now() - timedelta(hours=6)).isoformat()  # 6 hour buffer
+            cutoff_time = (_utcnow() - timedelta(hours=6)).isoformat()  # 6 hour buffer
             
             result = self.supabase.table("exam_sessions").select("*").eq("status", "active").lt("start_time", cutoff_time).execute()
             
