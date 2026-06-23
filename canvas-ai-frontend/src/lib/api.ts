@@ -463,7 +463,7 @@ export async function generatePracticeExam(params: {
   return apiFetch('/api/generate-practice-exam', { method: 'POST', body: form })
 }
 
-export async function createExamSession(exam: any, courseId: string, userId = 'anonymous') {
+export async function createExamSession(courseId: string, userId = 'anonymous', exam: unknown = null) {
   const form = new FormData()
   form.append('exam_data', JSON.stringify(exam))
   form.append('user_id', userId)

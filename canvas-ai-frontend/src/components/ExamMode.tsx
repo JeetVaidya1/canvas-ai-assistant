@@ -323,7 +323,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
       const res = await solveExamQuestion({
         courseId,
         questionText: q.question,
-        wantHint: false
+        wantHint: true
       })
       const s: SolveJSON = res.solution
       setHints(prev => ({ ...prev, [q.id]: s }))
