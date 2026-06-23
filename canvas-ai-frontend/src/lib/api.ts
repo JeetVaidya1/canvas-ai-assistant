@@ -272,6 +272,8 @@ export interface QuizAnswerResult {
   explanation: string
   concept: string
   source: QuizSource
+  mistake_explanation?: string
+  mistake_source?: QuizSource
 }
 
 export interface QuizTopicScore {

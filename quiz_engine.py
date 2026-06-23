@@ -255,18 +255,32 @@ def grade_answer(quiz_id: str, question_id: str, selected: str,
     except Exception as e:  # noqa: BLE001  analytics must never break grading
         print(f"quiz analytics tracking failed: {e}")
 
-    # Closed loop: a wrong answer seeds a spaced-repetition review item.
+    # Grounded "explain my mistake" + closed-loop review seeding (wrong only).
+    mistake_explanation = ""
+    mistake_source = {"doc_name": None, "page": None}
     if not is_correct:
+        correct_text = _correct_option_text(question, correct_letter)
+        selected_text = _correct_option_text(question, selected_letter)
+        try:
+            import mistake_engine
+            grounded = mistake_engine.explain_mistake(
+                course_id or "", question.get("question") or "",
+                question.get("concept") or "", selected_text, correct_text,
+            )
+            mistake_explanation = grounded.get("explanation") or ""
+            mistake_source = grounded.get("source") or mistake_source
+        except Exception as e:  # noqa: BLE001
+            print(f"quiz explain_mistake failed: {e}")
         try:
             import review_engine
-            correct_text = _correct_option_text(question, correct_letter)
             review_engine.seed_from_mistake(
                 user_id=user_id,
                 course_id=course_id or "",
                 concept=question.get("concept") or "general",
                 prompt=question.get("question") or "",
                 answer=correct_text,
-                explanation=question.get("explanation") or "",
+                # Prefer the grounded, cited explanation when we have one.
+                explanation=mistake_explanation or question.get("explanation") or "",
                 source="quiz",
             )
         except Exception as e:  # noqa: BLE001
@@ -278,6 +292,8 @@ def grade_answer(quiz_id: str, question_id: str, selected: str,
         "explanation": question.get("explanation", ""),
         "concept": question.get("concept", ""),
         "source": {"doc_name": question.get("source_doc"), "page": question.get("source_page")},
+        "mistake_explanation": mistake_explanation,
+        "mistake_source": mistake_source,
     }
 
 
