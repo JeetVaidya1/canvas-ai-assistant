@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import analytics, chat, concepts, courses, exams, exports_api, flashcards, notes, planner, practice, quiz, reviews, system
+from routers import analytics, chat, concepts, courses, exams, exports_api, flashcards, github_io, notes, planner, practice, quiz, reviews, system
 
 app = FastAPI()
 app.add_middleware(
@@ -13,5 +13,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for _m in (analytics, chat, concepts, courses, exams, exports_api, flashcards, notes, planner, practice, quiz, reviews, system):
+for _m in (analytics, chat, concepts, courses, exams, exports_api, flashcards, github_io, notes, planner, practice, quiz, reviews, system):
     app.include_router(_m.router)
