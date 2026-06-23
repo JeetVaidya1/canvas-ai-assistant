@@ -5,7 +5,7 @@ import random
 import re
 from typing import List, Dict, Any
 from dotenv import load_dotenv
-from openai import OpenAI
+from providers import make_client
 
 load_dotenv()
 
@@ -13,7 +13,7 @@ class PracticeGenerator:
     """Generate practice problems from course materials - works for any subject"""
     
     def __init__(self):
-        self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.openai_client = make_client()
     
     def extract_topics_from_course(self, course_id: str) -> List[str]:
         """Extract actual topics from course materials using multiple strategies - IMPROVED"""
@@ -137,7 +137,7 @@ class PracticeGenerator:
         """Analyze actual course content for topics using AI - subject agnostic"""
         try:
             # Get diverse content samples
-            sample_embedding = [0.0] * 1536  # Dummy for metadata query
+            sample_embedding = [0.0] * 1024  # Dummy for metadata query (BGE-large dim)
             results = vector_store.query(course_id, sample_embedding, top_k=25) or []
             
             if not results:

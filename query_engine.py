@@ -2,7 +2,7 @@
 import os, json, re, time, random
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
-from openai import OpenAI
+from providers import make_client
 from vector_store import VectorStore
 
 load_dotenv()
@@ -14,7 +14,7 @@ RAG_TOP_K   = int(os.getenv("RAG_TOP_K", "12"))
 ALLOW_GENERAL = os.getenv("ALLOW_GENERAL", "true").lower() == "true"
 MAX_CONTEXT_CHARS = int(os.getenv("MAX_CONTEXT_CHARS", "16000"))  # guardrail for prompt size
 
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+openai_client = make_client()
 vector_store = VectorStore()
 
 def _retry_chat(model: str, messages: List[Dict[str, Any]], temperature: float = 0.1, max_tokens: int = 2000, attempts: int = 3):

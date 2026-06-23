@@ -6,11 +6,14 @@ import pdfplumber
 from pptx import Presentation
 from docx import Document
 from dotenv import load_dotenv
-from openai import OpenAI
+from providers import make_client
 from vector_store import VectorStore
+# File deletion (DB rows + storage) is identical across ingest paths; reuse it
+# so main.py can import delete_file_from_course and enable ENHANCED_MODE.
+from ingest import delete_file_from_course
 
 load_dotenv()
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai_client = make_client()
 vector_store = VectorStore()
 
 EMBED_MODEL = os.getenv("EMBEDDINGS_MODEL", "text-embedding-3-small")

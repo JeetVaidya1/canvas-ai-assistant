@@ -1,11 +1,11 @@
 # test_gpt4v.py
 import os
-from openai import OpenAI
+from providers import make_client
 from dotenv import load_dotenv
 
 # Load your environment variables (same as your main app)
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = make_client()
 
 def test_gpt4v_access():
     print("🔍 Testing GPT-4V access...")

@@ -6,7 +6,7 @@ import hashlib
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from openai import OpenAI
+from providers import make_client
 from vector_store import VectorStore
 import pdfplumber
 import io
@@ -24,7 +24,7 @@ class ExamGenerator:
     """Generate practice exams from past papers and course materials"""
     
     def __init__(self):
-        self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.openai_client = make_client()
         self.vector_store = VectorStore()
     
     def analyze_past_paper(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
