@@ -328,7 +328,39 @@ WRITE ONE NATURAL, CONCISE ANSWER:
             return ("I'm having trouble right now. Please try again, or upload more relevant notes/slides "
                     "so I can ground the answer better.")
 
+    # ── Streaming variant: yields answer text deltas ──────────────────────────
+    def stream_conversational_response(self, question: str, course_id: str, session_id: str = None):
+        """Yield answer text chunks as Claude produces them."""
+        from providers import stream_text
+
+        results = self.intelligent_retrieval(question, course_id, session_id)
+        context, _ = self._build_context(results) if results else ("", [])
+        convo = self.get_conversation_context(session_id, 6) if session_id else ""
+
+        qtype = self._classify(question)
+        prompt = self._response_prompt(question, context, convo, ALLOW_GENERAL_FILL)
+        model, max_tokens = self._route(question, qtype)
+
+        messages = [{"role": "system", "content": SYSTEM_STYLE}]
+        messages.extend(self._few_shots())
+        messages.append({"role": "user", "content": prompt})
+
+        try:
+            for delta in stream_text(messages, model=model, max_tokens=max_tokens):
+                yield delta
+        except Exception as e:
+            print(f"Streaming generation failed: {e}")
+            yield ("\n\nI'm having trouble right now. Please try again, or upload more "
+                   "relevant notes/slides so I can ground the answer better.")
+
+
 # Public entrypoint
 def conversational_ask_question(question: str, course_id: str, session_id: str = None) -> str:
     engine = ConversationalRAGEngine()
     return engine.generate_conversational_response(question, course_id, session_id)
+
+
+def conversational_ask_stream(question: str, course_id: str, session_id: str = None):
+    """Public streaming entrypoint: yields answer text deltas."""
+    engine = ConversationalRAGEngine()
+    yield from engine.stream_conversational_response(question, course_id, session_id)

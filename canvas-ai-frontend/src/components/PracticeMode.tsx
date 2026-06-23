@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Markdown } from '@/components/ui/Markdown'
 import {
   Play,
   CheckCircle,
@@ -407,9 +408,9 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
           <span className="text-xs font-medium text-cyan-400 mb-2 block">
             Question {session.currentProblemIndex + 1}
           </span>
-          <h3 className="text-base font-medium text-zinc-100 leading-relaxed">
-            {currentProblem.question}
-          </h3>
+          <div className="text-base font-medium text-zinc-100">
+            <Markdown content={currentProblem.question} />
+          </div>
         </div>
 
         {/* Options */}
@@ -475,9 +476,9 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
                 <h4 className={`text-sm font-medium mb-1 ${isCorrect ? 'text-emerald-400' : 'text-red-400'}`}>
                   {isCorrect ? 'Correct!' : 'Not quite right'}
                 </h4>
-                <p className={`text-sm leading-relaxed ${isCorrect ? 'text-emerald-400/80' : 'text-red-400/80'}`}>
-                  {currentProblem.explanation}
-                </p>
+                <div className={`text-sm ${isCorrect ? 'text-emerald-400/80' : 'text-red-400/80'}`}>
+                  <Markdown content={currentProblem.explanation} />
+                </div>
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Shuffle, RotateCcw, Download } from 'lucide-react'
+import { Markdown } from '@/components/ui/Markdown'
 
 export type Flashcard = { q: string; a: string }
 
@@ -93,7 +94,7 @@ export default function Flashcards({
                 {/* Front */}
                 <div className="absolute inset-0 backface-hidden">
                   <div className="text-xs text-zinc-400 mb-1">Question</div>
-                  <div className="text-zinc-50 font-medium leading-snug line-clamp-6">{q}</div>
+                  <div className="text-zinc-50 font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
                   {studyMode==='all' && (
                     <div className="absolute bottom-3 right-3 text-xs text-zinc-400">Click to flip</div>
                   )}
@@ -102,7 +103,7 @@ export default function Flashcards({
                 {/* Back (answer) */}
                 <div className="absolute inset-0 rotate-y-180 backface-hidden">
                   <div className="text-xs text-zinc-400 mb-1">Answer</div>
-                  <div className="text-zinc-50 leading-snug whitespace-pre-wrap line-clamp-6">{a}</div>
+                  <div className="text-zinc-50 leading-snug overflow-hidden max-h-32"><Markdown content={a} /></div>
                 </div>
               </div>
 
@@ -110,7 +111,7 @@ export default function Flashcards({
               {studyMode==='hide-answers' && (
                 <div className="absolute inset-0 rounded-xl border border-dashed border-zinc-700 bg-zinc-800/60 p-4">
                   <div className="text-xs text-zinc-400 mb-1">Prompt</div>
-                  <div className="text-zinc-200 font-medium leading-snug line-clamp-6">{q}</div>
+                  <div className="text-zinc-200 font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
                 </div>
               )}
 

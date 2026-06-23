@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Markdown } from '@/components/ui/Markdown'
 import {
   Upload,
   Timer,
@@ -586,9 +587,9 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
             <span className="text-zinc-600 text-xs">&middot;</span>
             <span className="text-xs text-zinc-500">{currentQ.topic}</span>
           </div>
-          <h3 className="text-base font-medium text-zinc-100 leading-relaxed">
-            {currentQ.question}
-          </h3>
+          <div className="text-base font-medium text-zinc-100">
+            <Markdown content={currentQ.question} />
+          </div>
         </div>
 
         {/* Answer Input */}

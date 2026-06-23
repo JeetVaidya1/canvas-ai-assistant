@@ -191,41 +191,61 @@ def _extract_text(response) -> str:
     return "".join(parts)
 
 
+def _build_call(model, messages, temperature, max_tokens, response_format):
+    """Shared prep for both streaming and non-streaming calls.
+
+    Returns (client, kwargs, want_json, target_model).
+    """
+    client, mode = _get_anthropic()
+    target_model = resolve_chat_model(model)
+    system, anth_messages = _split_messages(messages)
+
+    want_json = bool(response_format) and response_format.get("type") == "json_object"
+    if want_json:
+        system = (system + "\n\n" + _JSON_INSTRUCTION).strip() if system else _JSON_INSTRUCTION
+
+    kwargs: Dict[str, Any] = {
+        "model": target_model,
+        "messages": anth_messages,
+        "max_tokens": max_tokens or DEFAULT_MAX_TOKENS,
+    }
+    if mode == "oauth":
+        # Subscription tokens require the Claude Code identity as the first
+        # system block; the real system prompt follows it.
+        system_blocks = [{"type": "text", "text": _CLAUDE_CODE_IDENTITY}]
+        if system:
+            system_blocks.append({"type": "text", "text": system})
+        kwargs["system"] = system_blocks
+    elif system:
+        kwargs["system"] = system
+    if temperature is not None:
+        # Anthropic temperature range is [0, 1].
+        kwargs["temperature"] = max(0.0, min(1.0, float(temperature)))
+    return client, kwargs, want_json, target_model
+
+
+def stream_text(messages, *, model=None, temperature=None, max_tokens=None):
+    """Yield assistant text deltas as they arrive (Claude streaming)."""
+    client, kwargs, _want_json, _target = _build_call(
+        model, messages, temperature, max_tokens, None
+    )
+    with client.messages.stream(**kwargs) as stream:
+        for delta in stream.text_stream:
+            if delta:
+                yield delta
+
+
 class _CompletionsNamespace:
     def create(self, *, model: str = None, messages: List[Dict[str, Any]],
                temperature: float = None, max_tokens: int = None,
                response_format: Dict[str, Any] = None, **_ignored) -> _ChatResponse:
-        client, mode = _get_anthropic()
-        target_model = resolve_chat_model(model)
-        system, anth_messages = _split_messages(messages)
-
-        want_json = bool(response_format) and response_format.get("type") == "json_object"
-        if want_json:
-            system = (system + "\n\n" + _JSON_INSTRUCTION).strip() if system else _JSON_INSTRUCTION
-
-        kwargs: Dict[str, Any] = {
-            "model": target_model,
-            "messages": anth_messages,
-            "max_tokens": max_tokens or DEFAULT_MAX_TOKENS,
-        }
-        if mode == "oauth":
-            # Subscription tokens require the Claude Code identity as the first
-            # system block; the real system prompt follows it.
-            system_blocks = [{"type": "text", "text": _CLAUDE_CODE_IDENTITY}]
-            if system:
-                system_blocks.append({"type": "text", "text": system})
-            kwargs["system"] = system_blocks
-        elif system:
-            kwargs["system"] = system
-        if temperature is not None:
-            # Anthropic temperature range is [0, 1].
-            kwargs["temperature"] = max(0.0, min(1.0, float(temperature)))
-
+        client, kwargs, want_json, target_model = _build_call(
+            model, messages, temperature, max_tokens, response_format
+        )
         response = client.messages.create(**kwargs)
         text = _extract_text(response)
         if want_json:
             text = _coerce_json(text)
-
         message = _Message(content=text)
         return _ChatResponse(choices=[_Choice(message=message)], model=target_model)
 

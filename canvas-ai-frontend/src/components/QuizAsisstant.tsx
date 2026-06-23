@@ -1,5 +1,6 @@
 // src/components/QuizAssistant.tsx - IMPROVED VERSION
 import React, { useState, useRef, useEffect } from 'react'
+import { Markdown } from '@/components/ui/Markdown'
 import {
   Brain,
   Copy,
@@ -205,9 +206,9 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                         <div className="bg-zinc-800 rounded-lg p-4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
-                              <p className="text-lg font-semibold text-zinc-100 leading-relaxed">
-                                {conv.response.answer}
-                              </p>
+                              <div className="text-lg font-semibold text-zinc-100">
+                                <Markdown content={conv.response.answer} />
+                              </div>
                             </div>
                             <button
                               onClick={() => copyAnswer(conv.response.answer)}
@@ -226,9 +227,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                             <span className="font-semibold text-zinc-50">Explanation</span>
                           </div>
                           <div className="bg-zinc-800 rounded-lg p-4">
-                            <p className="text-zinc-400 leading-relaxed">
-                              {conv.response.explanation}
-                            </p>
+                            <Markdown content={conv.response.explanation} className="text-zinc-400" />
                           </div>
                         </div>
 
