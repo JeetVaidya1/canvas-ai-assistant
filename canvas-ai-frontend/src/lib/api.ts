@@ -104,12 +104,18 @@ export interface ChatSession {
   created_at: string
 }
 
+export interface Source {
+  file: string
+  page?: number | null
+}
+
 export interface Message {
   id: string
   session_id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: string
+  sources?: Source[]
 }
 
 export interface QuestionResponse {
@@ -136,6 +142,7 @@ export async function askQuestion(
 export interface AskStreamHandlers {
   onToken: (delta: string) => void
   onSession?: (sessionId: string) => void
+  onSources?: (sources: Source[]) => void
   onDone?: (sessionId: string) => void
 }
 
@@ -175,8 +182,14 @@ export async function askQuestionStream(
       const payload = dataLine.slice(5).trim()
       if (!payload) continue
       try {
-        const obj = JSON.parse(payload) as { delta?: string; session_id?: string; done?: boolean }
+        const obj = JSON.parse(payload) as {
+          delta?: string
+          session_id?: string
+          sources?: Source[]
+          done?: boolean
+        }
         if (obj.session_id && !obj.done) handlers.onSession?.(obj.session_id)
+        if (obj.sources) handlers.onSources?.(obj.sources)
         if (obj.delta) handlers.onToken(obj.delta)
         if (obj.done) handlers.onDone?.(obj.session_id ?? '')
       } catch {

@@ -233,12 +233,20 @@ Return JSON list of indices most→least relevant, e.g. [3,1,2,...]. No comments
         ]
 
     # ── Prompt for conversational + hybrid grounding ──────────────────────────
-    def _response_prompt(self, question: str, context: str, convo: str, allow_general: bool) -> str:
+    def _response_prompt(self, question: str, context: str, convo: str, allow_general: bool,
+                         include_sources_line: bool = True) -> str:
         """
         Ask for a single, smooth reply that uses course context first, without rigid sections.
-        Keep tag markers (e.g., [1:file:page]) inside CONTEXT so the model can cite, but instruct it
-        to output one compact 'Sources:' line at the very end instead of inline tags.
+        Keep tag markers (e.g., [1:file:page]) inside CONTEXT so the model can cite. When
+        include_sources_line is False (streaming path), the UI renders source chips from the
+        structured sources instead, so the model is told to omit the trailing Sources line.
         """
+        sources_rule = (
+            '- End with exactly one compact line: "Sources: <file/page, file/page, ...>" '
+            "listing any tags from COURSE CONTEXT you relied on. If none, omit the line."
+            if include_sources_line
+            else "- Do NOT add a 'Sources:' line; sources are shown separately."
+        )
         return f"""You are helping a student.
 
 STUDENT QUESTION:
@@ -256,9 +264,24 @@ WRITE ONE NATURAL, CONCISE ANSWER:
 - Prefer short paragraphs; use up to 3–5 tight bullets only if they improve clarity.
 - Friendly, precise tone for a university student.
 - Do NOT include tag markers like [1:file:page] in the body of the answer.
-- End with exactly one compact line: "Sources: <file/page, file/page, ...>" listing any tags from COURSE CONTEXT you relied on. If none, omit the line.
+{sources_rule}
+- Use GitHub-flavored markdown (bold, bullets, fenced code, and $...$ / $$...$$ for math) when it improves clarity.
 - Return only the final answer.
 """
+
+    @staticmethod
+    def _dedupe_sources(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Collapse retrieval sources to a unique, display-ready list of {file, page}."""
+        seen, out = set(), []
+        for s in sources:
+            file = s.get("file") or "unknown"
+            page = s.get("page")
+            key = (file, page)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append({"file": file, "page": page})
+        return out[:6]
 
     # ── Routing to mini/full and token budgets ────────────────────────────────
     def _route(self, question: str, qtype: str):
@@ -328,17 +351,20 @@ WRITE ONE NATURAL, CONCISE ANSWER:
             return ("I'm having trouble right now. Please try again, or upload more relevant notes/slides "
                     "so I can ground the answer better.")
 
-    # ── Streaming variant: yields answer text deltas ──────────────────────────
+    # ── Streaming variant: yields structured events ───────────────────────────
     def stream_conversational_response(self, question: str, course_id: str, session_id: str = None):
-        """Yield answer text chunks as Claude produces them."""
+        """Yield event dicts: {"sources": [...]} once, then {"delta": "..."} repeatedly."""
         from providers import stream_text
 
         results = self.intelligent_retrieval(question, course_id, session_id)
-        context, _ = self._build_context(results) if results else ("", [])
+        context, sources = self._build_context(results) if results else ("", [])
         convo = self.get_conversation_context(session_id, 6) if session_id else ""
 
+        yield {"sources": self._dedupe_sources(sources)}
+
         qtype = self._classify(question)
-        prompt = self._response_prompt(question, context, convo, ALLOW_GENERAL_FILL)
+        prompt = self._response_prompt(question, context, convo, ALLOW_GENERAL_FILL,
+                                       include_sources_line=False)
         model, max_tokens = self._route(question, qtype)
 
         messages = [{"role": "system", "content": SYSTEM_STYLE}]
@@ -347,11 +373,11 @@ WRITE ONE NATURAL, CONCISE ANSWER:
 
         try:
             for delta in stream_text(messages, model=model, max_tokens=max_tokens):
-                yield delta
+                yield {"delta": delta}
         except Exception as e:
             print(f"Streaming generation failed: {e}")
-            yield ("\n\nI'm having trouble right now. Please try again, or upload more "
-                   "relevant notes/slides so I can ground the answer better.")
+            yield {"delta": ("\n\nI'm having trouble right now. Please try again, or upload more "
+                             "relevant notes/slides so I can ground the answer better.")}
 
 
 # Public entrypoint

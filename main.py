@@ -433,20 +433,25 @@ async def ask_stream_endpoint(
         # First event carries the session id so the client can track it.
         yield f"data: {json.dumps({'session_id': session_id})}\n\n"
         collected = []
+        stream_sources = []
         try:
-            for delta in conversational_ask_stream(question, course_id, session_id):
-                collected.append(delta)
-                yield f"data: {json.dumps({'delta': delta})}\n\n"
+            for evt in conversational_ask_stream(question, course_id, session_id):
+                if "sources" in evt:
+                    stream_sources = evt["sources"]
+                if "delta" in evt:
+                    collected.append(evt["delta"])
+                yield f"data: {json.dumps(evt)}\n\n"
         except Exception as e:
             print(f"❌ Stream failed: {e}")
             yield f"data: {json.dumps({'delta': ' (stream interrupted)'})}\n\n"
         answer = "".join(collected).strip()
-        # Persist the assistant message once the stream completes.
+        # Persist the assistant message (with its sources) once the stream completes.
         try:
             supabase.table("messages").insert({
                 "session_id": session_id,
                 "role": "assistant",
                 "content": answer,
+                "sources": stream_sources,
                 "timestamp": datetime.utcnow().isoformat(),
             }).execute()
         except Exception as e:

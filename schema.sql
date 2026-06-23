@@ -74,6 +74,7 @@ create table if not exists messages (
     session_id  uuid references chat_sessions(id) on delete cascade,
     role        text,
     content     text,
+    sources     jsonb,          -- citation chips for assistant messages: [{file, page}]
     "timestamp" timestamptz not null default now()
 );
 create index if not exists messages_session_idx on messages (session_id);
