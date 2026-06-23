@@ -2,7 +2,20 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Q
 from fastapi.responses import Response, StreamingResponse
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import readiness_engine
+
 router = APIRouter()
+
+
+@router.get("/api/readiness/{course_id}/{user_id}")
+async def get_readiness_endpoint(course_id: str, user_id: str):
+    """Predicted exam-readiness score for a course/user."""
+    try:
+        return readiness_engine.get_readiness(course_id, user_id)
+    except Exception as e:
+        print(f"Readiness computation failed: {e}")
+        return {"score_pct": 0.0, "by_topic": [], "gaps": [],
+                "confidence": "low", "has_past_papers": False, "error": str(e)}
 
 
 @router.get("/analytics/{course_id}/{user_id}")

@@ -24,6 +24,7 @@ import {
   Calendar,
   Flame
 } from 'lucide-react'
+import { getReadiness, type Readiness } from '@/lib/api'
 
 interface AnalyticsData {
   topics_progress: Array<{
@@ -67,8 +68,65 @@ interface AnalyticsDashboardProps {
   userId: string
 }
 
+function readinessTone(score: number): { ring: string; text: string; label: string } {
+  if (score >= 80) return { ring: '#10b981', text: 'text-emerald-400', label: 'On track' }
+  if (score >= 60) return { ring: '#06b6d4', text: 'text-cyan-400', label: 'Getting there' }
+  if (score >= 40) return { ring: '#f59e0b', text: 'text-amber-400', label: 'Needs work' }
+  return { ring: '#ef4444', text: 'text-red-400', label: 'At risk' }
+}
+
+function ReadinessHero({ readiness }: { readiness: Readiness }) {
+  const score = Math.round(readiness.score_pct)
+  const tone = readinessTone(score)
+  const circumference = 2 * Math.PI * 52
+  const offset = circumference * (1 - score / 100)
+  return (
+    <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6">
+      <div className="relative w-32 h-32 flex-shrink-0">
+        <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#27272a" strokeWidth="10" />
+          <circle
+            cx="60" cy="60" r="52" fill="none" stroke={tone.ring} strokeWidth="10" strokeLinecap="round"
+            strokeDasharray={circumference} strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 0.8s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className={`text-3xl font-bold ${tone.text}`}>{score}%</span>
+          <span className="text-[10px] text-zinc-500 uppercase tracking-wide">ready</span>
+        </div>
+      </div>
+      <div className="flex-1 text-center md:text-left">
+        <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+          <h2 className="text-lg font-bold text-zinc-50">Exam readiness</h2>
+          <span className={`text-xs font-medium ${tone.text}`}>· {tone.label}</span>
+        </div>
+        <p className="text-sm text-zinc-400 mb-3">
+          {readiness.has_past_papers
+            ? 'Weighted by how often each topic shows up on your past papers.'
+            : 'Based on your topic mastery. Upload a past paper to weight by what’s actually tested.'}
+          {readiness.confidence === 'low' && ' Study more to sharpen this estimate.'}
+        </p>
+        {readiness.gaps.length > 0 ? (
+          <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+            <span className="text-xs text-zinc-500 self-center">Biggest gaps:</span>
+            {readiness.gaps.map((g) => (
+              <span key={g} className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-full px-2.5 py-0.5">
+                {g}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-emerald-400">No major gaps — keep reviewing to hold your edge.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashboardProps) {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [readiness, setReadiness] = useState<Readiness | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -77,11 +135,15 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
 
   const loadAnalytics = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'}/analytics/${courseId}/${userId}`)
+      const [response, r] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'}/analytics/${courseId}/${userId}`),
+        getReadiness(courseId, userId).catch(() => null),
+      ])
       if (response.ok) {
         const data = await response.json()
         setAnalytics(data.analytics)
       }
+      setReadiness(r)
     } catch (error) {
       console.error('Failed to load analytics:', error)
     } finally {
@@ -136,6 +198,9 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
           Refresh
         </button>
       </div>
+
+      {/* Exam readiness hero */}
+      {readiness && <ReadinessHero readiness={readiness} />}
 
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
