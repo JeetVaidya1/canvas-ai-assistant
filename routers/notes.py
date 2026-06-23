@@ -135,6 +135,39 @@ async def save_notes_endpoint(
         raise HTTPException(500, detail=f"Notes saving failed: {str(e)}")
 
 
+@router.put("/notes/{note_id}")
+async def update_note_endpoint(
+    note_id: str,
+    course_id: str = Form(...),
+    title: str = Form(...),
+    content: str = Form(...),
+    source_files: str = Form("[]"),  # JSON string of file names
+    topic: str = Form(""),
+):
+    """Update a saved note in place (edit-and-resave)."""
+    if not note_id:
+        raise HTTPException(400, detail="Note ID is required")
+    if not course_id or not title.strip() or not content.strip():
+        raise HTTPException(400, detail="Course ID, title, and content are required")
+
+    try:
+        import json
+        file_list = json.loads(source_files)
+    except json.JSONDecodeError:
+        raise HTTPException(400, detail="Invalid source files format")
+
+    try:
+        result = save_notes_to_db(course_id, title.strip(), content, file_list, topic, note_id)
+        if result.get("status") == "success" and result.get("note"):
+            return {"status": "success", "message": "Notes updated", "note": result.get("note")}
+        raise HTTPException(404, detail=result.get("message", "Note not found or update failed"))
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Notes update error: {e}")
+        raise HTTPException(500, detail=f"Notes update failed: {str(e)}")
+
+
 @router.get("/notes/{course_id}")
 async def get_notes_endpoint(course_id: str):
     """Get all saved notes for a course"""
