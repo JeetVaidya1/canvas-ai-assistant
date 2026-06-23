@@ -64,6 +64,68 @@ def _extract_topics(course_id: str) -> List[str]:
         return []
 
 
+def _weak_topics(course_id: str, user_id: str) -> List[str]:
+    """Topics the student is weakest on (mastery ascending)."""
+    rows = (_supabase.table("learning_progress")
+            .select("topic, mastery_level")
+            .eq("user_id", user_id).eq("course_id", course_id)
+            .execute().data or [])
+    rows = [r for r in rows if r.get("topic")]
+    rows.sort(key=lambda r: float(r.get("mastery_level") or 0.0))
+    return [r["topic"] for r in rows]
+
+
+def _prereq_order(course_id: str) -> List[str]:
+    """A prerequisite-first ordering of concepts (topological sort of the graph).
+    Returns [] when no graph exists."""
+    try:
+        import concept_graph
+        graph = concept_graph.get_graph(course_id)
+    except Exception:  # noqa: BLE001
+        graph = None
+    if not graph:
+        return []
+    concepts = list(graph.get("concepts", []))
+    edges = graph.get("edges", [])
+    # Kahn's algorithm; prerequisite -> concept.
+    indeg = {c: 0 for c in concepts}
+    adj: Dict[str, List[str]] = {c: [] for c in concepts}
+    for e in edges:
+        pre, con = e.get("prerequisite"), e.get("concept")
+        if pre in indeg and con in indeg:
+            adj[pre].append(con)
+            indeg[con] += 1
+    queue = [c for c in concepts if indeg[c] == 0]
+    order = []
+    while queue:
+        n = queue.pop(0)
+        order.append(n)
+        for m in adj[n]:
+            indeg[m] -= 1
+            if indeg[m] == 0:
+                queue.append(m)
+    # Append any leftovers (cycles) to stay total.
+    order += [c for c in concepts if c not in order]
+    return order
+
+
+def _prioritized_topics(course_id: str, user_id: str) -> List[str]:
+    """Weak topics first, but each topic preceded by its prerequisites.
+
+    Orders by prerequisite chain (from the concept graph), then within that order
+    bubbles the weakest topics toward the front so revision targets gaps while
+    still respecting 'learn the foundation first'.
+    """
+    weak = _weak_topics(course_id, user_id)
+    order = _prereq_order(course_id)
+    base = order or _extract_topics(course_id) or weak
+    weak_set = {w.lower() for w in weak}
+    # Stable sort: weak topics first, otherwise keep prerequisite order.
+    indexed = list(enumerate(base))
+    indexed.sort(key=lambda iv: (iv[1].lower() not in weak_set, iv[0]))
+    return [v for _, v in indexed]
+
+
 def _resolve_horizon(days_available: Optional[int], exam_date: Optional[str]) -> (int, date):
     """Return (num_days, start_date). If an exam date is given, the plan runs from
     today up to the day before the exam; otherwise it runs for days_available days."""
@@ -84,18 +146,32 @@ def _resolve_horizon(days_available: Optional[int], exam_date: Optional[str]) ->
 
 
 def _generate_day_plan(course_id: str, topics: List[str], num_days: int,
-                       minutes_per_day: int) -> List[Dict[str, Any]]:
+                       minutes_per_day: int, mode: str = "balanced",
+                       weak_topics: Optional[List[str]] = None,
+                       due_reviews: int = 0) -> List[Dict[str, Any]]:
     """Ask the model for a spaced-repetition day plan over the given topics."""
     topic_list = "\n".join(f"- {t}" for t in topics) if topics else "(infer topics from the course)"
+    weak_line = ""
+    if mode == "weak_first" and weak_topics:
+        weak_line = (
+            "- PRIORITIZE the student's weak areas — front-load and repeat these: "
+            f"{', '.join(weak_topics[:8])}.\n"
+        )
+    review_line = (
+        f"- The student has {due_reviews} mistakes already due for review; fold a short "
+        "'review' block into the first 1-2 days to clear them.\n"
+        if due_reviews else ""
+    )
     prompt = (
-        f"Build a {num_days}-day study plan for the course covering these topics:\n"
-        f"{topic_list}\n\n"
+        f"Build a {num_days}-day study plan for the course covering these topics "
+        f"(already ordered foundation-first):\n{topic_list}\n\n"
         f"RULES:\n"
         f"- Each day budgets about {minutes_per_day} minutes (set duration_minutes accordingly).\n"
+        f"{weak_line}{review_line}"
         "- Introduce new topics on early days ('new'), then schedule spaced reviews of each "
         "topic at roughly +1, +3, and +7 days after it was introduced ('review').\n"
+        "- Respect prerequisites: never schedule a topic before the topics it depends on.\n"
         "- Include 'practice' sessions before the end to consolidate.\n"
-        "- Order topics pedagogically (foundational first).\n"
         "- Use the 1-based 'day' index from 1 to "
         f"{num_days}. Every day from 1 to {num_days} should appear exactly once."
     )
@@ -144,20 +220,39 @@ def _normalize_days(raw_days: List[Dict[str, Any]], num_days: int, start: date,
 def generate_study_plan(course_id: str, days_available: Optional[int] = None,
                         hours_per_day: Optional[float] = None,
                         exam_date: Optional[str] = None,
-                        user_id: str = "anonymous") -> Dict[str, Any]:
-    """Generate, persist, and return a study plan for a course."""
+                        user_id: str = "anonymous",
+                        mode: str = "balanced") -> Dict[str, Any]:
+    """Generate, persist, and return a study plan for a course.
+
+    ``mode='weak_first'`` re-prioritizes from the student's *current* state: weak
+    topics, prerequisite order, and any reviews already due — i.e. a live replan.
+    """
     num_days, start = _resolve_horizon(days_available, exam_date)
     minutes_per_day = int((hours_per_day or 2) * 60)
-    topics = _extract_topics(course_id)
 
-    raw_days = _generate_day_plan(course_id, topics, num_days, minutes_per_day)
+    weak = _weak_topics(course_id, user_id)
+    if mode == "weak_first":
+        topics = _prioritized_topics(course_id, user_id) or _extract_topics(course_id)
+    else:
+        topics = _extract_topics(course_id)
+
+    due_reviews = 0
+    try:
+        import review_engine
+        due_reviews = review_engine.due_count(course_id, user_id)
+    except Exception as e:  # noqa: BLE001
+        print(f"planner review-count lookup failed: {e}")
+
+    raw_days = _generate_day_plan(course_id, topics, num_days, minutes_per_day,
+                                  mode=mode, weak_topics=weak, due_reviews=due_reviews)
     days = _normalize_days(raw_days, num_days, start, minutes_per_day)
     if not days:
         raise RuntimeError("No study plan could be generated for this course.")
 
     plan_id = str(uuid.uuid4())
     created_at = datetime.utcnow().isoformat()
-    plan = {"id": plan_id, "course_id": course_id, "days": days, "created_at": created_at}
+    plan = {"id": plan_id, "course_id": course_id, "days": days,
+            "created_at": created_at, "mode": mode}
 
     _supabase.table("study_plans").insert({
         "id": plan_id,

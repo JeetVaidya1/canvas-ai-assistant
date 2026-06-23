@@ -4,9 +4,11 @@ import { Calendar, Download, Sparkles, BookOpen, RefreshCw, Dumbbell } from 'luc
 import {
   generateStudyPlan,
   getStudyPlan,
+  replanStudyPlan,
   exportPlannerIcal,
   type StudyPlan,
 } from '@/lib/api'
+import { useUser } from '@/hooks/useUser'
 import { showError, showSuccess } from '@/lib/toast'
 
 type DayType = 'review' | 'new' | 'practice'
@@ -31,9 +33,11 @@ function formatDate(iso: string): string {
 
 export default function PlannerPage() {
   const { courseId } = useParams<{ courseId: string }>()
+  const userId = useUser()
 
   const [plan, setPlan] = useState<StudyPlan | null>(null)
   const [loading, setLoading] = useState(false)
+  const [replanning, setReplanning] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [daysAvailable, setDaysAvailable] = useState(10)
   const [hoursPerDay, setHoursPerDay] = useState(2)
@@ -64,6 +68,24 @@ export default function PlannerPage() {
     }
   }
 
+  const handleReplan = async () => {
+    if (!courseId) return
+    setReplanning(true)
+    try {
+      const result = await replanStudyPlan(courseId, userId, {
+        daysAvailable,
+        hoursPerDay,
+        examDate: examDate || undefined,
+      })
+      setPlan(result)
+      showSuccess('Replanned around your weak areas')
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to replan')
+    } finally {
+      setReplanning(false)
+    }
+  }
+
   const handleExport = async () => {
     if (!courseId) return
     setExporting(true)
@@ -90,14 +112,25 @@ export default function PlannerPage() {
           <p className="text-sm text-zinc-500 mt-1">AI-powered study schedules with spaced repetition</p>
         </div>
         {plan && (
-          <button
-            onClick={() => void handleExport()}
-            disabled={exporting}
-            className="bg-zinc-800 border border-zinc-700 text-zinc-200 px-4 py-2 rounded-lg hover:bg-zinc-700 disabled:opacity-50 text-sm font-medium flex items-center gap-2 transition-colors flex-shrink-0"
-          >
-            <Download className="w-4 h-4" />
-            {exporting ? 'Exporting...' : 'Export to iCal'}
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => void handleReplan()}
+              disabled={replanning}
+              className="bg-amber-600/90 text-white px-4 py-2 rounded-lg hover:bg-amber-500 disabled:opacity-50 text-sm font-medium flex items-center gap-2 transition-colors"
+              title="Rebuild the plan around your current weak areas and due reviews"
+            >
+              <Sparkles className="w-4 h-4" />
+              {replanning ? 'Replanning...' : 'Focus on weak areas'}
+            </button>
+            <button
+              onClick={() => void handleExport()}
+              disabled={exporting}
+              className="bg-zinc-800 border border-zinc-700 text-zinc-200 px-4 py-2 rounded-lg hover:bg-zinc-700 disabled:opacity-50 text-sm font-medium flex items-center gap-2 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? 'Exporting...' : 'Export to iCal'}
+            </button>
+          </div>
         )}
       </div>
 

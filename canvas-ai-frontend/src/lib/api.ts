@@ -788,6 +788,20 @@ export async function getStudyPlan(courseId: string): Promise<StudyPlan | null> 
   }
 }
 
+export async function replanStudyPlan(
+  courseId: string,
+  userId: string = 'anonymous',
+  params: { daysAvailable?: number; hoursPerDay?: number; examDate?: string } = {}
+): Promise<StudyPlan> {
+  const form = new FormData()
+  form.append('course_id', courseId)
+  form.append('user_id', userId)
+  if (params.daysAvailable) form.append('days_available', String(params.daysAvailable))
+  if (params.hoursPerDay) form.append('hours_per_day', String(params.hoursPerDay))
+  if (params.examDate) form.append('exam_date', params.examDate)
+  return apiFetch('/api/replan', { method: 'POST', body: form }, 120_000)
+}
+
 /** ===== Audio Overview ===== */
 export interface AudioOverview {
   id: string
