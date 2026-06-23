@@ -51,6 +51,8 @@ function CourseFileCount({ courseId }: { courseId: string }) {
   )
 }
 
+import JoinClassPanel from '@/components/JoinClassPanel'
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { data: courses, isLoading: coursesLoading } = useCourses()
@@ -127,6 +129,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Join a shared class */}
+      <JoinClassPanel />
 
       {/* Courses header */}
       <div className="flex items-center justify-between">
