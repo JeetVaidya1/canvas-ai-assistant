@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SocraticTutor from '@/components/SocraticTutor'
+import FeynmanMode from '@/components/FeynmanMode'
+import { useUser } from '@/hooks/useUser'
 import { trackVisit } from '@/hooks/useRecentActivity'
 
 type TutorTab = 'socratic' | 'feynman'
 
 export default function TutorPage() {
   const { courseId } = useParams<{ courseId: string }>()
+  const userId = useUser()
   const [tab, setTab] = useState<TutorTab>('socratic')
 
   useEffect(() => {
@@ -37,7 +40,7 @@ export default function TutorPage() {
       {tab === 'socratic' ? (
         <SocraticTutor courseId={courseId || ''} />
       ) : (
-        <div className="text-center py-16 text-zinc-500 text-sm">Feynman mode coming up next.</div>
+        <FeynmanMode courseId={courseId || ''} userId={userId} />
       )}
     </div>
   )
