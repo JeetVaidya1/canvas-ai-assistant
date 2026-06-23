@@ -328,6 +328,24 @@ export async function submitQuiz(
   return apiFetch(`/quiz/${encodeURIComponent(quizId)}/submit`, { method: 'POST', body: form })
 }
 
+/** ===== Tutor modes (Phase 5) ===== */
+export interface TutorTurn {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export async function socraticTurn(
+  courseId: string,
+  message: string,
+  history: TutorTurn[] = []
+): Promise<{ reply: string }> {
+  const form = new FormData()
+  form.append('course_id', courseId)
+  form.append('message', message)
+  form.append('history', JSON.stringify(history))
+  return apiFetch('/api/socratic', { method: 'POST', body: form }, 90_000)
+}
+
 /** ===== Export to AIs (Phase 4) ===== */
 export async function getContextPack(courseId: string, userId: string = 'anonymous'): Promise<string> {
   const data = await apiFetch(`/api/context-pack/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`, undefined, 120_000)
