@@ -1,12 +1,14 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
+import RequireAuth from '@/components/RequireAuth'
 import ErrorBoundary from '@/components/shared/ErrorBoundary'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
 import { ShaderCanvas } from '@/components/ui/animated-shader-hero'
 import { FallingBooks } from '@/components/ui/falling-books'
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
+const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const CourseOverview = lazy(() => import('@/pages/CourseOverview'))
 const ChatPage = lazy(() => import('@/pages/ChatPage'))
@@ -37,6 +39,8 @@ export default function App() {
       <div className="relative z-10">
       <Routes>
         <Route path="/" element={<Suspense fallback={<PageFallback />}><LandingPage /></Suspense>} />
+        <Route path="/login" element={<Suspense fallback={<PageFallback />}><LoginPage /></Suspense>} />
+        <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route path="dashboard" element={<Suspense fallback={<PageFallback />}><Dashboard /></Suspense>} />
           <Route path="course/:courseId" element={<Suspense fallback={<PageFallback />}><CourseOverview /></Suspense>} />
@@ -51,6 +55,7 @@ export default function App() {
           <Route path="course/:courseId/audio" element={<Suspense fallback={<PageFallback />}><AudioPage /></Suspense>} />
           <Route path="settings" element={<Suspense fallback={<PageFallback />}><SettingsPage /></Suspense>} />
           <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFoundPage /></Suspense>} />
+        </Route>
         </Route>
       </Routes>
       </div>

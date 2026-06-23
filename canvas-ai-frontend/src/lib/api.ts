@@ -1,5 +1,6 @@
 // src/lib/api.ts
 import { supabase } from './supabaseClient'
+import { getAccessToken } from './auth'
 import type { PostgrestError } from '@supabase/supabase-js'
 
 /** ===== Backend base + helper ===== */
@@ -9,7 +10,11 @@ async function apiFetch(path: string, init?: RequestInit, timeoutMs = 60_000) {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), timeoutMs)
   try {
-    const resp = await fetch(`${BASE_URL}${path}`, { ...init, signal: ctrl.signal })
+    // Attach the Supabase access token so the backend can verify identity.
+    const token = await getAccessToken()
+    const headers = new Headers(init?.headers)
+    if (token) headers.set('Authorization', `Bearer ${token}`)
+    const resp = await fetch(`${BASE_URL}${path}`, { ...init, headers, signal: ctrl.signal })
     // Most FastAPI errors include .detail; fall back to statusText
     if (!resp.ok) {
       let msg = resp.statusText
@@ -32,6 +37,10 @@ export interface Course {
   course_id: string
   title: string
   created_at: string
+}
+
+export async function claimLegacyData(): Promise<{ claimed: number }> {
+  return apiFetch('/api/claim-legacy-data', { method: 'POST' })
 }
 
 export async function fetchCourses(): Promise<Course[]> {
