@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Download, Github, Upload, ChevronDown } from 'lucide-react'
-import { exportCourseMarkdown, githubPush, githubImport } from '@/lib/api'
+import { Download, Github, Upload, ChevronDown, Sparkles } from 'lucide-react'
+import { exportCourseMarkdown, githubPush, githubImport, getContextPack } from '@/lib/api'
+import { useUser } from '@/hooks/useUser'
 import { showError, showSuccess } from '@/lib/toast'
 
 interface IntegrationsPanelProps {
@@ -8,11 +9,25 @@ interface IntegrationsPanelProps {
 }
 
 export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) {
+  const userId = useUser()
   const [open, setOpen] = useState(false)
   const [repo, setRepo] = useState('')
   const [token, setToken] = useState('')
   const [subdir, setSubdir] = useState('')
-  const [busy, setBusy] = useState<'export' | 'push' | 'import' | null>(null)
+  const [busy, setBusy] = useState<'export' | 'push' | 'import' | 'context' | null>(null)
+
+  const handleCopyContext = async () => {
+    setBusy('context')
+    try {
+      const md = await getContextPack(courseId, userId)
+      await navigator.clipboard.writeText(md)
+      showSuccess('Study context copied — paste into Claude, ChatGPT, or a Project')
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to build context pack')
+    } finally {
+      setBusy(null)
+    }
+  }
 
   const handleExport = async () => {
     setBusy('export')
@@ -77,6 +92,18 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
 
       {open && (
         <div className="px-4 pb-4 space-y-4 border-t border-zinc-700/40 pt-4">
+          <div>
+            <button
+              onClick={() => void handleCopyContext()}
+              disabled={busy === 'context'}
+              className="bg-cyan-600 text-white px-3 py-2 rounded-lg hover:bg-cyan-500 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              {busy === 'context' ? 'Building…' : 'Copy study context for AI'}
+            </button>
+            <p className="text-xs text-zinc-500 mt-1.5">A grounded brief of your weak areas + source excerpts — paste into Claude, ChatGPT, or a Project. (Vindexa also runs as an MCP server; see mcp_server.py.)</p>
+          </div>
+
           <div>
             <button
               onClick={() => void handleExport()}

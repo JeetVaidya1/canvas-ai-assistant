@@ -29,3 +29,4 @@ pytesseract>=0.3.11      # requires system 'tesseract' (brew install tesseract)
 Pillow>=10.3.0
 opencv-python>=4.9
 numpy>=1.26
+mcp

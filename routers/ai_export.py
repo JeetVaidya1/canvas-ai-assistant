@@ -1,0 +1,30 @@
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import PlainTextResponse
+from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+
+import context_pack
+
+router = APIRouter()
+
+
+@router.get("/api/context-pack/{course_id}/{user_id}")
+async def context_pack_endpoint(course_id: str, user_id: str):
+    """A paste-ready Markdown study brief (weak areas + grounded excerpts) for any AI."""
+    try:
+        return {"markdown": context_pack.build_context_pack(course_id, user_id)}
+    except Exception as e:
+        print(f"Context pack build failed: {e}")
+        raise HTTPException(500, detail=f"Context pack build failed: {e}")
+
+
+@router.get("/api/context-pack/{course_id}/{user_id}/download", response_class=PlainTextResponse)
+async def context_pack_download(course_id: str, user_id: str):
+    """Same context pack as a downloadable .md file."""
+    try:
+        md = context_pack.build_context_pack(course_id, user_id)
+        return PlainTextResponse(
+            content=md,
+            headers={"Content-Disposition": f'attachment; filename="{course_id}_context.md"'},
+        )
+    except Exception as e:
+        raise HTTPException(500, detail=f"Context pack build failed: {e}")
