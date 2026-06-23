@@ -17,7 +17,8 @@ async def build_concept_graph_endpoint(course_id: str):
 
 
 @router.get("/api/concept-graph/{course_id}/{user_id}")
-async def get_concept_graph_endpoint(course_id: str, user_id: str):
+async def get_concept_graph_endpoint(course_id: str, user_id: str, _auth: str = Depends(current_user_id)):
+    user_id = _auth
     """Return the concept graph annotated with the user's mastery + blockers."""
     try:
         return concept_graph.graph_with_mastery(course_id, user_id)

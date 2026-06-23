@@ -12,7 +12,7 @@ async def generate_study_plan_endpoint(
     days_available: int | None = Form(None),
     hours_per_day: float | None = Form(None),
     exam_date: str | None = Form(None),
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
     mode: str = Form("balanced"),
 ):
     """Generate and persist a day-by-day study plan for a course."""
@@ -38,7 +38,7 @@ async def replan_endpoint(
     days_available: int | None = Form(None),
     hours_per_day: float | None = Form(None),
     exam_date: str | None = Form(None),
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
 ):
     """Re-generate the plan from the student's current state (weak areas first,
     prerequisites respected, due reviews folded in)."""

@@ -35,7 +35,7 @@ async def feynman_endpoint(
     course_id: str = Form(...),
     concept: str = Form(...),
     explanation: str = Form(...),
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
 ):
     """Grade a Feynman-technique explanation against the course material and seed
     review items for the gaps."""

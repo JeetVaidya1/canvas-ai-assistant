@@ -55,7 +55,8 @@ def health_check():
 
 
 @router.post("/create-course")
-def create_course(course_id: str = Form(...), title: str = Form(...)):
+def create_course(course_id: str = Form(...), title: str = Form(...),
+                  user_id: str = Depends(current_user_id)):
     # Check if course already exists in Supabase
     try:
         existing = supabase.table("courses").select("*").eq("course_id", course_id).execute()
@@ -80,7 +81,8 @@ def create_course(course_id: str = Form(...), title: str = Form(...)):
     try:
         supabase.table("courses").insert({
             "course_id": course_id,
-            "title": title
+            "title": title,
+            "owner_id": user_id
         }).execute()
     except Exception as e:
         # If Supabase fails, at least we have local storage
@@ -92,8 +94,10 @@ def create_course(course_id: str = Form(...), title: str = Form(...)):
 @router.post("/upload")
 async def upload_files(
     files: List[UploadFile] = File(...),
-    course_id: str = Form(...)
+    course_id: str = Form(...),
+    user=Depends(get_current_user)
 ):
+    require_course_access(course_id, user)
     print(f"🚀 Enhanced upload request for course: {course_id}")
     print(f"📁 Number of files: {len(files)}")
     
@@ -302,7 +306,8 @@ def list_files(course_id: str):
 
 
 @router.post("/delete-file")
-async def delete_file(course_id: str = Form(...), filename: str = Form(...)):
+async def delete_file(course_id: str = Form(...), filename: str = Form(...), user=Depends(get_current_user)):
+    require_course_access(course_id, user)
     try:
         # Delete from Supabase files table
         supabase.table("files").delete().eq("course_id", course_id).eq("filename", filename).execute()
@@ -337,7 +342,8 @@ async def delete_file(course_id: str = Form(...), filename: str = Form(...)):
 
 
 @router.post("/delete-course")
-async def delete_entire_course(course_id: str = Form(...)):
+async def delete_entire_course(course_id: str = Form(...), user=Depends(get_current_user)):
+    require_course_access(course_id, user)
     try:
         # Delete all files for this course from Supabase files table
         files_result = supabase.table("files").select("filename, storage_path").eq("course_id", course_id).execute()

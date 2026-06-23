@@ -10,7 +10,7 @@ async def ask_endpoint(
     question: str = Form(...),
     course_id: str = Form(...),
     session_id: str | None = Form(None),
-    user_id: str = Form("anonymous")
+    user_id: str = Depends(current_user_id)
 ):
     # 1) Create a new chat_session if none was provided
     if not session_id:
@@ -75,7 +75,7 @@ async def ask_stream_endpoint(
     question: str = Form(...),
     course_id: str = Form(...),
     session_id: str | None = Form(None),
-    user_id: str = Form("anonymous"),
+    user_id: str = Depends(current_user_id),
 ):
     """Streaming chat: emits Server-Sent Events with answer text deltas."""
     from fastapi.responses import StreamingResponse
@@ -136,7 +136,7 @@ async def ask_stream_endpoint(
 
 
 @router.get("/sessions")
-def list_sessions(user_id: str = Query(..., description="User ID to filter by")):
+def list_sessions(user_id: str = Depends(current_user_id)):
     """
     List all sessions for a user, newest first.
     """
