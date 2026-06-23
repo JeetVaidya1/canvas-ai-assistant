@@ -40,13 +40,41 @@ class LearningAnalyticsEngine:
             print(f"Failed to track interaction: {e}")
             return False
     
-    def update_learning_progress(self, user_id: str, course_id: str, 
-                               question: str, confidence: float):
+    def track_quiz_answer(self, user_id: str, course_id: str, concept: str,
+                          question: str, is_correct: bool, time_taken: float = 0.0) -> bool:
+        """Track a single quiz answer and update mastery for the explicit concept.
+
+        Unlike :meth:`track_interaction`, the concept is supplied by the quiz
+        generator (it knows what each question tests) rather than guessed from
+        keywords. Confidence is 1.0 for a correct answer, 0.0 otherwise.
+        """
+        confidence = 1.0 if is_correct else 0.0
+        try:
+            supabase.table("user_interactions").insert({
+                "user_id": user_id,
+                "course_id": course_id,
+                "question": question,
+                "answer": "correct" if is_correct else "incorrect",
+                "confidence_score": confidence,
+                "response_time": time_taken,
+                "question_type": "quiz",
+                "timestamp": datetime.utcnow().isoformat(),
+            }).execute()
+            self.update_learning_progress(user_id, course_id, question, confidence, topic=concept)
+            return True
+        except Exception as e:
+            print(f"Failed to track quiz answer: {e}")
+            return False
+
+    def update_learning_progress(self, user_id: str, course_id: str,
+                               question: str, confidence: float, topic: str = None):
         """Update student's mastery level for topics"""
         try:
-            # Extract topic from question (you can make this more sophisticated)
-            topic = self.extract_topic(question)
-            
+            # Use the explicit topic when provided (e.g. from a quiz question);
+            # otherwise fall back to keyword extraction from the question text.
+            if not topic:
+                topic = self.extract_topic(question)
+
             # Get current progress
             current = supabase.table("learning_progress") \
                 .select("*") \

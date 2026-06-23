@@ -103,6 +103,49 @@ create index if not exists exam_sessions_user_idx   on exam_sessions (user_id);
 create index if not exists exam_sessions_status_idx on exam_sessions (status);
 
 -- ---------------------------------------------------------------------------
+-- Quiz runner (Phase 3): generate -> answer one-at-a-time -> submit
+-- ---------------------------------------------------------------------------
+create table if not exists quiz_sessions (
+    id            uuid primary key,            -- set explicitly in code (uuid4)
+    course_id     text,
+    user_id       text,
+    topic         text,
+    difficulty    text,
+    num_questions integer,
+    status        text default 'active',       -- 'active' | 'completed'
+    score         jsonb,                        -- {correct, total, pct}
+    created_at    timestamptz not null default now()
+);
+create index if not exists quiz_sessions_course_idx on quiz_sessions (course_id);
+
+create table if not exists quiz_questions (
+    id             bigint generated always as identity primary key,
+    quiz_id        uuid references quiz_sessions(id) on delete cascade,
+    question_id    text,                        -- 'q1'..'qN', unique within a quiz
+    question       text,
+    options        jsonb,                        -- ["A) ...", "B) ...", ...]
+    correct_answer text,                         -- 'A'|'B'|'C'|'D'
+    explanation    text,
+    concept        text,
+    difficulty     text,
+    source_doc     text,
+    source_page    integer
+);
+create index if not exists quiz_questions_quiz_idx on quiz_questions (quiz_id);
+
+create table if not exists quiz_responses (
+    id          bigint generated always as identity primary key,
+    quiz_id     uuid references quiz_sessions(id) on delete cascade,
+    question_id text,
+    user_id     text,
+    selected    text,
+    is_correct  boolean,
+    time_taken  double precision,
+    ts          timestamptz not null default now()
+);
+create index if not exists quiz_responses_quiz_idx on quiz_responses (quiz_id, user_id);
+
+-- ---------------------------------------------------------------------------
 -- Learning analytics
 -- ---------------------------------------------------------------------------
 create table if not exists learning_progress (
