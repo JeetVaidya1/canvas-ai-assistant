@@ -19,6 +19,11 @@ from typing import List, Sequence, Union
 DEFAULT_EMBED_MODEL = os.getenv("LOCAL_EMBED_MODEL", "BAAI/bge-large-en-v1.5")
 EMBED_DIM = 1024
 
+# BGE retrieval is asymmetric: queries get an instruction prefix, documents do
+# not. Applying this to queries only (documents were ingested plain) improves
+# ranking without re-embedding the corpus.
+BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+
 _model = None
 _model_lock = threading.Lock()
 
@@ -60,6 +65,18 @@ def _normalize_input(value: Union[str, Sequence[str]]) -> List[str]:
     if not all(isinstance(x, str) for x in items):
         raise ValueError("embeddings input must be a string or list of strings")
     return items
+
+
+def embed_query(text: str) -> List[float]:
+    """Embed a search query with the BGE instruction prefix (asymmetric retrieval)."""
+    model = _get_model()
+    vec = model.encode(
+        BGE_QUERY_PREFIX + text,
+        normalize_embeddings=True,
+        convert_to_numpy=True,
+        show_progress_bar=False,
+    )
+    return [float(x) for x in vec]
 
 
 class EmbeddingsNamespace:

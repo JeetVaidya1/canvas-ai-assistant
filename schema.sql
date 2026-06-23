@@ -260,6 +260,40 @@ as $$
     limit match_count;
 $$;
 
+-- Keyword (full-text) search for hybrid retrieval, fused with vector search
+-- via reciprocal rank fusion in rag/retrieval.py.
+create index if not exists embeddings_fts_idx
+    on embeddings using gin (to_tsvector('english', coalesce(content, '')));
+
+create or replace function keyword_search_embeddings(
+    course_id_param text,
+    query_text      text,
+    match_count     integer default 20
+)
+returns table (
+    content   text,
+    doc_name  text,
+    chunk_id  integer,
+    course_id text,
+    page      integer,
+    slide     integer,
+    section   text,
+    sha256    text,
+    rank      real
+)
+language sql stable
+as $$
+    select e.content, e.doc_name, e.chunk_id, e.course_id,
+           e.page, e.slide, e.section, e.sha256,
+           ts_rank(to_tsvector('english', coalesce(e.content, '')),
+                   websearch_to_tsquery('english', query_text)) as rank
+    from embeddings e
+    where e.course_id = course_id_param
+      and to_tsvector('english', coalesce(e.content, '')) @@ websearch_to_tsquery('english', query_text)
+    order by rank desc
+    limit match_count;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Storage bucket (public so storage.py's public URLs resolve)
 -- ---------------------------------------------------------------------------
