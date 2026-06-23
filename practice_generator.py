@@ -5,15 +5,76 @@ import random
 import re
 from typing import List, Dict, Any
 from dotenv import load_dotenv
-from providers import make_client
+from providers import make_client, structured_call
 
 load_dotenv()
 
+# Schema for guaranteed-structure practice problem generation (no regex parsing).
+PROBLEM_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "problems": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string"},
+                    "options": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "description": "Four options, each prefixed 'A) '..'D) '.",
+                    },
+                    "correct_answer": {"type": "string", "enum": ["A", "B", "C", "D"]},
+                    "explanation": {"type": "string"},
+                    "estimated_time": {"type": "string"},
+                },
+                "required": ["question", "options", "correct_answer", "explanation"],
+            },
+        }
+    },
+    "required": ["problems"],
+}
+
+
+def route_difficulty_by_mastery(mastery: float) -> str:
+    """Adaptive difficulty: weaker topics get easier problems, mastered ones harder."""
+    if mastery < 0.5:
+        return "easy"
+    if mastery <= 0.8:
+        return "medium"
+    return "hard"
+
+
 class PracticeGenerator:
     """Generate practice problems from course materials - works for any subject"""
-    
+
     def __init__(self):
         self.openai_client = make_client()
+        self._supabase = None
+
+    def _get_supabase(self):
+        if self._supabase is None:
+            from supabase import create_client
+            self._supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
+        return self._supabase
+
+    def lookup_topic_mastery(self, course_id: str, topic: str, user_id: str) -> float:
+        """Return the user's mastery (0..1) for a topic, or 0.5 if unknown."""
+        try:
+            resp = (self._get_supabase().table("learning_progress")
+                    .select("mastery_level")
+                    .eq("user_id", user_id)
+                    .eq("course_id", course_id)
+                    .eq("topic", topic)
+                    .limit(1)
+                    .execute())
+            if resp.data and resp.data[0].get("mastery_level") is not None:
+                return float(resp.data[0]["mastery_level"])
+        except Exception as e:  # noqa: BLE001
+            print(f"Mastery lookup failed (defaulting to 0.5): {e}")
+        return 0.5
     
     def extract_topics_from_course(self, course_id: str) -> List[str]:
         """Extract actual topics from course materials using multiple strategies - IMPROVED"""
@@ -403,35 +464,29 @@ class PracticeGenerator:
             "Essential Knowledge"
         ]
     
-    def generate_practice_problems(self, course_id: str, topic: str, 
-                                 difficulty: str = "medium", count: int = 5) -> List[Dict[str, Any]]:
-        """Generate practice problems - FIXED to use EXACT same search as study chat"""
+    def generate_practice_problems(self, course_id: str, topic: str,
+                                 difficulty: str = "adaptive", count: int = 5,
+                                 user_id: str = "anonymous") -> List[Dict[str, Any]]:
+        """Generate practice problems grounded in course material.
+
+        When ``difficulty == 'adaptive'`` the level is chosen from the user's
+        mastery of the topic (weaker -> easier, mastered -> harder).
+        """
         try:
+            if difficulty == "adaptive":
+                mastery = self.lookup_topic_mastery(course_id, topic, user_id)
+                difficulty = route_difficulty_by_mastery(mastery)
+                print(f"🎚️ Adaptive difficulty for '{topic}': mastery={mastery:.2f} -> {difficulty}")
+            if difficulty not in ("easy", "medium", "hard"):
+                difficulty = "medium"
+
             print(f"🎯 Generating {count} {difficulty.upper()} difficulty problems for: '{topic}'")
-            
-            # FIXED: Use the EXACT same search engine as study chat
-            from query_engine import advanced_rag_engine
-            
-            print(f"🔍 Using study chat's search engine for: '{topic}'")
-            
-            # Let the study chat engine do the heavy lifting
-            # It will handle embedding, query expansion, reranking, etc.
-            results = advanced_rag_engine.hybrid_search([topic], course_id, top_k=12)
-            
-            print(f"📚 Study chat engine found: {len(results) if results else 0} content chunks")
-            
-            # Debug: Show what we found
-            if results:
-                print("📄 Content sources:")
-                for i, result in enumerate(results[:3]):
-                    doc = result.get("doc_name", "unknown")
-                    content_preview = result.get("content", "")[:100] + "..."
-                    similarity = result.get("similarity", result.get("relevance_score", 0))
-                    print(f"  {i+1}. {doc} (sim: {similarity:.3f}): {content_preview}")
-            else:
-                print("❌ No content found even with study chat's search!")
-                print("   This means the topic might not be covered in your course materials")
-            
+
+            # Canonical hybrid + reranked retrieval (same as the rest of Phase 3).
+            from rag.retrieval import retrieve
+            results = retrieve(topic, course_id, top_k=12)
+            print(f"📚 Retrieval found: {len(results) if results else 0} content chunks")
+
             # Generate problems based on what we found
             if results and len(results) > 0:
                 print(f"✅ Using course content to generate problems")
@@ -705,38 +760,32 @@ class PracticeGenerator:
         """
         
         try:
-            response = self.openai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.4 if difficulty == "hard" else 0.3,  # Slightly more creative for hard questions
-                max_tokens=4000  # More tokens for detailed explanations
+            # Guaranteed-schema tool use — no regex/JSON parsing of model text.
+            out = structured_call(
+                [{"role": "user", "content": prompt}],
+                schema=PROBLEM_SCHEMA,
+                tool_name="practice_problems",
+                model=os.getenv("MODEL_COMPLEX"),
+                max_tokens=4000,
             )
-            
-            content = response.choices[0].message.content.strip()
-            
-            if content.startswith("```json"):
-                content = content.replace("```json", "").replace("```", "").strip()
-                
-            problems = json.loads(content)
-            
-            # Validate problems
-            if isinstance(problems, list) and len(problems) > 0:
-                validated = []
-                for problem in problems:
-                    if (isinstance(problem, dict) and 
+            problems = out.get("problems", []) if isinstance(out, dict) else []
+
+            validated = []
+            for problem in problems:
+                if (isinstance(problem, dict) and
                         all(key in problem for key in ["question", "options", "correct_answer", "explanation"])):
-                        # Ensure difficulty is set
-                        problem["difficulty"] = difficulty
-                        problem["topic"] = topic
-                        validated.append(problem)
-                
-                if validated:
-                    print(f"✅ Generated {len(validated)} {difficulty} difficulty problems")
-                    return validated
-            
+                    problem.setdefault("estimated_time", self.get_time_estimate_by_difficulty(difficulty))
+                    problem["difficulty"] = difficulty
+                    problem["topic"] = topic
+                    validated.append(problem)
+
+            if validated:
+                print(f"✅ Generated {len(validated)} {difficulty} difficulty problems")
+                return validated
+
             print(f"⚠️ AI generation failed, trying internet fallback...")
             return self.internet_fallback_problems(topic, count, difficulty)
-                
+
         except Exception as e:
             print(f"❌ AI problem generation failed: {e}")
             return self.internet_fallback_problems(topic, count, difficulty)

@@ -9,12 +9,16 @@ router = APIRouter()
 async def generate_practice_problems(
     course_id: str = Form(...),
     topic: str = Form(...),
-    difficulty: str = Form("medium"),
-    count: int = Form(5)
+    difficulty: str = Form("adaptive"),
+    count: int = Form(5),
+    user_id: str = Form("anonymous")
 ):
-    """Generate practice problems"""
+    """Generate practice problems. difficulty='adaptive' routes off the user's
+    mastery of the topic (easy/medium/hard)."""
     try:
-        problems = practice_generator.generate_practice_problems(course_id, topic, difficulty, count)
+        problems = practice_generator.generate_practice_problems(
+            course_id, topic, difficulty, count, user_id
+        )
         return {"problems": problems}
     except Exception as e:
         print(f"Practice generation error: {e}")
@@ -28,32 +32,6 @@ async def generate_practice_problems(
             "difficulty": difficulty,
             "topic": topic
         }]}
-
-
-@router.get("/practice-topics/{course_id}")
-async def get_practice_topics(course_id: str):
-    """Get available topics for practice based on ACTUAL course content"""
-    try:
-        print(f"Getting topics for course: {course_id}")
-        
-        # Use the practice generator to extract real topics
-        topics = practice_generator.extract_topics_from_course(course_id)
-        
-        print(f"Extracted topics: {topics}")
-        
-        return {"topics": topics}
-        
-    except Exception as e:
-        print(f"Failed to get practice topics for course {course_id}: {e}")
-        # Return fallback topics with clear indication
-        return {
-            "topics": [
-                "Course Content Analysis", 
-                "General Review",
-                "Key Concepts"
-            ],
-            "error": "Could not analyze course content for topics"
-        }
 
 
 @router.get("/practice-topics/{course_id}")

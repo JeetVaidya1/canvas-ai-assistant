@@ -49,7 +49,7 @@ interface TopicsResponse {
 export default function PracticeMode({ courseId, userId, onModeChange }: PracticeModeProps) {
   const [session, setSession] = useState<PracticeSession | null>(null)
   const [selectedTopic, setSelectedTopic] = useState('')
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
+  const [difficulty, setDifficulty] = useState<'adaptive' | 'easy' | 'medium' | 'hard'>('adaptive')
   const [problemCount, setProblemCount] = useState(5)
   const [loading, setLoading] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState('')
@@ -124,7 +124,7 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
     if (!courseId || !selectedTopic) return
     setLoading(true)
     try {
-      const problems = await generatePracticeProblems(courseId, selectedTopic, difficulty, problemCount)
+      const problems = await generatePracticeProblems(courseId, selectedTopic, difficulty, problemCount, userId)
       setSession({
         problems,
         currentProblemIndex: 0,
@@ -254,9 +254,10 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
               <label className="block text-xs font-medium text-zinc-500 mb-1.5">Difficulty</label>
               <select
                 value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
+                onChange={(e) => setDifficulty(e.target.value as 'adaptive' | 'easy' | 'medium' | 'hard')}
                 className="w-full px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-800 text-zinc-100 text-sm"
               >
+                <option value="adaptive">Adaptive</option>
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
                 <option value="hard">Hard</option>

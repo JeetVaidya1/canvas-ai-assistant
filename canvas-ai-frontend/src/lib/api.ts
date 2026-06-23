@@ -446,16 +446,18 @@ export interface PracticeProblem {
 export async function generatePracticeProblems(
   courseId: string,
   topic: string,
-  difficulty: string = 'medium',
-  count: number = 5
+  difficulty: string = 'adaptive',
+  count: number = 5,
+  userId: string = 'anonymous'
 ): Promise<PracticeProblem[]> {
   const form = new FormData()
   form.append('course_id', courseId)
   form.append('topic', topic)
   form.append('difficulty', difficulty)
   form.append('count', String(count))
-
-  const data = await apiFetch('/generate-practice', { method: 'POST', body: form })
+  form.append('user_id', userId)
+  // Generation runs retrieval + reranker + LLM; allow a generous timeout.
+  const data = await apiFetch('/generate-practice', { method: 'POST', body: form }, 120_000)
   return data.problems
 }
 
