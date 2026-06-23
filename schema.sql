@@ -187,6 +187,15 @@ create table if not exists practice_sessions (
 create index if not exists practice_sessions_idx on practice_sessions (user_id, course_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
+-- Concept prerequisite graph (Phase 4) — one DAG per course
+-- ---------------------------------------------------------------------------
+create table if not exists concept_graphs (
+    course_id  text primary key,
+    graph      jsonb,                          -- {concepts:[...], edges:[{prerequisite, concept}]}
+    created_at timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
 -- Mistake-driven review queue (Phase 4) — per-user SM-2 items seeded by errors
 -- ---------------------------------------------------------------------------
 create table if not exists review_items (

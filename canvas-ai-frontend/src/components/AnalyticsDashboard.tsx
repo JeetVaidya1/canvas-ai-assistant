@@ -24,7 +24,7 @@ import {
   Calendar,
   Flame
 } from 'lucide-react'
-import { getReadiness, type Readiness } from '@/lib/api'
+import { getReadiness, getConceptGraph, type Readiness, type ConceptBlocker } from '@/lib/api'
 import ReviewPanel from './ReviewPanel'
 
 interface AnalyticsData {
@@ -128,10 +128,21 @@ function ReadinessHero({ readiness }: { readiness: Readiness }) {
 export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashboardProps) {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [readiness, setReadiness] = useState<Readiness | null>(null)
+  const [blockers, setBlockers] = useState<ConceptBlocker[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadAnalytics()
+  }, [courseId, userId])
+
+  // Concept-graph blockers load separately (first call builds the graph; slow).
+  useEffect(() => {
+    if (!courseId) return
+    let cancelled = false
+    getConceptGraph(courseId, userId)
+      .then((g) => { if (!cancelled) setBlockers(g.blockers || []) })
+      .catch(() => { /* non-blocking */ })
+    return () => { cancelled = true }
   }, [courseId, userId])
 
   const loadAnalytics = async () => {
@@ -205,6 +216,27 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
 
       {/* Mistake-driven review queue (hidden when nothing is due) */}
       <ReviewPanel courseId={courseId} userId={userId} />
+
+      {/* Prerequisite gaps — fix the foundation first */}
+      {blockers.length > 0 && (
+        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
+          <h2 className="text-sm font-semibold text-zinc-100 mb-1 flex items-center gap-2">
+            <Brain className="w-4 h-4 text-violet-400" /> Fix the foundation first
+          </h2>
+          <p className="text-xs text-zinc-400 mb-3">You're weak on these, and so are their prerequisites — start upstream.</p>
+          <div className="space-y-2">
+            {blockers.slice(0, 5).map((b, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className="text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-0.5 text-xs">
+                  {b.prerequisite} <span className="text-zinc-500">({Math.round(b.prerequisite_pct)}%)</span>
+                </span>
+                <span className="text-zinc-600">→ unlocks →</span>
+                <span className="text-zinc-300 text-xs">{b.concept} <span className="text-zinc-500">({Math.round(b.concept_pct)}%)</span></span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

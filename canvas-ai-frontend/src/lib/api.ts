@@ -328,6 +328,26 @@ export async function submitQuiz(
   return apiFetch(`/quiz/${encodeURIComponent(quizId)}/submit`, { method: 'POST', body: form })
 }
 
+/** ===== Concept prerequisite graph (Phase 4) ===== */
+export interface ConceptBlocker {
+  concept: string
+  prerequisite: string
+  concept_pct: number
+  prerequisite_pct: number
+}
+
+export interface ConceptGraph {
+  concepts: Array<{ concept: string; mastery_pct: number; has_data: boolean }>
+  edges: Array<{ prerequisite: string; concept: string }>
+  blockers: ConceptBlocker[]
+  exists: boolean
+}
+
+export async function getConceptGraph(courseId: string, userId: string = 'anonymous'): Promise<ConceptGraph> {
+  // Auto-builds server-side on first call; allow time for the LLM extraction.
+  return apiFetch(`/api/concept-graph/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`, undefined, 120_000)
+}
+
 /** ===== Mistake-driven review queue (Phase 4) ===== */
 export interface ReviewItem {
   id: string
