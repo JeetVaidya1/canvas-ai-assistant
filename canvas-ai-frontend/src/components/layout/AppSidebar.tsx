@@ -15,8 +15,10 @@ import {
   Calendar,
   Headphones,
   Lightbulb,
+  LogOut,
 } from 'lucide-react'
 import { useCourses } from '@/hooks/useCourses'
+import { useAuth } from '@/lib/auth'
 
 interface SubNavItem {
   label: string
@@ -45,6 +47,7 @@ export default function AppSidebar() {
   const { courseId } = useParams()
   const location = useLocation()
   const { data: courses } = useCourses()
+  const { signOut } = useAuth()
 
   return (
     <aside
@@ -161,6 +164,13 @@ export default function AppSidebar() {
           <Settings className="w-4 h-4 flex-shrink-0" />
           {!collapsed && <span>Settings</span>}
         </NavLink>
+        <button
+          onClick={() => { void signOut() }}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors"
+        >
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          {!collapsed && <span>Sign out</span>}
+        </button>
       </div>
 
       {/* Collapse toggle */}
