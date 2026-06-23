@@ -192,6 +192,18 @@ create table if not exists notes (
 create index if not exists notes_course_idx on notes (course_id);
 
 -- ---------------------------------------------------------------------------
+-- Study planner (Phase 3)
+-- ---------------------------------------------------------------------------
+create table if not exists study_plans (
+    id         uuid primary key,            -- set explicitly in code (uuid4)
+    course_id  text,
+    user_id    text,
+    plan       jsonb,                        -- {id, course_id, days:[{date,topics,duration_minutes,type}], created_at}
+    created_at timestamptz not null default now()
+);
+create index if not exists study_plans_course_idx on study_plans (course_id, created_at desc);
+
+-- ---------------------------------------------------------------------------
 -- Past papers
 -- ---------------------------------------------------------------------------
 create table if not exists past_papers (

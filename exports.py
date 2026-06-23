@@ -243,10 +243,29 @@ def _ics_escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
 
 
+def _load_or_generate_plan(course_id: str, supabase) -> List[Dict[str, Any]]:
+    """Prefer the most recent persisted plan (so the .ics matches what the user
+    sees in the Planner); fall back to generating one on the fly."""
+    try:
+        resp = (supabase.table("study_plans")
+                .select("plan")
+                .eq("course_id", course_id)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute())
+        if resp.data:
+            days = (resp.data[0].get("plan") or {}).get("days")
+            if days:
+                return days
+    except Exception as e:  # noqa: BLE001
+        print(f"Persisted plan lookup failed, regenerating: {e}")
+    return _generate_study_plan(course_id, supabase)
+
+
 def build_planner_ics(course_id: str) -> bytes:
     supabase = _supabase()
     title = _course_title(course_id, supabase)
-    plan = _generate_study_plan(course_id, supabase)
+    plan = _load_or_generate_plan(course_id, supabase)
 
     start = _dt.date.today()
     stamp = _dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
@@ -258,8 +277,16 @@ def build_planner_ics(course_id: str) -> bytes:
         f"X-WR-CALNAME:{_ics_escape(title)} Study Plan",
     ]
     for idx, day in enumerate(plan):
-        offset = int(day.get("day", idx + 1)) - 1
-        date = start + _dt.timedelta(days=max(offset, 0))
+        # Persisted plans carry an explicit ISO 'date'; legacy/on-the-fly plans
+        # carry a 1-based 'day' offset from today.
+        if day.get("date"):
+            try:
+                date = _dt.date.fromisoformat(str(day["date"])[:10])
+            except Exception:  # noqa: BLE001
+                date = start + _dt.timedelta(days=idx)
+        else:
+            offset = int(day.get("day", idx + 1)) - 1
+            date = start + _dt.timedelta(days=max(offset, 0))
         nxt = date + _dt.timedelta(days=1)
         topics = day.get("topics") or []
         kind = str(day.get("type", "review")).capitalize()
