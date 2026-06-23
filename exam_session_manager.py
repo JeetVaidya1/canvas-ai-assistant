@@ -254,7 +254,10 @@ class ExamSessionManager:
             
             # Track analytics
             self.track_exam_completion(session, scoring_result)
-            
+
+            # Closed loop: seed review items for missed questions.
+            self._seed_exam_mistakes(session, scoring_result)
+
             print(f"✅ Submitted exam session: {session_id}")
             return {
                 "status": "success", 
@@ -349,6 +352,27 @@ class ExamSessionManager:
             print(f"❌ Score calculation failed: {e}")
             return {"error": str(e)}
     
+    def _seed_exam_mistakes(self, session: Dict[str, Any], scoring_result: Dict[str, Any]) -> None:
+        """Seed the spaced-repetition review queue from missed exam questions."""
+        try:
+            import review_engine
+            user_id = session.get("user_id") or "anonymous"
+            course_id = session.get("course_id") or ""
+            for qr in scoring_result.get("question_results", []):
+                if qr.get("verdict") == "correct":
+                    continue
+                review_engine.seed_from_mistake(
+                    user_id=user_id,
+                    course_id=course_id,
+                    concept=qr.get("topic") or "general",
+                    prompt=qr.get("question") or "",
+                    answer=qr.get("correct_answer") or "",
+                    explanation=qr.get("explanation") or qr.get("grade_reason") or "",
+                    source="exam",
+                )
+        except Exception as e:  # noqa: BLE001  must never break submission
+            print(f"exam review seeding failed: {e}")
+
     def grade_response(self, question: Dict[str, Any], user_answer: str, correct_answer: str) -> Dict[str, Any]:
         """Grade one response, returning {verdict, reason}.
 

@@ -187,6 +187,28 @@ create table if not exists practice_sessions (
 create index if not exists practice_sessions_idx on practice_sessions (user_id, course_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
+-- Mistake-driven review queue (Phase 4) — per-user SM-2 items seeded by errors
+-- ---------------------------------------------------------------------------
+create table if not exists review_items (
+    id            uuid primary key,            -- set explicitly in code (uuid4)
+    user_id       text,
+    course_id     text,
+    concept       text,
+    prompt        text,                         -- the question the student missed
+    answer        text,                         -- the correct answer
+    explanation   text,
+    source        text,                         -- 'quiz' | 'exam' | 'manual'
+    ease          double precision default 2.5,
+    interval      integer default 0,
+    repetitions   integer default 0,
+    due_date      date,
+    last_reviewed timestamptz,
+    status        text default 'active',
+    created_at    timestamptz not null default now()
+);
+create index if not exists review_items_due_idx on review_items (user_id, course_id, status, due_date);
+
+-- ---------------------------------------------------------------------------
 -- Notes
 -- ---------------------------------------------------------------------------
 create table if not exists notes (

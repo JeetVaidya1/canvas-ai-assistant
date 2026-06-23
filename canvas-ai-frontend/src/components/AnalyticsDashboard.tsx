@@ -25,6 +25,7 @@ import {
   Flame
 } from 'lucide-react'
 import { getReadiness, type Readiness } from '@/lib/api'
+import ReviewPanel from './ReviewPanel'
 
 interface AnalyticsData {
   topics_progress: Array<{
@@ -201,6 +202,9 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
 
       {/* Exam readiness hero */}
       {readiness && <ReadinessHero readiness={readiness} />}
+
+      {/* Mistake-driven review queue (hidden when nothing is due) */}
+      <ReviewPanel courseId={courseId} userId={userId} />
 
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

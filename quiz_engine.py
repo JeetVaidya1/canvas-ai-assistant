@@ -241,9 +241,9 @@ def grade_answer(quiz_id: str, question_id: str, selected: str,
     }).execute()
 
     # Feed per-concept mastery (confidence = 1.0 if correct else 0.0).
+    course_id = _quiz_course_id(quiz_id)
     try:
         from deps import analytics_engine
-        course_id = _quiz_course_id(quiz_id)
         analytics_engine.track_quiz_answer(
             user_id=user_id,
             course_id=course_id or "",
@@ -255,6 +255,23 @@ def grade_answer(quiz_id: str, question_id: str, selected: str,
     except Exception as e:  # noqa: BLE001  analytics must never break grading
         print(f"quiz analytics tracking failed: {e}")
 
+    # Closed loop: a wrong answer seeds a spaced-repetition review item.
+    if not is_correct:
+        try:
+            import review_engine
+            correct_text = _correct_option_text(question, correct_letter)
+            review_engine.seed_from_mistake(
+                user_id=user_id,
+                course_id=course_id or "",
+                concept=question.get("concept") or "general",
+                prompt=question.get("question") or "",
+                answer=correct_text,
+                explanation=question.get("explanation") or "",
+                source="quiz",
+            )
+        except Exception as e:  # noqa: BLE001
+            print(f"quiz review seeding failed: {e}")
+
     return {
         "is_correct": is_correct,
         "correct_answer": correct_letter,
@@ -262,6 +279,15 @@ def grade_answer(quiz_id: str, question_id: str, selected: str,
         "concept": question.get("concept", ""),
         "source": {"doc_name": question.get("source_doc"), "page": question.get("source_page")},
     }
+
+
+def _correct_option_text(question: Dict[str, Any], letter: str) -> str:
+    """Resolve a correct-answer letter (A-D) to the full option text."""
+    options = question.get("options") or []
+    idx = "ABCD".find((letter or "A").upper()[:1])
+    if 0 <= idx < len(options):
+        return str(options[idx])
+    return letter
 
 
 def _quiz_course_id(quiz_id: str) -> Optional[str]:
