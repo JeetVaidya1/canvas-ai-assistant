@@ -59,7 +59,7 @@ export default function AppSidebar() {
       <div className="h-12 flex items-center px-4 border-b border-zinc-800 gap-3">
         <img src="/favicon-32x32.png" alt="Vindexa" className="w-8 h-8 rounded-lg flex-shrink-0" />
         {!collapsed && (
-          <span className="text-lg font-semibold text-white">Vindexa</span>
+          <span className="text-lg font-semibold text-gradient-brand">Vindexa</span>
         )}
       </div>
 
@@ -79,9 +79,9 @@ export default function AppSidebar() {
                   to={`/course/${course.course_id}`}
                   end
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                       isActive || isActiveCourse
-                        ? 'bg-zinc-800 text-cyan-400'
+                        ? 'bg-gradient-brand-soft text-cyan-300 ring-1 ring-inset ring-cyan-500/15'
                         : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
                     }`
                   }
@@ -110,9 +110,9 @@ export default function AppSidebar() {
                           <NavLink
                             to={fullPath}
                             end={item.path === ''}
-                            className={`flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-lg text-xs transition-colors ${
+                            className={`flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
                               isItemActive
-                                ? 'text-cyan-400 bg-zinc-800/60'
+                                ? 'text-cyan-300 bg-gradient-brand-soft'
                                 : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
                             }`}
                           >

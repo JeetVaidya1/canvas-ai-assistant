@@ -1,19 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Plus,
-  Loader2,
-  Trash2,
-  X,
-  ArrowRight,
-  FileText,
-  BookOpen,
-} from 'lucide-react'
+import { Plus, Trash2, X, ArrowRight, FileText, BookOpen, GraduationCap } from 'lucide-react'
 import { useCourses, useCreateCourse, useDeleteCourse } from '@/hooks/useCourses'
 import { useCourseFiles } from '@/hooks/useCourseFiles'
 import { useRecentActivity } from '@/hooks/useRecentActivity'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DashboardSkeleton from '@/components/skeletons/DashboardSkeleton'
+import JoinClassPanel from '@/components/JoinClassPanel'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -35,23 +30,14 @@ function timeAgo(timestamp: number): string {
 
 function CourseFileCount({ courseId }: { courseId: string }) {
   const { data: files } = useCourseFiles(courseId)
-  if (!files || files.length === 0) {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
-        <FileText className="w-3 h-3" />
-        No files yet
-      </span>
-    )
-  }
+  const count = files?.length ?? 0
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-zinc-400">
-      <FileText className="w-3 h-3" />
-      {files.length} file{files.length !== 1 ? 's' : ''}
+    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400">
+      <FileText className="w-3.5 h-3.5" />
+      {count === 0 ? 'No files yet' : `${count} file${count !== 1 ? 's' : ''}`}
     </span>
   )
 }
-
-import JoinClassPanel from '@/components/JoinClassPanel'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -81,9 +67,7 @@ export default function Dashboard() {
     setDeleteTarget(null)
   }
 
-  if (coursesLoading) {
-    return <DashboardSkeleton />
-  }
+  if (coursesLoading) return <DashboardSkeleton />
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -91,7 +75,6 @@ export default function Dashboard() {
     day: 'numeric',
   })
 
-  // Build recent activity entries with course names
   const recentWithNames = recentActivity
     .map((entry) => {
       const course = courses?.find((c) => c.course_id === entry.courseId)
@@ -100,31 +83,39 @@ export default function Dashboard() {
     })
     .filter(Boolean) as Array<{ courseId: string; page: string; timestamp: number; courseTitle: string }>
 
+  const inputClass =
+    'w-full px-3 py-2.5 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 ' +
+    'focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-sm transition-colors'
+
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+    <div className="max-w-5xl mx-auto px-6 py-8 space-y-9">
       {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-50">{getGreeting()}</h1>
-        <p className="text-sm text-zinc-500 mt-1">{today}</p>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          <span className="text-zinc-50">{getGreeting()}</span>
+        </h1>
+        <p className="text-sm text-zinc-500 mt-1.5">{today}</p>
       </div>
 
       {/* Continue studying */}
       {recentWithNames.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Continue studying</h2>
+          <h2 className="text-xs font-semibold text-gradient-brand uppercase tracking-widest">Continue studying</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {recentWithNames.map((entry) => (
-              <button
+              <Card
                 key={`${entry.courseId}-${entry.page}`}
+                interactive
+                padding="sm"
                 onClick={() => navigate(`/course/${entry.courseId}/${entry.page}`)}
-                className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-4 hover:bg-zinc-800 hover:border-zinc-600/50 cursor-pointer transition-all text-left flex items-center justify-between gap-3 group"
+                className="flex items-center justify-between gap-3 group"
               >
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-zinc-200 truncate">{entry.courseTitle}</div>
                   <div className="text-xs text-zinc-500 capitalize mt-0.5">{entry.page} &middot; {timeAgo(entry.timestamp)}</div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 flex-shrink-0 transition-colors" />
-              </button>
+                <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 flex-shrink-0 transition-all" />
+              </Card>
             ))}
           </div>
         </div>
@@ -135,57 +126,53 @@ export default function Dashboard() {
 
       {/* Courses header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-medium text-zinc-200">Your Courses</h2>
-        <button
-          onClick={() => setShowCreateDialog(true)}
-          className="bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          New Course
-        </button>
+        <h2 className="text-base font-semibold text-zinc-100">Your courses</h2>
+        <Button onClick={() => setShowCreateDialog(true)} leftIcon={<Plus className="w-4 h-4" />}>
+          New course
+        </Button>
       </div>
 
       {/* Course cards */}
       {!courses || courses.length === 0 ? (
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl py-16 px-8 text-center">
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-6 h-6 text-cyan-400" />
+        <Card padding="none" className="py-16 px-8 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
+            <BookOpen className="w-7 h-7 text-cyan-300" />
           </div>
-          <h3 className="text-lg font-medium text-zinc-100 mb-2">Create your first course</h3>
+          <h3 className="text-lg font-semibold text-zinc-100 mb-2">Create your first course</h3>
           <p className="text-sm text-zinc-500 max-w-md mx-auto mb-6">
-            Upload your course materials — PDFs, slides, docs — and Vindexa will turn them into quizzes, practice problems, notes, and more.
+            Upload your course materials — PDFs, slides, docs — and Vindexa turns them into quizzes, practice problems, notes, and more.
           </p>
-          <button
-            onClick={() => setShowCreateDialog(true)}
-            className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
-          >
-            Get Started
-          </button>
-        </div>
+          <Button size="lg" onClick={() => setShowCreateDialog(true)}>Get started</Button>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
           {courses.map((course) => {
             const lastVisit = recentActivity.find((e) => e.courseId === course.course_id)
             return (
-              <div
+              <Card
                 key={course.course_id}
+                interactive
+                accent
                 onClick={() => navigate(`/course/${course.course_id}`)}
-                className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 hover:bg-zinc-800 hover:border-zinc-600/50 cursor-pointer transition-all group relative"
+                className="group"
               >
-                <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-cyan-500" />
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-base font-medium text-zinc-100 pl-1">{course.title}</h3>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+                    <GraduationCap className="w-5 h-5 text-cyan-300" />
+                  </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       setDeleteTarget({ id: course.course_id, title: course.title })
                     }}
                     className="p-1.5 text-zinc-600 hover:text-red-400 hover:bg-zinc-700/50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                    aria-label="Delete course"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <div className="flex items-center gap-3 pl-1">
+                <h3 className="text-base font-semibold text-zinc-100 group-hover:text-white transition-colors">{course.title}</h3>
+                <div className="flex items-center gap-2.5 mt-2">
                   <CourseFileCount courseId={course.course_id} />
                   {lastVisit && (
                     <>
@@ -194,7 +181,7 @@ export default function Dashboard() {
                     </>
                   )}
                 </div>
-              </div>
+              </Card>
             )
           })}
         </div>
@@ -204,61 +191,40 @@ export default function Dashboard() {
       {showCreateDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowCreateDialog(false)} />
-          <div className="bg-zinc-900 border border-zinc-700/50 rounded-xl relative z-10 w-full max-w-md p-6 space-y-5 shadow-2xl">
+          <Card padding="lg" className="relative z-10 w-full max-w-md space-y-5 shadow-2xl !bg-zinc-900">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-medium text-zinc-100">Create New Course</h3>
-              <button onClick={() => setShowCreateDialog(false)} className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors">
+              <h3 className="text-base font-semibold text-zinc-100">Create new course</h3>
+              <button onClick={() => setShowCreateDialog(false)} className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors" aria-label="Close">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-zinc-400">Course ID</label>
-                <input
-                  type="text"
-                  placeholder="e.g., CS101, MATH200"
-                  value={newCourseId}
-                  onChange={(e) => setNewCourseId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 outline-none text-sm transition-colors"
-                />
+                <input type="text" placeholder="e.g., CS101, MATH200" value={newCourseId} onChange={(e) => setNewCourseId(e.target.value)} className={inputClass} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-400">Course Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Introduction to Computer Science"
-                  value={newCourseTitle}
-                  onChange={(e) => setNewCourseTitle(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 outline-none text-sm transition-colors"
-                />
+                <label className="text-xs font-medium text-zinc-400">Course title</label>
+                <input type="text" placeholder="e.g., Introduction to Computer Science" value={newCourseTitle} onChange={(e) => setNewCourseTitle(e.target.value)} className={inputClass} />
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 pt-1">
-              <button
-                onClick={() => setShowCreateDialog(false)}
-                className="px-4 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors text-sm"
-              >
-                Cancel
-              </button>
-              <button
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <Button variant="ghost" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
+              <Button
                 onClick={handleCreate}
-                disabled={createCourse.isPending || !newCourseId.trim() || !newCourseTitle.trim()}
-                className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                loading={createCourse.isPending}
+                disabled={!newCourseId.trim() || !newCourseTitle.trim()}
               >
-                {createCourse.isPending ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>
-                ) : (
-                  'Create Course'
-                )}
-              </button>
+                Create course
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Delete Course"
+        title="Delete course"
         description={`Delete "${deleteTarget?.title}" and all its files? This cannot be undone.`}
         confirmLabel="Delete"
         variant="danger"
