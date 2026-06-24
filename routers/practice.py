@@ -5,7 +5,7 @@ from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re
 router = APIRouter()
 
 
-@router.post("/generate-practice")
+@router.post("/generate-practice", dependencies=[Depends(ai_rate_limit)])
 async def generate_practice_problems(
     course_id: str = Form(...),
     topic: str = Form(...),
@@ -87,7 +87,7 @@ async def get_practice_topics(course_id: str):
         }
 
 
-@router.post("/regenerate-practice-topics")
+@router.post("/regenerate-practice-topics", dependencies=[Depends(ai_rate_limit)])
 async def regenerate_practice_topics(course_id: str = Form(...)):
     """Force regeneration of practice topics for any course"""
     try:

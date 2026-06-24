@@ -8,7 +8,7 @@ import feynman_engine
 router = APIRouter()
 
 
-@router.post("/api/socratic")
+@router.post("/api/socratic", dependencies=[Depends(ai_rate_limit)])
 async def socratic_endpoint(
     course_id: str = Form(...),
     message: str = Form(...),
@@ -30,7 +30,7 @@ async def socratic_endpoint(
         raise HTTPException(500, detail=f"Socratic turn failed: {e}")
 
 
-@router.post("/api/feynman")
+@router.post("/api/feynman", dependencies=[Depends(ai_rate_limit)])
 async def feynman_endpoint(
     course_id: str = Form(...),
     concept: str = Form(...),

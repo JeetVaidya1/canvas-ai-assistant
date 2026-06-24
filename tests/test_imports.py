@@ -18,6 +18,7 @@ PROVIDERS = [
     "providers.structured",
     "providers.local_embeddings",
     "providers.claude_auth",
+    "providers.pricing",
 ]
 
 RAG = [
@@ -55,6 +56,8 @@ ENGINES = [
     "feynman_engine",
     "exports",
     "auth",
+    "rate_limit",
+    "usage_tracker",
     "deps",
 ]
 

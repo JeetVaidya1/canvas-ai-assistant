@@ -33,6 +33,18 @@ def get_system_status():
     }
 
 
+@router.get("/admin/usage")
+def get_usage_stats():
+    """AI token usage + estimated USD cost since process start (cost observability).
+
+    NOTE: open in this build for quick visibility; gate behind an admin check
+    before exposing publicly.
+    """
+    import usage_tracker
+
+    return usage_tracker.snapshot()
+
+
 @router.get("/health/rag")
 def rag_health():
     try:

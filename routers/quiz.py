@@ -7,7 +7,7 @@ import quiz_engine
 router = APIRouter()
 
 
-@router.post("/quiz-assist")
+@router.post("/quiz-assist", dependencies=[Depends(ai_rate_limit)])
 async def quiz_assist_endpoint(
     question: str = Form(...),
     course_id: str = Form(...),
@@ -118,7 +118,7 @@ async def quiz_assist_endpoint(
 # ─────────────────────────────────────────────────────────────────────────────
 # Quiz runner: generate -> answer one-at-a-time -> submit (Phase 3)
 # ─────────────────────────────────────────────────────────────────────────────
-@router.post("/quiz/generate")
+@router.post("/quiz/generate", dependencies=[Depends(ai_rate_limit)])
 async def generate_quiz_endpoint(
     course_id: str = Form(...),
     topic: str | None = Form(None),

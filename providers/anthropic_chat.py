@@ -191,6 +191,46 @@ def _extract_text(response) -> str:
     return "".join(parts)
 
 
+def _prompt_cache_on() -> bool:
+    return os.getenv("PROMPT_CACHE_ENABLED", "1").lower() not in ("0", "false", "no")
+
+
+def _system_field(system: str, mode: str):
+    """Build the Anthropic ``system`` field, marking the real system prompt with
+    a prompt-cache breakpoint so repeated long system prompts are billed cheaply.
+
+    Anthropic ignores ``cache_control`` below the minimum cacheable prefix size,
+    so this is always safe — it only ever helps, never errors.
+    """
+    cache = _prompt_cache_on()
+    if mode == "oauth":
+        # Subscription tokens require the Claude Code identity as the first block.
+        blocks = [{"type": "text", "text": _CLAUDE_CODE_IDENTITY}]
+        if system:
+            block = {"type": "text", "text": system}
+            if cache:
+                block["cache_control"] = {"type": "ephemeral"}
+            blocks.append(block)
+        return blocks
+    if not system:
+        return None
+    if cache:
+        return [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+    return system
+
+
+def _record_usage(response, target_model: str) -> None:
+    """Best-effort usage/cost accounting — must never break a real request."""
+    try:
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            import usage_tracker
+
+            usage_tracker.record(target_model, usage)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _build_call(model, messages, temperature, max_tokens, response_format):
     """Shared prep for both streaming and non-streaming calls.
 
@@ -209,15 +249,9 @@ def _build_call(model, messages, temperature, max_tokens, response_format):
         "messages": anth_messages,
         "max_tokens": max_tokens or DEFAULT_MAX_TOKENS,
     }
-    if mode == "oauth":
-        # Subscription tokens require the Claude Code identity as the first
-        # system block; the real system prompt follows it.
-        system_blocks = [{"type": "text", "text": _CLAUDE_CODE_IDENTITY}]
-        if system:
-            system_blocks.append({"type": "text", "text": system})
-        kwargs["system"] = system_blocks
-    elif system:
-        kwargs["system"] = system
+    system_field = _system_field(system, mode)
+    if system_field is not None:
+        kwargs["system"] = system_field
     if temperature is not None:
         # Anthropic temperature range is [0, 1].
         kwargs["temperature"] = max(0.0, min(1.0, float(temperature)))
@@ -243,6 +277,7 @@ class _CompletionsNamespace:
             model, messages, temperature, max_tokens, response_format
         )
         response = client.messages.create(**kwargs)
+        _record_usage(response, target_model)
         text = _extract_text(response)
         if want_json:
             text = _coerce_json(text)
