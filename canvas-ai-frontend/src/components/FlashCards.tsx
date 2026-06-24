@@ -18,10 +18,10 @@ type GradeVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 // SM-2 recall grades surfaced as four buttons.
 const GRADES: { label: string; grade: number; variant: GradeVariant; className: string }[] = [
-  { label: 'Again', grade: 1, variant: 'danger', className: '' },
-  { label: 'Hard', grade: 3, variant: 'secondary', className: '!bg-amber-600 !border-amber-500 hover:!bg-amber-500 text-white' },
-  { label: 'Good', grade: 4, variant: 'primary', className: '' },
-  { label: 'Easy', grade: 5, variant: 'secondary', className: '!bg-emerald-600 !border-emerald-500 hover:!bg-emerald-500 text-white' },
+  { label: 'Again', grade: 1, variant: 'secondary', className: '!bg-rose-500/15 !border-rose-400/30 !text-rose-200 hover:!bg-rose-500/25' },
+  { label: 'Hard', grade: 3, variant: 'secondary', className: '!bg-amber-500/15 !border-amber-400/30 !text-amber-200 hover:!bg-amber-500/25' },
+  { label: 'Good', grade: 4, variant: 'secondary', className: '!bg-cyan-500/15 !border-cyan-400/30 !text-cyan-200 hover:!bg-cyan-500/25' },
+  { label: 'Easy', grade: 5, variant: 'secondary', className: '!bg-emerald-500/15 !border-emerald-400/30 !text-emerald-200 hover:!bg-emerald-500/25' },
 ]
 
 function downloadCSV(cards: Flashcard[]) {
@@ -144,13 +144,13 @@ export default function Flashcards({
     <Card accent padding="lg">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h3 className="text-lg font-semibold text-zinc-50">
-          {title} <span className="text-zinc-500 font-normal">({cards.length})</span>
+          {title} <span className="text-zinc-400 font-normal">({cards.length})</span>
         </h3>
         <div className="flex items-center gap-2 flex-wrap">
           <select
             value={studyMode}
             onChange={e => { setStudyMode(e.target.value as any); setShowBack({}); setTypingAnswers({}) }}
-            className="bg-zinc-800/70 border border-zinc-700 text-zinc-100 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
+            className="bg-white/[0.04] border border-white/10 text-zinc-100 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25 transition-colors"
             title="Study mode"
           >
             <option value="all">Flip to reveal</option>
@@ -223,7 +223,7 @@ export default function Flashcards({
               className="group relative perspective"
             >
               {/* Card */}
-              <div className="card-surface accent-top relative h-44 w-full transition-transform duration-500 [transform-style:preserve-3d] rounded-xl p-4 hover:border-cyan-500/30"
+              <div className="card-surface accent-top relative h-44 w-full transition-transform duration-500 [transform-style:preserve-3d] rounded-xl p-4 hover:border-cyan-400/30"
                    style={{ transform: (studyMode==='all' && flipped) ? 'rotateY(180deg)' : 'none' }}
                    onClick={() => studyMode==='all' && setShowBack(s => ({...s, [idx]: !s[idx]}))}
               >
@@ -245,18 +245,18 @@ export default function Flashcards({
 
               {/* Hide-answers mode: show only prompts */}
               {studyMode==='hide-answers' && (
-                <div className="absolute inset-0 rounded-xl border border-dashed border-zinc-700 bg-zinc-800/60 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-1.5">Prompt</div>
+                <div className="absolute inset-0 rounded-xl border border-dashed border-white/15 bg-white/[0.04] p-4">
+                  <div className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-1.5">Prompt</div>
                   <div className="text-zinc-200 font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
                 </div>
               )}
 
               {/* Typing practice mode */}
               {studyMode==='typing' && (
-                <div className="absolute inset-0 rounded-xl border border-cyan-500/30 bg-gradient-brand-soft p-4 flex flex-col">
+                <div className="absolute inset-0 rounded-xl border border-cyan-400/30 bg-gradient-brand-soft p-4 flex flex-col">
                   <div className="text-xs font-semibold uppercase tracking-widest text-cyan-300 mb-1.5">Type your answer</div>
                   <textarea
-                    className="flex-1 resize-none rounded-lg bg-zinc-800/70 border border-cyan-500/30 px-3 py-2 text-sm text-zinc-50 outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
+                    className="flex-1 resize-none rounded-lg bg-white/[0.04] border border-cyan-400/30 px-3 py-2 text-sm text-zinc-50 outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25 transition-colors"
                     value={typingAnswers[idx] || ''}
                     onChange={e => setTypingAnswers(s => ({...s, [idx]: e.target.value}))}
                     placeholder="Write your answer here…"
@@ -297,7 +297,7 @@ function SrReview({
   if (loading) {
     return (
       <div className="text-center py-12 text-zinc-400">
-        <div className="w-8 h-8 border-2 border-zinc-700 border-t-cyan-500 rounded-full animate-spin mx-auto mb-3" />
+        <div className="w-8 h-8 border-2 border-white/10 border-t-cyan-400 rounded-full animate-spin mx-auto mb-3" />
         Loading your due cards…
       </div>
     )
@@ -335,7 +335,7 @@ function SrReview({
         <div className="text-zinc-50 font-medium leading-snug mb-4"><Markdown content={card.q} /></div>
         {revealed && (
           <>
-            <div className="border-t border-zinc-800 my-3" />
+            <div className="border-t border-white/10 my-3" />
             <div className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Answer</div>
             <div className="text-zinc-200 leading-snug"><Markdown content={card.a} /></div>
           </>

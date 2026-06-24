@@ -34,15 +34,21 @@ Vindexa is an AI-powered study companion that transforms course materials into i
 - `noUnusedParameters` is ON: every function parameter must be used
 - Build command: `tsc -b && vite build` — TypeScript must pass before Vite builds
 
-## Styling Conventions
+## Styling Conventions — "Premium Dark" design system (Linear/Vercel)
 
-- **Dark theme**: zinc-950 (bg), zinc-900 (cards), zinc-800 (elevated/hover), zinc-700 (borders)
-- **Accent**: cyan-600 for primary actions, cyan-400 for active states
-- **Font**: Inter via Google Fonts CDN
-- **Border radius**: `rounded-lg` consistently
-- **Cards**: `bg-zinc-900 border border-zinc-800 rounded-lg`
-- **No decorative effects**: no glow shadows, no glass-morphism, no animated backgrounds
-- **Buttons**: solid colors, no gradients. Primary = `bg-cyan-600`, Secondary = `bg-zinc-800`
+The canonical token + utility source is `src/index.css` (read it first). Summary:
+
+- **Canvas**: deep navy `#0a0c14` with a soft blue aurora on `body::before` (echoes the landing nebula). The app layout is transparent so the aurora shows — do NOT add opaque `bg-zinc-950` wrappers.
+- **Elevation ladder (surfaces)**: cards are SOLID navy `#111521` (via the `Card` component / `.card-surface`, NOT translucent). Elevated/nested surfaces use `bg-white/[0.04]` or `#19202f`; popovers/overlays `#1f2738`. Use `.elev-1/2/3` for layered-shadow depth.
+- **Borders**: `border-white/10`, `border-[#18181d]`, or `#21212a`.
+- **Accent**: CYAN → BLUE (matches the landing wordmark + CTA). Primary buttons use `.bg-gradient-brand` (cyan→blue, `#06b6d4`→`#3b82f6`). Accent text/icons `text-cyan-300`; active rings `ring-cyan-400/25`; gradient eyebrow text `.text-gradient-brand`. (Quick Quiz keeps an amber ⚡ identity; semantic = emerald/amber/rose.)
+- **Text contrast (important)**: titles/key content `text-zinc-50`/`text-zinc-100`; body `text-zinc-300`; secondary `text-zinc-400`; ONLY true hints `text-zinc-500`. Never use zinc-500/600 for primary or content text — that was the old "washed out" bug this rebuild fixed.
+- **Semantic colors**: success = emerald, warning = amber, danger = rose (use rose, not red).
+- **Font**: Inter via Google Fonts CDN. Headings use tight tracking (`-0.02em`).
+- **Border radius**: `rounded-lg`/`rounded-xl`.
+- **Primitives** (reuse, don't re-roll): `Button` + `Card`/`PageHeader` (`@/components/ui/Card`), `SubTabs`, `Select`, `Markdown`, `CountUp`, `FadeIn`.
+- **Decorative effects ARE used, tastefully**: gradient accents, subtle glow on primary actions, glass top bar (`.glass-bar`), motion v12 entrances. (This supersedes the old "no decorative effects" rule.)
+- **Wrapper page headers**: consolidated destinations (Learn/Practice/StudyKit/Progress) use a slim `h-14 border-b border-[#18181d]` bar with `SubTabs` — no redundant eyebrow+course-title block (the TopBar already shows page context).
 
 ## File Structure
 
@@ -101,4 +107,4 @@ src/
 
 ## Design Philosophy
 
-Professional, Linear/Notion-inspired dark UI. Clean, purposeful, information-dense. No decorative animations or flashy effects. Cyan accent used sparingly for primary actions and active states only.
+World-class, deep-navy UI that matches the landing page: navy canvas with a soft blue aurora, a real elevation ladder, crisp high-contrast text, and a cyan→blue accent. The core study pages are STRUCTURALLY rebuilt, not restyled — Chat is the reference (center-first composer that docks on send, history as a slide-over, clean prose answers, collapsible sources, follow-up study chips); Notes is a center-first studio (topic prompt + style pills + collapsible sources, not a checkbox form); Practice setup is center-first and tactile. Generous spacing, confident type, subtle motion. Every surface should highlight what the backend can do (RAG citations, adaptive practice, concept graphs, readiness). Avoid flat low-contrast "AI slop" AND avoid recolor-only "rebuilds" — change layout + interaction, not just the palette.

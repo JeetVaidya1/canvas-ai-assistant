@@ -7,11 +7,11 @@ export default function AppLayout() {
   const location = useLocation()
 
   return (
-    <div className="flex h-screen bg-zinc-950/70 backdrop-blur-xl text-zinc-50">
+    <div className="flex h-screen text-zinc-50">
       <AppSidebar />
       <div className="flex flex-col flex-1 min-w-0">
         <TopBar />
-        <main className="flex-1 overflow-y-auto bg-zinc-900/30 backdrop-blur-sm">
+        <main className="flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -19,6 +19,7 @@ export default function AppLayout() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="h-full"
             >
               <Outlet />
             </motion.div>

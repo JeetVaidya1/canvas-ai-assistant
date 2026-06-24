@@ -9,7 +9,7 @@ import { showError } from '@/lib/toast'
 const GRADES: { label: string; grade: number; tone: string }[] = [
   { label: 'Again', grade: 1, tone: 'bg-red-600 hover:bg-red-500' },
   { label: 'Hard', grade: 3, tone: 'bg-amber-600 hover:bg-amber-500' },
-  { label: 'Good', grade: 4, tone: 'bg-cyan-600 hover:bg-cyan-500' },
+  { label: 'Good', grade: 4, tone: 'bg-cyan-500 hover:bg-cyan-400' },
   { label: 'Easy', grade: 5, tone: 'bg-emerald-600 hover:bg-emerald-500' },
 ]
 
@@ -64,7 +64,7 @@ export default function ReviewPanel({ courseId, userId }: ReviewPanelProps) {
     return (
       <Card accent padding="md" className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-gradient-brand-soft border border-cyan-400/20 flex items-center justify-center flex-shrink-0">
             <Zap className="w-5 h-5 text-cyan-300" />
           </div>
           <div>
@@ -102,7 +102,7 @@ export default function ReviewPanel({ courseId, userId }: ReviewPanelProps) {
     <Card padding="lg">
       <div className="flex items-center justify-between mb-4 text-xs">
         <span className="font-medium text-zinc-500">Review {index + 1} of {items.length}</span>
-        <span className="text-cyan-300 font-medium bg-gradient-brand-soft border border-cyan-500/15 rounded-full px-2.5 py-0.5">{item.concept}</span>
+        <span className="text-cyan-300 font-medium bg-gradient-brand-soft border border-cyan-400/15 rounded-full px-2.5 py-0.5">{item.concept}</span>
       </div>
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">
         <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 mb-1.5">From a {item.source} you missed</div>

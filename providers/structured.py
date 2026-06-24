@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List
 
-from .anthropic_chat import _build_call, _extract_text, _record_usage
+from .anthropic_chat import _build_call, _extract_text, _messages_create_with_retry, _record_usage
 
 
 def structured_call(
@@ -34,7 +34,7 @@ def structured_call(
     }]
     kwargs["tool_choice"] = {"type": "tool", "name": tool_name}
 
-    response = client.messages.create(**kwargs)
+    response = _messages_create_with_retry(client, kwargs)
     _record_usage(response, _target)
     for block in response.content:
         if getattr(block, "type", None) == "tool_use" and getattr(block, "name", None) == tool_name:

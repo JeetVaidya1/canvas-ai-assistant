@@ -39,7 +39,7 @@ export default function ConfirmDialog({
             className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
               variant === 'danger'
                 ? 'bg-red-600 hover:bg-red-500 text-white'
-                : 'bg-cyan-600 hover:bg-cyan-500 text-white'
+                : 'bg-cyan-500 hover:bg-cyan-400 text-white'
             }`}
           >
             {confirmLabel}

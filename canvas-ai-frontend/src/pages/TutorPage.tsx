@@ -40,7 +40,7 @@ export default function TutorPage() {
                   onClick={() => setTab(id)}
                   className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     active
-                      ? 'bg-gradient-brand-soft text-cyan-300 ring-1 ring-cyan-500/30'
+                      ? 'bg-gradient-brand-soft text-cyan-300 ring-1 ring-cyan-400/30'
                       : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >

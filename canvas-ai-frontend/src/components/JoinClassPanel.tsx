@@ -45,12 +45,12 @@ export default function JoinClassPanel() {
 
   const inputClass =
     'flex-1 px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 ' +
-    'focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-sm transition-colors'
+    'focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 outline-none text-sm transition-colors'
 
   return (
     <Card padding="md">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center">
           <Users className="w-5 h-5 text-cyan-300" />
         </div>
         <h2 className="text-sm font-semibold text-zinc-100">Join a class</h2>

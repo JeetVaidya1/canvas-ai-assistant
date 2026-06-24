@@ -2,10 +2,12 @@ import type { HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  /** Adds hover lift + cyan border glow (use for clickable cards). */
+  /** Adds hover lift + indigo border glow (use for clickable cards). */
   interactive?: boolean
-  /** Adds a subtle cyan gradient hairline across the top. */
+  /** Adds a subtle indigo gradient hairline across the top. */
   accent?: boolean
+  /** Resting elevation — layered shadow depth. Default 1. */
+  elevation?: 0 | 1 | 2 | 3
   padding?: 'none' | 'sm' | 'md' | 'lg'
 }
 
@@ -16,9 +18,17 @@ const paddings = {
   lg: 'p-6',
 }
 
+const elevations = {
+  0: '',
+  1: 'elev-1',
+  2: 'elev-2',
+  3: 'elev-3',
+}
+
 export function Card({
   interactive = false,
   accent = false,
+  elevation = 1,
   padding = 'md',
   className,
   children,
@@ -28,6 +38,7 @@ export function Card({
     <div
       className={cn(
         'card-surface rounded-xl',
+        elevations[elevation],
         interactive && 'card-interactive cursor-pointer',
         accent && 'accent-top',
         paddings[padding],
@@ -59,7 +70,7 @@ export function PageHeader({ eyebrow, title, subtitle, actions, className }: Pag
           </p>
         )}
         <h1 className="text-2xl font-semibold text-zinc-50 tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-zinc-500 mt-1">{subtitle}</p>}
+        {subtitle && <p className="text-sm text-zinc-400 mt-1">{subtitle}</p>}
       </div>
       {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
     </div>

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import RequireAuth from '@/components/RequireAuth'
 import ErrorBoundary from '@/components/shared/ErrorBoundary'
@@ -10,16 +10,13 @@ import { FallingBooks } from '@/components/ui/falling-books'
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const CourseHome = lazy(() => import('@/pages/CourseHome'))
 const CourseOverview = lazy(() => import('@/pages/CourseOverview'))
-const ChatPage = lazy(() => import('@/pages/ChatPage'))
-const TutorPage = lazy(() => import('@/pages/TutorPage'))
-const QuizPage = lazy(() => import('@/pages/QuizPage'))
+const LearnPage = lazy(() => import('@/pages/LearnPage'))
 const PracticePage = lazy(() => import('@/pages/PracticePage'))
-const NotesPage = lazy(() => import('@/pages/NotesPage'))
 const ExamsPage = lazy(() => import('@/pages/ExamsPage'))
-const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage'))
-const PlannerPage = lazy(() => import('@/pages/PlannerPage'))
-const AudioPage = lazy(() => import('@/pages/AudioPage'))
+const StudyKitPage = lazy(() => import('@/pages/StudyKitPage'))
+const ProgressPage = lazy(() => import('@/pages/ProgressPage'))
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
 
@@ -31,30 +28,68 @@ function PageFallback() {
   )
 }
 
+/** The animated WebGL shader + falling books are a MARKETING background only.
+ *  Rendering them app-wide pinned the GPU on every screen (and the shell's
+ *  backdrop-blur re-blurred the moving canvas every frame) — the source of the
+ *  app-wide lag. Restrict them to the landing + login routes. */
+function MarketingBackground() {
+  const { pathname } = useLocation()
+  if (pathname !== '/' && pathname !== '/login') return null
+  return (
+    <>
+      <ShaderCanvas />
+      <FallingBooks />
+    </>
+  )
+}
+
+/** Redirect old tool paths to the new consolidated destinations. */
+function RedirectCourse({ to }: { to: string }) {
+  const { courseId } = useParams<{ courseId: string }>()
+  return <Navigate to={`/course/${courseId}/${to}`} replace />
+}
+
+function Page({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <ErrorBoundary>{children}</ErrorBoundary>
+    </Suspense>
+  )
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <ShaderCanvas />
-      <FallingBooks />
+      <MarketingBackground />
       <div className="relative z-10">
       <Routes>
         <Route path="/" element={<Suspense fallback={<PageFallback />}><LandingPage /></Suspense>} />
         <Route path="/login" element={<Suspense fallback={<PageFallback />}><LoginPage /></Suspense>} />
         <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
-          <Route path="dashboard" element={<Suspense fallback={<PageFallback />}><Dashboard /></Suspense>} />
-          <Route path="course/:courseId" element={<Suspense fallback={<PageFallback />}><CourseOverview /></Suspense>} />
-          <Route path="course/:courseId/chat" element={<Suspense fallback={<PageFallback />}><ChatPage /></Suspense>} />
-          <Route path="course/:courseId/tutor" element={<Suspense fallback={<PageFallback />}><ErrorBoundary><TutorPage /></ErrorBoundary></Suspense>} />
-          <Route path="course/:courseId/quiz" element={<Suspense fallback={<PageFallback />}><ErrorBoundary><QuizPage /></ErrorBoundary></Suspense>} />
-          <Route path="course/:courseId/practice" element={<Suspense fallback={<PageFallback />}><ErrorBoundary><PracticePage /></ErrorBoundary></Suspense>} />
-          <Route path="course/:courseId/notes" element={<Suspense fallback={<PageFallback />}><ErrorBoundary><NotesPage /></ErrorBoundary></Suspense>} />
-          <Route path="course/:courseId/exams" element={<Suspense fallback={<PageFallback />}><ErrorBoundary><ExamsPage /></ErrorBoundary></Suspense>} />
-          <Route path="course/:courseId/analytics" element={<Suspense fallback={<PageFallback />}><ErrorBoundary><AnalyticsPage /></ErrorBoundary></Suspense>} />
-          <Route path="course/:courseId/planner" element={<Suspense fallback={<PageFallback />}><PlannerPage /></Suspense>} />
-          <Route path="course/:courseId/audio" element={<Suspense fallback={<PageFallback />}><AudioPage /></Suspense>} />
-          <Route path="settings" element={<Suspense fallback={<PageFallback />}><SettingsPage /></Suspense>} />
-          <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFoundPage /></Suspense>} />
+          <Route path="dashboard" element={<Page><Dashboard /></Page>} />
+
+          {/* Six intent-based destinations */}
+          <Route path="course/:courseId" element={<Page><CourseHome /></Page>} />
+          <Route path="course/:courseId/materials" element={<Page><CourseOverview /></Page>} />
+          <Route path="course/:courseId/learn" element={<Page><LearnPage /></Page>} />
+          <Route path="course/:courseId/practice" element={<Page><PracticePage /></Page>} />
+          <Route path="course/:courseId/exam" element={<Page><ExamsPage /></Page>} />
+          <Route path="course/:courseId/kit" element={<Page><StudyKitPage /></Page>} />
+          <Route path="course/:courseId/progress" element={<Page><ProgressPage /></Page>} />
+
+          {/* Old tool paths → new destinations (keeps links + recent-activity working) */}
+          <Route path="course/:courseId/chat" element={<RedirectCourse to="learn" />} />
+          <Route path="course/:courseId/tutor" element={<RedirectCourse to="learn" />} />
+          <Route path="course/:courseId/quiz" element={<RedirectCourse to="practice" />} />
+          <Route path="course/:courseId/notes" element={<RedirectCourse to="kit" />} />
+          <Route path="course/:courseId/audio" element={<RedirectCourse to="kit" />} />
+          <Route path="course/:courseId/analytics" element={<RedirectCourse to="progress" />} />
+          <Route path="course/:courseId/planner" element={<RedirectCourse to="progress" />} />
+          <Route path="course/:courseId/exams" element={<RedirectCourse to="exam" />} />
+
+          <Route path="settings" element={<Page><SettingsPage /></Page>} />
+          <Route path="*" element={<Page><NotFoundPage /></Page>} />
         </Route>
         </Route>
       </Routes>

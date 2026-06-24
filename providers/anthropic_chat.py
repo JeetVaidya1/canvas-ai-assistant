@@ -57,6 +57,37 @@ def _get_anthropic():
     return _client, _auth_mode
 
 
+def _reset_client() -> None:
+    """Drop the cached client so the next call re-reads a fresh token.
+
+    The Max OAuth token in the keychain rotates (~hourly); without this, a
+    long-running process keeps using a client built around a now-expired token
+    and every call 401s until manual restart.
+    """
+    global _client, _auth_mode
+    with _client_lock:
+        _client = None
+        _auth_mode = None
+
+
+def _is_auth_error(exc: Exception) -> bool:
+    if getattr(exc, "status_code", None) == 401:
+        return True
+    return "authentication" in str(exc).lower() and "401" in str(exc)
+
+
+def _messages_create_with_retry(client, kwargs):
+    """messages.create that, on a 401, refreshes the token once and retries."""
+    try:
+        return client.messages.create(**kwargs)
+    except Exception as exc:  # noqa: BLE001
+        if _is_auth_error(exc):
+            _reset_client()
+            fresh, _ = _get_anthropic()
+            return fresh.messages.create(**kwargs)
+        raise
+
+
 # ---------- response shape (mimics OpenAI SDK) ----------
 @dataclass(frozen=True)
 class _Message:
@@ -263,10 +294,25 @@ def stream_text(messages, *, model=None, temperature=None, max_tokens=None):
     client, kwargs, _want_json, _target = _build_call(
         model, messages, temperature, max_tokens, None
     )
-    with client.messages.stream(**kwargs) as stream:
-        for delta in stream.text_stream:
-            if delta:
-                yield delta
+    yielded = False
+    try:
+        with client.messages.stream(**kwargs) as stream:
+            for delta in stream.text_stream:
+                if delta:
+                    yielded = True
+                    yield delta
+    except Exception as exc:  # noqa: BLE001
+        # Auth errors surface at stream-open (before any delta) — safe to refresh
+        # the token and retry once without double-emitting.
+        if _is_auth_error(exc) and not yielded:
+            _reset_client()
+            fresh, _ = _get_anthropic()
+            with fresh.messages.stream(**kwargs) as stream:
+                for delta in stream.text_stream:
+                    if delta:
+                        yield delta
+        else:
+            raise
 
 
 class _CompletionsNamespace:
@@ -276,7 +322,7 @@ class _CompletionsNamespace:
         client, kwargs, want_json, target_model = _build_call(
             model, messages, temperature, max_tokens, response_format
         )
-        response = client.messages.create(**kwargs)
+        response = _messages_create_with_retry(client, kwargs)
         _record_usage(response, target_model)
         text = _extract_text(response)
         if want_json:

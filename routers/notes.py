@@ -71,6 +71,9 @@ async def generate_notes_endpoint(
             "word_count": result.get("word_count", 0),
             "reading_time": result.get("reading_time", "0 min"),
             "topics": result.get("topics", []),
+            # Structured flashcards the engine already generated (schema tool-call).
+            # Previously dropped here, forcing the UI to regex-scrape markdown -> "0 cards".
+            "flashcards": result.get("flashcards", []),
             "source_files": result.get("source_files", file_list)
         }
         

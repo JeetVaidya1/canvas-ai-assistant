@@ -1,5 +1,6 @@
 // src/lib/api/chat.ts
 import { BASE_URL, apiFetch } from './client'
+import { getAccessToken } from '../auth'
 
 /** ===== Chat + sessions ===== */
 export interface ChatSession {
@@ -69,7 +70,13 @@ export async function askQuestionStream(
   form.append('user_id', userId)
   if (sessionId) form.append('session_id', sessionId)
 
-  const resp = await fetch(`${BASE_URL}/ask/stream`, { method: 'POST', body: form })
+  // Attach the Supabase bearer token — /ask/stream is auth + rate-limited, so a
+  // raw token-less fetch would 401. (Mirrors apiFetch's auth handling.)
+  const token = await getAccessToken()
+  const headers = new Headers()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+
+  const resp = await fetch(`${BASE_URL}/ask/stream`, { method: 'POST', body: form, headers })
   if (!resp.ok || !resp.body) throw new Error('Stream failed')
 
   const reader = resp.body.getReader()

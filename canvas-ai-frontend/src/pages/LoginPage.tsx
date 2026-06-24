@@ -54,7 +54,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-2xl p-7">
         <div className="flex items-center gap-2 mb-6">
-          <div className="w-9 h-9 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-lg bg-cyan-400/15 flex items-center justify-center">
             <GraduationCap className="w-5 h-5 text-cyan-400" />
           </div>
           <span className="text-lg font-semibold text-zinc-50">Vindexa</span>
@@ -93,7 +93,7 @@ export default function LoginPage() {
                 <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email"
-                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 text-sm focus:border-cyan-600 outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 text-sm focus:border-cyan-500 outline-none"
                 />
               </div>
               {mode !== 'magic' && (
@@ -101,13 +101,13 @@ export default function LoginPage() {
                   <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password"
-                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 text-sm focus:border-cyan-600 outline-none"
+                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 text-sm focus:border-cyan-500 outline-none"
                   />
                 </div>
               )}
               <button
                 type="submit" disabled={busy}
-                className="w-full bg-cyan-600 text-white py-2.5 rounded-lg font-medium text-sm hover:bg-cyan-500 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-cyan-500 text-white py-2.5 rounded-lg font-medium text-sm hover:bg-cyan-400 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {busy && <Loader2 className="w-4 h-4 animate-spin" />}
                 {mode === 'signup' ? 'Create account' : mode === 'magic' ? 'Send magic link' : 'Sign in'}
