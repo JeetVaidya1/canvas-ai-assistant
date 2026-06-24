@@ -1,0 +1,38 @@
+# Fly.io config for the Vindexa backend (FastAPI + local BGE embeddings).
+# Always-on single machine so the 1.3GB model stays warm in RAM (no scale-to-zero).
+
+app = "vindexa-backend"
+# Pick the region closest to your Supabase project to minimise DB latency.
+# Common US choices: "iad" (Virginia), "sjc" (San Jose), "sea" (Seattle).
+primary_region = "iad"
+
+[build]
+  # Uses ./Dockerfile by default.
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Keep exactly one machine running at all times so the embedding model stays loaded.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 20
+    hard_limit = 40
+
+  # Lightweight in-memory health endpoint (no DB calls).
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    path = "/system-status"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  # BGE-large needs ~1.3GB resident; 2GB is the practical floor. If you see OOM
+  # kills in `fly logs`, bump this to "4gb" (≈$5/mo more).
+  memory = "2gb"
+  cpus = 1

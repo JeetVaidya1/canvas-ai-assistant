@@ -1,0 +1,34 @@
+# Keep the image small and the build fast. Runtime needs none of these:
+# vectors live in Supabase pgvector, not in local data/ or vectorstores/.
+
+# VCS + Python caches
+.git
+.gitignore
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtualenvs (image installs its own deps)
+.venv/
+venv/
+
+# Secrets — provided via `fly secrets`, never baked into the image
+.env
+.env.*
+!.env.example
+
+# Frontend lives on Vercel, not in the backend image
+canvas-ai-frontend/
+
+# Local-only ingest artifacts (corpus is already embedded in Supabase)
+data/
+vectorstores/
+docs/
+
+# Editor / OS noise
+.DS_Store
+*.tmp
+*.log
