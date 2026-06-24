@@ -22,16 +22,20 @@ export default function QuizPage() {
         <div className="inline-flex bg-zinc-800/60 border border-zinc-700/40 rounded-lg p-1 gap-1">
           <button
             onClick={() => setTab('quiz')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === 'quiz' ? 'bg-cyan-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+              tab === 'quiz'
+                ? 'bg-gradient-brand text-white glow-brand-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             Quiz
           </button>
           <button
             onClick={() => setTab('helper')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === 'helper' ? 'bg-cyan-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+              tab === 'helper'
+                ? 'bg-gradient-brand text-white glow-brand-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             Answer Helper

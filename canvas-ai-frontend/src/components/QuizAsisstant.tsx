@@ -1,6 +1,7 @@
 // src/components/QuizAssistant.tsx - IMPROVED VERSION
 import React, { useState, useRef, useEffect } from 'react'
 import { Markdown } from '@/components/ui/Markdown'
+import { Button } from '@/components/ui/Button'
 import {
   Brain,
   Copy,
@@ -135,30 +136,36 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-t-lg p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-zinc-100">Quiz Assistant</h2>
-            <p className="text-sm text-zinc-500">
-              Paste any quiz question and get intelligent help with explanations
-            </p>
+      <div className="card-surface accent-top rounded-t-xl p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+              <Brain className="w-5 h-5 text-cyan-300" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-0.5">Answer Helper</p>
+              <h2 className="text-lg font-semibold text-zinc-100">Quiz Assistant</h2>
+              <p className="text-sm text-zinc-500">
+                Paste any quiz question and get intelligent help with explanations
+              </p>
+            </div>
           </div>
 
           {conversations.length > 0 && (
-            <button
+            <Button
+              variant="secondary"
               onClick={clearConversations}
-              className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-sm font-medium text-zinc-300"
+              leftIcon={<RotateCcw className="w-4 h-4" />}
             >
-              <RotateCcw className="w-4 h-4" />
               Clear All
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Conversation History */}
       {conversations.length > 0 && (
-        <div className="bg-zinc-900 border-x border-zinc-800 max-h-96 overflow-y-auto">
+        <div className="card-surface border-t-0 rounded-none max-h-96 overflow-y-auto">
           <div className="p-6 space-y-6">
             {conversations.map((conv) => (
               <div key={conv.id} className="space-y-4">
@@ -168,7 +175,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                     <User className="w-4 h-4 text-zinc-300" />
                   </div>
                   <div className="max-w-3xl text-right">
-                    <div className="inline-block px-4 py-3 rounded-lg bg-cyan-600 text-white">
+                    <div className="inline-block px-4 py-3 rounded-lg bg-gradient-brand text-white glow-brand-sm">
                       <p className="whitespace-pre-wrap leading-relaxed">
                         {conv.question}
                       </p>
@@ -184,26 +191,26 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
 
                 {/* AI Response */}
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                    <Brain className="w-4 h-4 text-cyan-400" />
+                  <div className="w-8 h-8 rounded-full bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+                    <Brain className="w-4 h-4 text-cyan-300" />
                   </div>
                   <div className="flex-1">
                     {conv.response.status === 'success' ? (
                       <div className="space-y-4">
                         {/* Answer Header */}
                         <div className="flex items-center gap-3">
-                          <Target className="w-5 h-5 text-cyan-400" />
+                          <Target className="w-5 h-5 text-cyan-300" />
                           <span className="font-semibold text-zinc-50">Answer</span>
                           <div className={`px-3 py-1 rounded-full text-xs font-medium ${getConfidenceColor(conv.response.confidence)}`}>
                             {getConfidenceText(conv.response.confidence)}
                           </div>
-                          <div className="px-3 py-1 bg-cyan-500/10 text-cyan-400 text-xs font-medium rounded-full">
+                          <div className="px-3 py-1 bg-gradient-brand-soft border border-cyan-500/15 text-cyan-300 text-xs font-medium rounded-full">
                             {formatQuestionType(conv.response.question_type)}
                           </div>
                         </div>
 
                         {/* Main Answer */}
-                        <div className="bg-zinc-800 rounded-lg p-4">
+                        <div className="bg-gradient-brand-soft border border-cyan-500/15 rounded-lg p-4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
                               <div className="text-lg font-semibold text-zinc-100">
@@ -212,7 +219,8 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                             </div>
                             <button
                               onClick={() => copyAnswer(conv.response.answer)}
-                              className="p-2 text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors flex-shrink-0"
+                              className="p-2 text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors flex-shrink-0"
+                              aria-label="Copy answer"
                               title="Copy answer"
                             >
                               <Copy className="w-4 h-4" />
@@ -325,7 +333,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
       )}
 
       {/* Input Form */}
-      <div className={`bg-zinc-900 ${conversations.length > 0 ? 'border-x' : 'border-x rounded-none'} border-zinc-800 p-6`}>
+      <div className={`card-surface border-t-0 p-6 ${conversations.length === 0 ? 'rounded-none' : ''}`}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-zinc-400 mb-2">
@@ -336,43 +344,36 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="Example:&#10;&#10;Which of the following best describes photosynthesis?&#10;A) The process by which plants break down glucose&#10;B) The process by which plants convert light energy into chemical energy&#10;C) The process by which plants absorb water&#10;D) The process by which plants release oxygen"
-              className="w-full min-h-[120px] p-4 bg-zinc-800 border border-zinc-700 text-zinc-50 rounded-lg focus:ring-2 focus:ring-cyan-500/50 focus:border-transparent resize-none transition-all text-sm placeholder-zinc-500"
+              className="w-full min-h-[120px] p-4 bg-zinc-800/70 border border-zinc-700 text-zinc-50 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none resize-none transition-colors text-sm placeholder-zinc-500"
               disabled={loading}
             />
           </div>
 
           <div className="flex items-center gap-3">
-            <button
+            <Button
               type="submit"
+              size="lg"
               disabled={loading || !question.trim() || !courseId}
-              className="bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center gap-2 transition-colors text-sm"
+              loading={loading}
+              leftIcon={<Zap className="w-5 h-5" />}
             >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Zap className="w-5 h-5" />
-                  {conversations.length > 0 ? 'Ask Another' : 'Get Answer'}
-                </>
-              )}
-            </button>
+              {loading ? 'Analyzing...' : conversations.length > 0 ? 'Ask Another' : 'Get Answer'}
+            </Button>
 
             {conversations.length > 0 && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="lg"
                 onClick={() => setQuestion('')}
-                className="px-4 py-3 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-2"
+                leftIcon={<Plus className="w-4 h-4 rotate-45" />}
               >
-                <Plus className="w-4 h-4 rotate-45" />
                 Clear
-              </button>
+              </Button>
             )}
 
             {!courseId && (
-              <div className="flex items-center gap-2 text-amber-600 text-sm">
+              <div className="flex items-center gap-2 text-amber-500 text-sm">
                 <AlertCircle className="w-4 h-4" />
                 Select a course first
               </div>
@@ -383,9 +384,11 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
 
       {/* Footer Tips */}
       {conversations.length === 0 && (
-        <div className="bg-zinc-800 rounded-b-2xl border border-zinc-700 p-6">
+        <div className="card-surface border-t-0 rounded-t-none rounded-b-xl p-6">
           <div className="flex items-start gap-3">
-            <HelpCircle className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+              <HelpCircle className="w-5 h-5 text-cyan-300" />
+            </div>
             <div>
               <h4 className="font-semibold text-zinc-50 mb-2">Pro Tips for Best Results:</h4>
               <ul className="text-sm text-zinc-400 space-y-1">

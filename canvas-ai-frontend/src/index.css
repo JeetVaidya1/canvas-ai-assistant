@@ -150,3 +150,50 @@ body {
 .hero-delay-400 { animation-delay: 0.4s; }
 .hero-delay-600 { animation-delay: 0.6s; }
 .hero-delay-800 { animation-delay: 0.8s; }
+
+/* ============================================================
+   Brand design language (cohesive with the landing page).
+   Cyan -> blue gradient accents, subtle depth + glow.
+   ============================================================ */
+
+/* Gradient text for headlines / eyebrow accents */
+.text-gradient-brand {
+  background-image: linear-gradient(100deg, #67e8f9 0%, #22d3ee 40%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Brand gradient fills (primary actions, accent bars) */
+.bg-gradient-brand { background-image: linear-gradient(100deg, #06b6d4 0%, #3b82f6 100%); }
+.bg-gradient-brand-soft {
+  background-image: linear-gradient(100deg, rgba(6, 182, 212, 0.14), rgba(59, 130, 246, 0.14));
+}
+
+/* Soft outer glow for primary actions / focused cards */
+.glow-brand { box-shadow: 0 6px 20px -6px rgba(34, 211, 238, 0.35); }
+.glow-brand-sm { box-shadow: 0 4px 14px -6px rgba(34, 211, 238, 0.28); }
+
+/* Card lift on hover — used across every surface for consistency */
+.card-surface {
+  background-color: rgba(24, 24, 27, 0.7);
+  border: 1px solid #27272a;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-interactive:hover {
+  border-color: rgba(34, 211, 238, 0.3);
+  background-color: rgba(39, 39, 42, 0.6);
+  box-shadow: 0 10px 30px -16px rgba(34, 211, 238, 0.35);
+}
+
+/* Subtle gradient hairline at the top of feature cards */
+.accent-top {
+  position: relative;
+}
+.accent-top::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 1rem; right: 1rem;
+  height: 1px;
+  background-image: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.5), transparent);
+}

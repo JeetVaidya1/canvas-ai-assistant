@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Shuffle, RotateCcw, Download, Save, Brain, CheckCircle } from 'lucide-react'
 import { Markdown } from '@/components/ui/Markdown'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import {
   saveFlashcards,
   getFlashcardDeck,
@@ -12,12 +14,14 @@ import { showError, showSuccess } from '@/lib/toast'
 
 export type Flashcard = { q: string; a: string }
 
+type GradeVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+
 // SM-2 recall grades surfaced as four buttons.
-const GRADES: { label: string; grade: number; tone: string }[] = [
-  { label: 'Again', grade: 1, tone: 'bg-red-600 hover:bg-red-500' },
-  { label: 'Hard', grade: 3, tone: 'bg-amber-600 hover:bg-amber-500' },
-  { label: 'Good', grade: 4, tone: 'bg-cyan-600 hover:bg-cyan-500' },
-  { label: 'Easy', grade: 5, tone: 'bg-emerald-600 hover:bg-emerald-500' },
+const GRADES: { label: string; grade: number; variant: GradeVariant; className: string }[] = [
+  { label: 'Again', grade: 1, variant: 'danger', className: '' },
+  { label: 'Hard', grade: 3, variant: 'secondary', className: '!bg-amber-600 !border-amber-500 hover:!bg-amber-500 text-white' },
+  { label: 'Good', grade: 4, variant: 'primary', className: '' },
+  { label: 'Easy', grade: 5, variant: 'secondary', className: '!bg-emerald-600 !border-emerald-500 hover:!bg-emerald-500 text-white' },
 ]
 
 function downloadCSV(cards: Flashcard[]) {
@@ -137,14 +141,16 @@ export default function Flashcards({
   if (!cards?.length) return null
 
   return (
-    <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-zinc-50">{title} ({cards.length})</h3>
-        <div className="flex items-center gap-2">
+    <Card accent padding="lg">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <h3 className="text-lg font-semibold text-zinc-50">
+          {title} <span className="text-zinc-500 font-normal">({cards.length})</span>
+        </h3>
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={studyMode}
             onChange={e => { setStudyMode(e.target.value as any); setShowBack({}); setTypingAnswers({}) }}
-            className="bg-zinc-800 border border-zinc-700 text-zinc-50 rounded-lg px-3 py-2 text-sm focus:ring-cyan-500/50"
+            className="bg-zinc-800/70 border border-zinc-700 text-zinc-100 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
             title="Study mode"
           >
             <option value="all">Flip to reveal</option>
@@ -152,39 +158,43 @@ export default function Flashcards({
             <option value="typing">Typing practice</option>
           </select>
 
-          <button onClick={shuffled} className="px-3 py-2 border border-zinc-700 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 flex items-center gap-2">
-            <Shuffle className="w-4 h-4" /> Shuffle
-          </button>
-          <button onClick={reset} className="px-3 py-2 border border-zinc-700 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 flex items-center gap-2">
-            <RotateCcw className="w-4 h-4" /> Reset
-          </button>
-          <button onClick={() => downloadCSV(cards)} className="px-3 py-2 border border-zinc-700 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 flex items-center gap-2">
-            <Download className="w-4 h-4" /> CSV
-          </button>
+          <Button variant="ghost" size="sm" onClick={shuffled} leftIcon={<Shuffle className="w-4 h-4" />}>
+            Shuffle
+          </Button>
+          <Button variant="ghost" size="sm" onClick={reset} leftIcon={<RotateCcw className="w-4 h-4" />}>
+            Reset
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => downloadCSV(cards)} leftIcon={<Download className="w-4 h-4" />}>
+            CSV
+          </Button>
           {courseId && (
             <>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => void handleAnkiExport()}
-                className="px-3 py-2 border border-zinc-700 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 flex items-center gap-2"
+                leftIcon={<Download className="w-4 h-4" />}
                 title="Export your saved deck to Anki, keeping spaced-repetition state"
               >
-                <Download className="w-4 h-4" /> Anki
-              </button>
-              <button
+                Anki
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => void handleSaveToDeck()}
-                disabled={saving}
-                className="px-3 py-2 border border-zinc-700 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 disabled:opacity-50 flex items-center gap-2"
+                loading={saving}
+                leftIcon={<Save className="w-4 h-4" />}
               >
-                <Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save to deck'}
-              </button>
-              <button
+                {saving ? 'Saving…' : 'Save to deck'}
+              </Button>
+              <Button
+                variant={studyMode === 'sr' ? 'primary' : 'secondary'}
+                size="sm"
                 onClick={() => (studyMode === 'sr' ? setStudyMode('all') : enterSrMode())}
-                className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
-                  studyMode === 'sr' ? 'bg-cyan-600 text-white' : 'border border-zinc-700 text-zinc-400 hover:bg-zinc-800'
-                }`}
+                leftIcon={<Brain className="w-4 h-4" />}
               >
-                <Brain className="w-4 h-4" /> Review
-              </button>
+                Review
+              </Button>
             </>
           )}
         </div>
@@ -213,22 +223,22 @@ export default function Flashcards({
               className="group relative perspective"
             >
               {/* Card */}
-              <div className="relative h-44 w-full transition-transform duration-500 [transform-style:preserve-3d] rounded-xl border border-zinc-700 bg-zinc-900 p-4"
+              <div className="card-surface accent-top relative h-44 w-full transition-transform duration-500 [transform-style:preserve-3d] rounded-xl p-4 hover:border-cyan-500/30"
                    style={{ transform: (studyMode==='all' && flipped) ? 'rotateY(180deg)' : 'none' }}
                    onClick={() => studyMode==='all' && setShowBack(s => ({...s, [idx]: !s[idx]}))}
               >
                 {/* Front */}
-                <div className="absolute inset-0 backface-hidden">
-                  <div className="text-xs text-zinc-400 mb-1">Question</div>
+                <div className="absolute inset-0 p-4 backface-hidden">
+                  <div className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Question</div>
                   <div className="text-zinc-50 font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
                   {studyMode==='all' && (
-                    <div className="absolute bottom-3 right-3 text-xs text-zinc-400">Click to flip</div>
+                    <div className="absolute bottom-3 right-3 text-xs text-zinc-500">Click to flip</div>
                   )}
                 </div>
 
                 {/* Back (answer) */}
-                <div className="absolute inset-0 rotate-y-180 backface-hidden">
-                  <div className="text-xs text-zinc-400 mb-1">Answer</div>
+                <div className="absolute inset-0 p-4 rotate-y-180 backface-hidden">
+                  <div className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Answer</div>
                   <div className="text-zinc-50 leading-snug overflow-hidden max-h-32"><Markdown content={a} /></div>
                 </div>
               </div>
@@ -236,17 +246,17 @@ export default function Flashcards({
               {/* Hide-answers mode: show only prompts */}
               {studyMode==='hide-answers' && (
                 <div className="absolute inset-0 rounded-xl border border-dashed border-zinc-700 bg-zinc-800/60 p-4">
-                  <div className="text-xs text-zinc-400 mb-1">Prompt</div>
+                  <div className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-1.5">Prompt</div>
                   <div className="text-zinc-200 font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
                 </div>
               )}
 
               {/* Typing practice mode */}
               {studyMode==='typing' && (
-                <div className="absolute inset-0 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 flex flex-col">
-                  <div className="text-xs text-cyan-400 mb-1">Type your answer</div>
+                <div className="absolute inset-0 rounded-xl border border-cyan-500/30 bg-gradient-brand-soft p-4 flex flex-col">
+                  <div className="text-xs font-semibold uppercase tracking-widest text-cyan-300 mb-1.5">Type your answer</div>
                   <textarea
-                    className="flex-1 resize-none rounded-lg bg-zinc-800 border border-cyan-500/30 px-3 py-2 text-sm text-zinc-50 focus:ring-2 focus:ring-cyan-500/50"
+                    className="flex-1 resize-none rounded-lg bg-zinc-800/70 border border-cyan-500/30 px-3 py-2 text-sm text-zinc-50 outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
                     value={typingAnswers[idx] || ''}
                     onChange={e => setTypingAnswers(s => ({...s, [idx]: e.target.value}))}
                     placeholder="Write your answer here…"
@@ -263,7 +273,7 @@ export default function Flashcards({
         })}
       </div>
       )}
-    </div>
+    </Card>
   )
 }
 
@@ -307,9 +317,9 @@ function SrReview({
             ? 'Save cards to your deck, then come back when they’re due.'
             : `You reviewed ${deck.length} card${deck.length === 1 ? '' : 's'}.`}
         </p>
-        <button onClick={onRestart} className="px-4 py-2 border border-zinc-700 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800">
+        <Button variant="secondary" size="sm" onClick={onRestart}>
           Reload deck
-        </button>
+        </Button>
       </div>
     )
   }
@@ -320,35 +330,33 @@ function SrReview({
       <div className="flex items-center justify-between mb-3 text-xs text-zinc-500">
         <span>Card {index + 1} of {deck.length} due</span>
       </div>
-      <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-6 min-h-44">
-        <div className="text-xs text-zinc-400 mb-1">Question</div>
+      <Card accent padding="lg" className="min-h-44">
+        <div className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Question</div>
         <div className="text-zinc-50 font-medium leading-snug mb-4"><Markdown content={card.q} /></div>
         {revealed && (
           <>
             <div className="border-t border-zinc-800 my-3" />
-            <div className="text-xs text-zinc-400 mb-1">Answer</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Answer</div>
             <div className="text-zinc-200 leading-snug"><Markdown content={card.a} /></div>
           </>
         )}
-      </div>
+      </Card>
 
       {!revealed ? (
-        <button
-          onClick={onReveal}
-          className="mt-4 w-full bg-zinc-800 border border-zinc-700 text-zinc-200 py-2.5 rounded-lg hover:bg-zinc-700 text-sm font-medium"
-        >
+        <Button variant="secondary" onClick={onReveal} className="mt-4 w-full">
           Show answer
-        </button>
+        </Button>
       ) : (
         <div className="mt-4 grid grid-cols-4 gap-2">
           {GRADES.map((g) => (
-            <button
+            <Button
               key={g.grade}
+              variant={g.variant}
               onClick={() => onGrade(g.grade)}
-              className={`py-2.5 rounded-lg text-white text-sm font-medium transition-colors ${g.tone}`}
+              className={g.className}
             >
               {g.label}
-            </button>
+            </Button>
           ))}
         </div>
       )}

@@ -25,6 +25,8 @@ import {
   Flame
 } from 'lucide-react'
 import { getReadiness, getConceptGraph, type Readiness, type ConceptBlocker } from '@/lib/api'
+import { Card, PageHeader } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import ReviewPanel from './ReviewPanel'
 
 interface AnalyticsData {
@@ -82,7 +84,7 @@ function ReadinessHero({ readiness }: { readiness: Readiness }) {
   const circumference = 2 * Math.PI * 52
   const offset = circumference * (1 - score / 100)
   return (
-    <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6">
+    <Card accent padding="lg" className="flex flex-col md:flex-row items-center gap-6">
       <div className="relative w-32 h-32 flex-shrink-0">
         <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
           <circle cx="60" cy="60" r="52" fill="none" stroke="#27272a" strokeWidth="10" />
@@ -94,13 +96,13 @@ function ReadinessHero({ readiness }: { readiness: Readiness }) {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className={`text-3xl font-bold ${tone.text}`}>{score}%</span>
-          <span className="text-[10px] text-zinc-500 uppercase tracking-wide">ready</span>
+          <span className="text-[10px] text-zinc-500 uppercase tracking-widest">ready</span>
         </div>
       </div>
       <div className="flex-1 text-center md:text-left">
-        <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
-          <h2 className="text-lg font-bold text-zinc-50">Exam readiness</h2>
-          <span className={`text-xs font-medium ${tone.text}`}>· {tone.label}</span>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Exam readiness</p>
+        <div className="flex items-center justify-center md:justify-start gap-2 mb-1.5">
+          <h2 className="text-xl font-semibold text-zinc-50 tracking-tight">{tone.label}</h2>
         </div>
         <p className="text-sm text-zinc-400 mb-3">
           {readiness.has_past_papers
@@ -121,7 +123,7 @@ function ReadinessHero({ readiness }: { readiness: Readiness }) {
           <p className="text-xs text-emerald-400">No major gaps — keep reviewing to hold your edge.</p>
         )}
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -181,11 +183,13 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
   if (!analytics) {
     return (
       <div className="max-w-6xl mx-auto p-6">
-        <div className="text-center py-16">
-          <BarChart3 className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-zinc-400 mb-2">No Analytics Data Yet</h3>
-          <p className="text-zinc-400">Start studying to see your progress!</p>
-        </div>
+        <Card padding="none" className="py-16 px-8 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
+            <BarChart3 className="w-7 h-7 text-cyan-300" />
+          </div>
+          <h3 className="text-lg font-semibold text-zinc-100 mb-2">No analytics data yet</h3>
+          <p className="text-sm text-zinc-500">Start studying to see your progress!</p>
+        </Card>
       </div>
     )
   }
@@ -193,23 +197,16 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-50 flex items-center gap-3">
-            <BarChart3 className="w-8 h-8 text-cyan-400" />
-            Learning Analytics
-          </h1>
-          <p className="text-zinc-400 mt-2">Track your progress and identify areas for improvement</p>
-        </div>
-
-        <button
-          onClick={loadAnalytics}
-          className="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2"
-        >
-          <TrendingUp className="w-4 h-4" />
-          Refresh
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Analytics"
+        title="Learning Analytics"
+        subtitle="Track your progress and identify areas for improvement"
+        actions={
+          <Button variant="secondary" onClick={loadAnalytics} leftIcon={<TrendingUp className="w-4 h-4" />}>
+            Refresh
+          </Button>
+        }
+      />
 
       {/* Exam readiness hero */}
       {readiness && <ReadinessHero readiness={readiness} />}
@@ -219,12 +216,15 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
 
       {/* Prerequisite gaps — fix the foundation first */}
       {blockers.length > 0 && (
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-zinc-100 mb-1 flex items-center gap-2">
-            <Brain className="w-4 h-4 text-violet-400" /> Fix the foundation first
-          </h2>
-          <p className="text-xs text-zinc-400 mb-3">You're weak on these, and so are their prerequisites — start upstream.</p>
-          <div className="space-y-2">
+        <Card padding="md">
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center flex-shrink-0">
+              <Brain className="w-4 h-4 text-violet-400" />
+            </div>
+            <h2 className="text-sm font-semibold text-zinc-100">Fix the foundation first</h2>
+          </div>
+          <p className="text-xs text-zinc-500 mb-4 ml-[42px]">You're weak on these, and so are their prerequisites — start upstream.</p>
+          <div className="space-y-2 ml-[42px]">
             {blockers.slice(0, 5).map((b, i) => (
               <div key={i} className="flex items-center gap-2 text-sm">
                 <span className="text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-0.5 text-xs">
@@ -235,75 +235,77 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
-          <div className="flex items-center justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-zinc-500">Study Streak</p>
-              <p className="text-2xl font-bold text-zinc-100">{analytics.study_streak}</p>
-              <p className="text-sm text-zinc-500">days</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Study Streak</p>
+              <p className="text-3xl font-bold text-gradient-brand mt-1.5 leading-none">{analytics.study_streak}</p>
+              <p className="text-xs text-zinc-500 mt-1.5">days</p>
             </div>
-            <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center">
-              <Flame className="w-5 h-5 text-zinc-400" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+              <Flame className="w-5 h-5 text-cyan-300" />
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
-          <div className="flex items-center justify-between">
+        <Card>
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-zinc-500">Questions Asked</p>
-              <p className="text-2xl font-bold text-zinc-100">{analytics.total_questions}</p>
-              <p className="text-sm text-zinc-500">total</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Questions Asked</p>
+              <p className="text-3xl font-bold text-gradient-brand mt-1.5 leading-none">{analytics.total_questions}</p>
+              <p className="text-xs text-zinc-500 mt-1.5">total</p>
             </div>
-            <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-zinc-400" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+              <BookOpen className="w-5 h-5 text-cyan-300" />
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
-          <div className="flex items-center justify-between">
+        <Card>
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-zinc-500">Avg Confidence</p>
-              <p className="text-2xl font-bold text-zinc-100">{Math.round(analytics.avg_confidence * 100)}%</p>
-              <p className="text-sm text-zinc-500">score</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Avg Confidence</p>
+              <p className="text-3xl font-bold text-gradient-brand mt-1.5 leading-none">{Math.round(analytics.avg_confidence * 100)}%</p>
+              <p className="text-xs text-zinc-500 mt-1.5">score</p>
             </div>
-            <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center">
-              <Target className="w-5 h-5 text-zinc-400" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+              <Target className="w-5 h-5 text-cyan-300" />
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
-          <div className="flex items-center justify-between">
+        <Card>
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-zinc-500">Topics Studied</p>
-              <p className="text-2xl font-bold text-zinc-100">{analytics.topics_progress.length}</p>
-              <p className="text-sm text-zinc-500">concepts</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Topics Studied</p>
+              <p className="text-3xl font-bold text-gradient-brand mt-1.5 leading-none">{analytics.topics_progress.length}</p>
+              <p className="text-xs text-zinc-500 mt-1.5">concepts</p>
             </div>
-            <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center">
-              <Brain className="w-5 h-5 text-zinc-400" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+              <Brain className="w-5 h-5 text-cyan-300" />
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Topic Progress */}
-      <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
-        <h2 className="text-2xl font-bold text-zinc-50 mb-6 flex items-center gap-3">
-          <TrendingUp className="w-6 h-6 text-cyan-400" />
-          Topic Mastery Progress
-        </h2>
+      <Card padding="lg">
+        <div className="flex items-center gap-2.5 mb-6">
+          <div className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-cyan-300" />
+          </div>
+          <h2 className="text-lg font-semibold text-zinc-50 tracking-tight">Topic Mastery Progress</h2>
+        </div>
 
         {analytics.topics_progress.length === 0 ? (
-          <div className="text-center py-8 text-zinc-400">
-            <Brain className="w-12 h-12 text-zinc-400 mx-auto mb-3" />
-            <p>No topics studied yet. Start asking questions to see progress!</p>
+          <div className="text-center py-8 text-zinc-500">
+            <Brain className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
+            <p className="text-sm">No topics studied yet. Start asking questions to see progress!</p>
           </div>
         ) : (
           <div style={{ height: Math.max(160, analytics.topics_progress.length * 40) }}>
@@ -316,11 +318,11 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
                 layout="vertical"
                 margin={{ left: 8, right: 24, top: 4, bottom: 4 }}
               >
-                <XAxis type="number" domain={[0, 100]} tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" unit="%" />
-                <YAxis type="category" dataKey="topic" width={150} tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" />
+                <XAxis type="number" domain={[0, 100]} tick={{ fill: '#71717a', fontSize: 11 }} stroke="#27272a" unit="%" />
+                <YAxis type="category" dataKey="topic" width={150} tick={{ fill: '#71717a', fontSize: 11 }} stroke="#27272a" />
                 <Tooltip
                   cursor={{ fill: '#27272a' }}
-                  contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 }}
                   formatter={(value) => [`${value}%`, 'Mastery']}
                 />
                 <Bar dataKey="mastery" radius={[0, 4, 4, 0]}>
@@ -332,16 +334,18 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
             </ResponsiveContainer>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Study Activity Trend */}
       {analytics.study_time_trend.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
-            <h2 className="text-lg font-bold text-zinc-50 mb-4 flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-cyan-400" />
-              Study Time
-            </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card padding="lg">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-cyan-300" />
+              </div>
+              <h2 className="text-base font-semibold text-zinc-50 tracking-tight">Study Time</h2>
+            </div>
             <div style={{ height: 220 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
@@ -353,23 +357,25 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
                   margin={{ left: 0, right: 16, top: 8, bottom: 4 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                  <XAxis dataKey="date" tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" />
-                  <YAxis tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" />
+                  <XAxis dataKey="date" tick={{ fill: '#71717a', fontSize: 11 }} stroke="#27272a" />
+                  <YAxis tick={{ fill: '#71717a', fontSize: 11 }} stroke="#27272a" />
                   <Tooltip
-                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
+                    contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 }}
                     formatter={(value, name) => [name === 'minutes' ? `${value} min` : value, name === 'minutes' ? 'Study time' : 'Questions']}
                   />
-                  <Line type="monotone" dataKey="minutes" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="minutes" stroke="#22d3ee" strokeWidth={2} dot={{ r: 3, fill: '#22d3ee' }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </Card>
 
-          <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
-            <h2 className="text-lg font-bold text-zinc-50 mb-4 flex items-center gap-3">
-              <Target className="w-5 h-5 text-emerald-400" />
-              Confidence Over Time
-            </h2>
+          <Card padding="lg">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+                <Target className="w-5 h-5 text-blue-300" />
+              </div>
+              <h2 className="text-base font-semibold text-zinc-50 tracking-tight">Confidence Over Time</h2>
+            </div>
             <div style={{ height: 220 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
@@ -380,34 +386,36 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
                   margin={{ left: 0, right: 16, top: 8, bottom: 4 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                  <XAxis dataKey="date" tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" />
-                  <YAxis domain={[0, 100]} tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" unit="%" />
+                  <XAxis dataKey="date" tick={{ fill: '#71717a', fontSize: 11 }} stroke="#27272a" />
+                  <YAxis domain={[0, 100]} tick={{ fill: '#71717a', fontSize: 11 }} stroke="#27272a" unit="%" />
                   <Tooltip
-                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
+                    contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 }}
                     formatter={(value) => [`${value}%`, 'Avg confidence']}
                   />
-                  <Line type="monotone" dataKey="confidence" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="confidence" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: '#3b82f6' }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       {/* Weak Areas & Recommendations */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Weak Areas */}
-        <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
-          <h2 className="text-xl font-bold text-zinc-50 mb-4 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            Areas to Focus On
-          </h2>
+        <Card padding="lg">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            </div>
+            <h2 className="text-base font-semibold text-zinc-50 tracking-tight">Areas to Focus On</h2>
+          </div>
 
           {analytics.weak_areas.length === 0 ? (
             <div className="text-center py-8">
               <Award className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
               <p className="text-emerald-400 font-medium">Great job!</p>
-              <p className="text-zinc-400 text-sm">No weak areas identified</p>
+              <p className="text-zinc-500 text-sm">No weak areas identified</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -424,14 +432,16 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
               ))}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Study Recommendations */}
-        <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
-          <h2 className="text-xl font-bold text-zinc-50 mb-4 flex items-center gap-3">
-            <Zap className="w-5 h-5 text-amber-400" />
-            Study Recommendations
-          </h2>
+        <Card padding="lg">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <Zap className="w-5 h-5 text-amber-400" />
+            </div>
+            <h2 className="text-base font-semibold text-zinc-50 tracking-tight">Study Recommendations</h2>
+          </div>
 
           <div className="space-y-3">
             {analytics.study_recommendations.map((rec, index) => (
@@ -443,19 +453,21 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Study Schedule Suggestion */}
-      <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Calendar className="w-6 h-6 text-cyan-400" />
-          <h2 className="text-xl font-bold text-zinc-50">Suggested Study Schedule</h2>
+      <Card accent padding="lg">
+        <div className="flex items-center gap-2.5 mb-5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+            <Calendar className="w-5 h-5 text-cyan-300" />
+          </div>
+          <h2 className="text-base font-semibold text-zinc-50 tracking-tight">Suggested Study Schedule</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-zinc-900/60 rounded-lg p-4 border border-zinc-800">
-            <h3 className="font-semibold text-zinc-200 mb-2">Today</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-zinc-950/50 rounded-lg p-4 border border-zinc-800">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gradient-brand mb-2">Today</h3>
             <p className="text-sm text-zinc-400">
               {analytics.weak_areas.length > 0
                 ? `Review ${analytics.weak_areas[0]} concepts`
@@ -464,15 +476,15 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
             </p>
           </div>
 
-          <div className="bg-zinc-900/60 rounded-lg p-4 border border-zinc-800">
-            <h3 className="font-semibold text-zinc-200 mb-2">This Week</h3>
+          <div className="bg-zinc-950/50 rounded-lg p-4 border border-zinc-800">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gradient-brand mb-2">This Week</h3>
             <p className="text-sm text-zinc-400">
               Practice problems on your strongest topics to maintain mastery
             </p>
           </div>
 
-          <div className="bg-zinc-900/60 rounded-lg p-4 border border-zinc-800">
-            <h3 className="font-semibold text-zinc-200 mb-2">Next Steps</h3>
+          <div className="bg-zinc-950/50 rounded-lg p-4 border border-zinc-800">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gradient-brand mb-2">Next Steps</h3>
             <p className="text-sm text-zinc-400">
               {analytics.total_questions < 50
                 ? 'Ask more questions to get better insights'
@@ -481,7 +493,7 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
             </p>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

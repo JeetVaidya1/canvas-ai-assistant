@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Send,
-  Loader2,
   User,
   Plus,
   Trash2,
@@ -10,8 +9,10 @@ import {
   CheckCircle,
   Bot,
   FileText,
+  Sparkles,
 } from 'lucide-react'
 import { Markdown } from '@/components/ui/Markdown'
+import { Button } from '@/components/ui/Button'
 import { useUser } from '@/hooks/useUser'
 import { useCourses } from '@/hooks/useCourses'
 import { useCourseFiles } from '@/hooks/useCourseFiles'
@@ -179,12 +180,14 @@ export default function ChatPage() {
       {sidebarOpen && (
         <div className="w-60 bg-zinc-950 border-r border-zinc-800 flex flex-col">
           <div className="p-4 border-b border-zinc-800">
-            <button
+            <Button
+              variant="secondary"
               onClick={startNew}
-              className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-2.5 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm"
+              leftIcon={<Plus className="w-4 h-4" />}
+              className="w-full"
             >
-              <Plus className="w-4 h-4" /> New Chat
-            </button>
+              New Chat
+            </Button>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-1">
             {sessions.map((session) => (
@@ -192,8 +195,8 @@ export default function ChatPage() {
                 key={session.id}
                 className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors ${
                   activeSession?.id === session.id
-                    ? 'bg-zinc-800 text-zinc-100'
-                    : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'
+                    ? 'bg-gradient-brand-soft border border-cyan-500/20 text-zinc-100'
+                    : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300 border border-transparent'
                 }`}
                 onClick={() => setActiveSession(session)}
               >
@@ -222,7 +225,8 @@ export default function ChatPage() {
         <div className="h-12 flex items-center px-4 border-b border-zinc-800 gap-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400"
+            className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-cyan-300"
+            aria-label={sidebarOpen ? 'Hide chats' : 'Show chats'}
           >
             <MessageCircle className="w-4 h-4" />
           </button>
@@ -235,8 +239,8 @@ export default function ChatPage() {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 && !isTyping ? (
             <div className="text-center py-16">
-              <div className="w-14 h-14 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-5">
-                <MessageCircle className="w-7 h-7 text-zinc-500" />
+              <div className="w-14 h-14 rounded-2xl bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
+                <Sparkles className="w-7 h-7 text-cyan-300" />
               </div>
               <h3 className="text-lg font-semibold text-zinc-100 mb-2">Ready to help you study</h3>
               <p className="text-sm text-zinc-500 max-w-md mx-auto mb-8">
@@ -252,7 +256,7 @@ export default function ChatPage() {
                   <button
                     key={suggestion}
                     onClick={() => setQuestion(suggestion)}
-                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded-lg text-sm transition-colors border border-zinc-700"
+                    className="bg-zinc-800/70 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 px-4 py-2 rounded-full text-sm transition-colors border border-zinc-700 hover:border-cyan-500/50"
                   >
                     {suggestion}
                   </button>
@@ -267,24 +271,24 @@ export default function ChatPage() {
                   className={`flex items-start gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
                 >
                   <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 ${
                       msg.role === 'user'
-                        ? 'bg-zinc-700'
-                        : 'bg-zinc-800'
+                        ? 'bg-zinc-800 border border-zinc-700'
+                        : 'bg-gradient-brand-soft border border-cyan-500/15'
                     }`}
                   >
                     {msg.role === 'user' ? (
                       <User className="w-3.5 h-3.5 text-zinc-300" />
                     ) : (
-                      <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                      <Bot className="w-3.5 h-3.5 text-cyan-300" />
                     )}
                   </div>
                   <div className={`max-w-3xl ${msg.role === 'user' ? 'text-right' : ''}`}>
                     <div
-                      className={`inline-block px-4 py-3 rounded-lg ${
+                      className={`inline-block px-4 py-3 rounded-xl text-left ${
                         msg.role === 'user'
-                          ? 'bg-cyan-600 text-white'
-                          : 'bg-zinc-800 text-zinc-200 border border-zinc-700'
+                          ? 'bg-cyan-500/15 border border-cyan-500/25 text-zinc-100'
+                          : 'bg-zinc-800/80 text-zinc-200 border border-zinc-700'
                       }`}
                     >
                       {msg.role === 'user' ? (
@@ -316,14 +320,14 @@ export default function ChatPage() {
               ))}
               {isTyping && (
                 <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center">
-                    <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                  <div className="w-7 h-7 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+                    <Bot className="w-3.5 h-3.5 text-cyan-300" />
                   </div>
-                  <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3">
+                  <div className="bg-zinc-800/80 border border-zinc-700 rounded-xl px-4 py-3">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                      <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                      <div className="w-2 h-2 bg-cyan-400/70 rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-cyan-400/70 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                      <div className="w-2 h-2 bg-cyan-400/70 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                     </div>
                   </div>
                 </div>
@@ -342,16 +346,19 @@ export default function ChatPage() {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="Ask me anything about your course..."
-                className="flex-1 px-4 py-2.5 bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 outline-none text-sm"
+                className="flex-1 px-4 py-2.5 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-sm transition-colors"
                 disabled={isTyping}
               />
-              <button
+              <Button
                 type="submit"
+                variant="primary"
+                loading={isTyping}
                 disabled={isTyping || !question.trim()}
-                className="bg-cyan-600 hover:bg-cyan-500 text-white p-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="!px-3"
+                aria-label="Send message"
               >
-                {isTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-              </button>
+                {!isTyping && <Send className="w-5 h-5" />}
+              </Button>
             </form>
             <div className="flex items-center gap-2 mt-3 text-xs text-zinc-600">
               <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />

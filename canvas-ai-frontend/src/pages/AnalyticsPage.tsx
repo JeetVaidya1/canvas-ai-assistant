@@ -13,7 +13,7 @@ export default function AnalyticsPage() {
   }, [courseId])
 
   return (
-    <div className="p-5 max-w-5xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <AnalyticsDashboard courseId={courseId || ''} userId={userId} />
     </div>
   )

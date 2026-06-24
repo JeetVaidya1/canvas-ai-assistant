@@ -5,7 +5,6 @@ import {
   Upload,
   FileText,
   X,
-  Loader2,
   MessageCircle,
   Target,
   BookOpen,
@@ -14,6 +13,14 @@ import { useCourses } from '@/hooks/useCourses'
 import { useCourseFiles, useUploadFile, useDeleteFile } from '@/hooks/useCourseFiles'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
 import CourseOverviewSkeleton from '@/components/skeletons/CourseOverviewSkeleton'
+import { Button } from '@/components/ui/Button'
+import { Card, PageHeader } from '@/components/ui/Card'
+
+const QUICK_LINKS = [
+  { label: 'Chat', path: '/chat', icon: MessageCircle },
+  { label: 'Practice', path: '/practice', icon: Target },
+  { label: 'Notes', path: '/notes', icon: BookOpen },
+]
 
 export default function CourseOverview() {
   const { courseId } = useParams<{ courseId: string }>()
@@ -24,6 +31,7 @@ export default function CourseOverview() {
   const deleteFileM = useDeleteFile(courseId)
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [dragActive, setDragActive] = useState(false)
 
   const course = courses?.find((c) => c.course_id === courseId)
 
@@ -45,38 +53,69 @@ export default function CourseOverview() {
     }
   }
 
+  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault()
+    setDragActive(false)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setSelectedFiles(e.dataTransfer.files)
+    }
+  }
+
   if (!course) {
     return <CourseOverviewSkeleton />
   }
 
   const hasFiles = files && files.length > 0
 
+  const pendingUploads = selectedFiles && (
+    <div className="space-y-3 p-4 bg-zinc-900/60 rounded-lg border border-zinc-700/50">
+      <div className="text-sm text-zinc-300">
+        {Array.from(selectedFiles).map((f) => f.name).join(', ')}
+      </div>
+      <Button
+        onClick={handleUpload}
+        loading={uploadFile.isPending}
+        className="w-full"
+      >
+        {uploadFile.isPending ? 'Uploading...' : 'Upload Files'}
+      </Button>
+      {uploadProgress > 0 && (
+        <div className="w-full bg-zinc-700 rounded-full h-1">
+          <div
+            className="bg-gradient-brand h-1 rounded-full transition-all duration-300"
+            style={{ width: `${uploadProgress}%` }}
+          />
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-zinc-50">{course.title}</h1>
-        {hasFiles && (
-          <p className="text-sm text-zinc-500 mt-1">{files.length} file{files.length !== 1 ? 's' : ''} uploaded</p>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Course"
+        title={course.title}
+        subtitle={hasFiles ? `${files.length} file${files.length !== 1 ? 's' : ''} uploaded` : undefined}
+      />
 
       {/* Quick actions — only show when files exist */}
       {hasFiles && (
-        <div className="flex items-center gap-2">
-          {[
-            { label: 'Chat', path: '/chat', icon: MessageCircle },
-            { label: 'Practice', path: '/practice', icon: Target },
-            { label: 'Notes', path: '/notes', icon: BookOpen },
-          ].map((action) => (
-            <button
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {QUICK_LINKS.map((action) => (
+            <Card
               key={action.label}
+              interactive
+              accent
+              padding="sm"
               onClick={() => navigate(`/course/${courseId}${action.path}`)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-zinc-800/80 border border-zinc-700/50 rounded-lg text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 hover:border-zinc-600/50 transition-all"
+              className="flex items-center gap-3 group"
             >
-              <action.icon className="w-3.5 h-3.5" />
-              {action.label}
-            </button>
+              <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+                <action.icon className="w-5 h-5 text-cyan-300" />
+              </div>
+              <span className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors">{action.label}</span>
+            </Card>
           ))}
         </div>
       )}
@@ -87,17 +126,29 @@ export default function CourseOverview() {
       {/* Files Section or Onboarding */}
       {!hasFiles && !filesLoading ? (
         // Onboarding state
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-8">
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4">
-            <Upload className="w-6 h-6 text-cyan-400" />
+        <Card accent padding="lg">
+          <div className="w-12 h-12 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center mb-4">
+            <Upload className="w-6 h-6 text-cyan-300" />
           </div>
-          <h2 className="text-lg font-medium text-zinc-100 mb-2">Upload your course materials</h2>
+          <h2 className="text-lg font-semibold text-zinc-100 mb-2">Upload your course materials</h2>
           <p className="text-sm text-zinc-500 mb-5 max-w-lg">
             Add your PDFs, slides, and documents. Vindexa will use them to generate quizzes, practice problems, study notes, and more.
           </p>
-          <label className="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg cursor-pointer transition-colors text-sm font-medium">
-            <Upload className="w-4 h-4" />
-            Upload Files
+
+          {/* Drag-and-drop zone */}
+          <label
+            onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
+            onDragLeave={(e) => { e.preventDefault(); setDragActive(false) }}
+            onDrop={handleDrop}
+            className={`flex flex-col items-center justify-center gap-2 px-6 py-8 rounded-xl border-2 border-dashed cursor-pointer transition-all ${
+              dragActive
+                ? 'border-cyan-500/60 bg-gradient-brand-soft'
+                : 'border-zinc-700 bg-zinc-900/40 hover:border-cyan-500/40 hover:bg-zinc-900/60'
+            }`}
+          >
+            <Upload className={`w-6 h-6 transition-colors ${dragActive ? 'text-cyan-300' : 'text-zinc-500'}`} />
+            <span className="text-sm font-medium text-zinc-300">Drop files here or click to browse</span>
+            <span className="text-xs text-zinc-600">PDF, DOCX, PPTX</span>
             <input
               type="file"
               multiple
@@ -108,41 +159,14 @@ export default function CourseOverview() {
           </label>
 
           {/* Pending uploads */}
-          {selectedFiles && (
-            <div className="space-y-3 p-4 bg-zinc-900/60 rounded-lg border border-zinc-700/50 mt-5">
-              <div className="text-sm text-zinc-300">
-                {Array.from(selectedFiles).map((f) => f.name).join(', ')}
-              </div>
-              <button
-                onClick={handleUpload}
-                disabled={uploadFile.isPending}
-                className="w-full bg-emerald-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 transition-colors"
-              >
-                {uploadFile.isPending ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
-                  </span>
-                ) : (
-                  'Upload Files'
-                )}
-              </button>
-              {uploadProgress > 0 && (
-                <div className="w-full bg-zinc-700 rounded-full h-1">
-                  <div
-                    className="bg-emerald-500 h-1 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+          {selectedFiles && <div className="mt-5">{pendingUploads}</div>}
+        </Card>
       ) : (
         // Files list
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5 space-y-4">
+        <Card padding="md" className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-zinc-200">Files</h2>
-            <label className="flex items-center gap-2 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg cursor-pointer transition-colors text-xs font-medium">
+            <h2 className="text-sm font-semibold text-zinc-200">Files</h2>
+            <label className="inline-flex items-center gap-2 font-medium rounded-lg transition-all text-white bg-gradient-brand hover:brightness-110 glow-brand-sm hover:glow-brand active:scale-[0.98] select-none cursor-pointer text-xs px-3 py-1.5">
               <Upload className="w-3.5 h-3.5" />
               Upload
               <input
@@ -156,34 +180,7 @@ export default function CourseOverview() {
           </div>
 
           {/* Pending uploads */}
-          {selectedFiles && (
-            <div className="space-y-3 p-3 bg-zinc-900/60 rounded-lg border border-zinc-700/50">
-              <div className="text-sm text-zinc-300">
-                {Array.from(selectedFiles).map((f) => f.name).join(', ')}
-              </div>
-              <button
-                onClick={handleUpload}
-                disabled={uploadFile.isPending}
-                className="w-full bg-emerald-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 transition-colors"
-              >
-                {uploadFile.isPending ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
-                  </span>
-                ) : (
-                  'Upload Files'
-                )}
-              </button>
-              {uploadProgress > 0 && (
-                <div className="w-full bg-zinc-700 rounded-full h-1">
-                  <div
-                    className="bg-emerald-500 h-1 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+          {selectedFiles && pendingUploads}
 
           {/* File list */}
           {filesLoading ? (
@@ -196,12 +193,13 @@ export default function CourseOverview() {
                   className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-zinc-700/30 transition-colors group"
                 >
                   <span className="text-zinc-300 text-sm truncate flex-1 flex items-center gap-2.5">
-                    <FileText className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                    <FileText className="w-4 h-4 text-cyan-300/70 flex-shrink-0" />
                     {filename}
                   </span>
                   <button
                     onClick={() => deleteFileM.mutate(filename)}
                     className="p-1 text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                    aria-label={`Delete ${filename}`}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -209,7 +207,7 @@ export default function CourseOverview() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
       )}
     </div>
   )

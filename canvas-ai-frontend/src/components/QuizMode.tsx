@@ -25,6 +25,8 @@ import {
 } from 'lucide-react'
 
 import { Markdown } from '@/components/ui/Markdown'
+import { Button } from '@/components/ui/Button'
+import { Card, PageHeader } from '@/components/ui/Card'
 import {
   generateQuiz,
   submitQuizAnswer,
@@ -207,17 +209,23 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
   if (!run) {
     return (
       <div className="max-w-3xl mx-auto px-5 py-5">
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
-          <h2 className="text-base font-medium text-zinc-100 mb-4">Start a quiz</h2>
+        <Card>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+              <Brain className="w-5 h-5 text-cyan-300" />
+            </div>
+            <PageHeader eyebrow="Quiz" title="Start a quiz" subtitle="Pick a topic, difficulty, and length" />
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-zinc-500">Topic</label>
+                <label className="text-xs font-medium text-zinc-400">Topic</label>
                 <button
                   onClick={() => void loadTopics()}
                   disabled={topicsLoading}
-                  className="text-cyan-400 hover:text-cyan-300 text-xs flex items-center gap-1"
+                  className="text-cyan-400 hover:text-cyan-300 text-xs flex items-center gap-1 transition-colors"
+                  aria-label="Refresh topics"
                 >
                   <RefreshCw className={`w-3 h-3 ${topicsLoading ? 'animate-spin' : ''}`} />
                 </button>
@@ -226,7 +234,7 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
                 <button
                   onClick={() => setTopicDropdownOpen(!topicDropdownOpen)}
                   disabled={topicsLoading || !courseId}
-                  className="w-full px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-800 text-zinc-100 text-sm text-left flex items-center justify-between disabled:opacity-50"
+                  className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-zinc-100 text-sm text-left flex items-center justify-between disabled:opacity-50 transition-colors"
                 >
                   <span className="truncate">
                     {topicsLoading ? 'Loading...' : selectedTopic || 'Select topic'}
@@ -242,8 +250,10 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
                           setSelectedTopic(topic)
                           setTopicDropdownOpen(false)
                         }}
-                        className={`w-full px-3 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
-                          selectedTopic === topic ? 'text-cyan-400 font-medium' : 'text-zinc-400'
+                        className={`w-full px-3 py-2 text-left text-sm transition-colors ${
+                          selectedTopic === topic
+                            ? 'bg-gradient-brand-soft text-cyan-300 font-medium'
+                            : 'text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
                         } ${index === 0 ? 'rounded-t-lg' : ''} ${index === availableTopics.length - 1 ? 'rounded-b-lg' : ''}`}
                       >
                         <div className="truncate">{topic}</div>
@@ -256,11 +266,11 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-zinc-500 mb-1.5">Difficulty</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Difficulty</label>
               <select
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
-                className="w-full px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-800 text-zinc-100 text-sm"
+                className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-zinc-100 text-sm transition-colors"
               >
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
@@ -269,11 +279,11 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-zinc-500 mb-1.5">Questions</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Questions</label>
               <select
                 value={questionCount}
                 onChange={(e) => setQuestionCount(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-800 text-zinc-100 text-sm"
+                className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-zinc-100 text-sm transition-colors"
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
@@ -283,24 +293,15 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
             </div>
           </div>
 
-          <button
+          <Button
             onClick={() => void startQuiz()}
             disabled={loading || topicsLoading || !selectedTopic || !courseId}
-            className="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2 transition-colors"
+            loading={loading}
+            leftIcon={<Play className="w-4 h-4" />}
           >
-            {loading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Generating quiz...
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4" />
-                Start Quiz
-              </>
-            )}
-          </button>
-        </div>
+            {loading ? 'Generating quiz...' : 'Start Quiz'}
+          </Button>
+        </Card>
       </div>
     )
   }
@@ -311,24 +312,29 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
     const scorePct = result.score.pct
     return (
       <div className="max-w-3xl mx-auto px-5 py-5">
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
-          <div className="mb-5">
-            <h2 className="text-xl font-semibold text-zinc-100 mb-1">Quiz Complete</h2>
-            <p className="text-sm text-zinc-500">Here's how you did</p>
+        <Card>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+              <Trophy className="w-5 h-5 text-cyan-300" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gradient-brand mb-0.5">Quiz Complete</h2>
+              <p className="text-sm text-zinc-500">Here's how you did</p>
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 mb-5">
-            <div className="bg-zinc-800 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold mb-0.5 text-cyan-400">{scorePct}%</div>
+            <div className="bg-gradient-brand-soft border border-cyan-500/15 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold mb-0.5 text-gradient-brand">{scorePct}%</div>
               <div className="text-xs text-zinc-500">Score</div>
             </div>
-            <div className="bg-zinc-800 rounded-lg p-4 text-center">
+            <div className="bg-zinc-800/70 border border-zinc-700/50 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold mb-0.5 text-emerald-400">
                 {result.score.correct}/{result.score.total}
               </div>
               <div className="text-xs text-zinc-500">Correct</div>
             </div>
-            <div className="bg-zinc-800 rounded-lg p-4 text-center">
+            <div className="bg-zinc-800/70 border border-zinc-700/50 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold mb-0.5 text-zinc-100">{formatTime(timeElapsed)}</div>
               <div className="text-xs text-zinc-500">Time</div>
             </div>
@@ -337,7 +343,7 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
           {chartData.length > 0 && (
             <div className="mb-5">
               <h3 className="text-sm font-medium text-zinc-300 mb-3">Performance by topic</h3>
-              <div className="bg-zinc-800 rounded-lg p-4" style={{ height: Math.max(140, chartData.length * 44) }}>
+              <div className="bg-zinc-800/70 border border-zinc-700/50 rounded-lg p-4" style={{ height: Math.max(140, chartData.length * 44) }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }}>
                     <XAxis type="number" domain={[0, 100]} tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" />
@@ -380,33 +386,29 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
           )}
 
           <div className="flex flex-wrap gap-3">
-            <button
-              onClick={resetQuiz}
-              className="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-500 text-sm font-medium flex items-center gap-2 transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
+            <Button onClick={resetQuiz} leftIcon={<RotateCcw className="w-4 h-4" />}>
               New Quiz
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() =>
                 onModeChange ? onModeChange('practice') : window.dispatchEvent(new CustomEvent('navigateToPractice'))
               }
-              className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-4 py-2 rounded-lg hover:bg-zinc-700 text-sm font-medium flex items-center gap-2 transition-colors"
+              leftIcon={<BookOpen className="w-4 h-4" />}
             >
-              <BookOpen className="w-4 h-4" />
               Practice Weak Areas
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() =>
                 onModeChange ? onModeChange('analytics') : window.dispatchEvent(new CustomEvent('navigateToAnalytics'))
               }
-              className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-4 py-2 rounded-lg hover:bg-zinc-700 text-sm font-medium flex items-center gap-2 transition-colors"
+              leftIcon={<Brain className="w-4 h-4" />}
             >
-              <Brain className="w-4 h-4" />
               View Analytics
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     )
   }
@@ -419,15 +421,20 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
 
   return (
     <div className="max-w-3xl mx-auto p-5">
-      <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5 mb-5">
+      <Card className="mb-5">
         <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-base font-medium text-zinc-100">Quiz</h2>
-            <p className="text-xs text-zinc-500">{selectedTopic} &middot; {difficulty}</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+              <Brain className="w-5 h-5 text-cyan-300" />
+            </div>
+            <div>
+              <h2 className="text-base font-medium text-zinc-100">Quiz</h2>
+              <p className="text-xs text-zinc-500">{selectedTopic} &middot; {difficulty}</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5 text-sm text-zinc-400">
-              <Clock className="w-4 h-4" />
+              <Clock className="w-4 h-4 text-cyan-300" />
               {formatTime(timeElapsed)}
             </div>
             <div className="text-sm text-zinc-400">
@@ -435,14 +442,14 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
             </div>
           </div>
         </div>
-        <div className="w-full bg-zinc-700 rounded-full h-1.5">
-          <div className="bg-cyan-600 h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+        <div className="w-full bg-zinc-700/60 rounded-full h-1.5">
+          <div className="bg-gradient-brand h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
-      </div>
+      </Card>
 
-      <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
+      <Card>
         <div className="mb-5">
-          <span className="text-xs font-medium text-cyan-400 mb-2 block">Question {run.currentIndex + 1}</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-2 block">Question {run.currentIndex + 1}</span>
           <div className="text-base font-medium text-zinc-100">
             <Markdown content={question.question} />
           </div>
@@ -460,9 +467,9 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
               else if (isSelected) klass += 'border-red-500 bg-red-500/10 text-red-400'
               else klass += 'border-zinc-700 bg-zinc-800 text-zinc-400'
             } else if (isSelected) {
-              klass += 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400'
+              klass += 'border-transparent bg-gradient-brand-soft text-cyan-300 ring-2 ring-cyan-500/30'
             } else {
-              klass += 'border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800'
+              klass += 'border-zinc-700 hover:border-cyan-500/40 hover:bg-cyan-500/5'
             }
 
             return (
@@ -480,7 +487,7 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
                         : feedback && isSelected && !isCorrectOption
                         ? 'bg-red-500 text-white'
                         : isSelected
-                        ? 'bg-cyan-600 text-white'
+                        ? 'bg-gradient-brand text-white'
                         : 'bg-zinc-700 text-zinc-400'
                     }`}
                   >
@@ -546,49 +553,26 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
 
         <div>
           {!feedback ? (
-            <button
+            <Button
               onClick={() => void submitAnswer()}
               disabled={!run.selectedLetter || submitting}
-              className="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2 transition-colors"
+              loading={submitting}
+              leftIcon={<CheckCircle className="w-4 h-4" />}
             >
-              {submitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Checking...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  Submit Answer
-                </>
-              )}
-            </button>
+              {submitting ? 'Checking...' : 'Submit Answer'}
+            </Button>
           ) : (
-            <button
+            <Button
               onClick={() => void nextQuestion()}
               disabled={submitting}
-              className="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-500 disabled:opacity-50 text-sm font-medium flex items-center gap-2 transition-colors"
+              loading={submitting}
+              rightIcon={isLast ? <Trophy className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
             >
-              {submitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Scoring...
-                </>
-              ) : isLast ? (
-                <>
-                  View Results
-                  <Trophy className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  Next Question
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
+              {submitting ? 'Scoring...' : isLast ? 'View Results' : 'Next Question'}
+            </Button>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   )
 }
