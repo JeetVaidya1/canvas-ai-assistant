@@ -236,7 +236,8 @@ export default function ChatPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-4xl mx-auto w-full px-6 py-8 space-y-6">
           {messages.length === 0 && !isTyping ? (
             <div className="text-center py-16">
               <div className="w-14 h-14 rounded-2xl bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
@@ -283,12 +284,12 @@ export default function ChatPage() {
                       <Bot className="w-3.5 h-3.5 text-cyan-300" />
                     )}
                   </div>
-                  <div className={`max-w-3xl ${msg.role === 'user' ? 'text-right' : ''}`}>
+                  <div className={`min-w-0 ${msg.role === 'user' ? 'max-w-[80%] text-right' : 'flex-1'}`}>
                     <div
-                      className={`inline-block px-4 py-3 rounded-xl text-left ${
+                      className={`px-4 py-3 rounded-xl text-left ${
                         msg.role === 'user'
-                          ? 'bg-cyan-500/15 border border-cyan-500/25 text-zinc-100'
-                          : 'bg-zinc-800/80 text-zinc-200 border border-zinc-700'
+                          ? 'inline-block bg-cyan-500/15 border border-cyan-500/25 text-zinc-100'
+                          : 'block bg-zinc-800/60 text-zinc-200 border border-zinc-800'
                       }`}
                     >
                       {msg.role === 'user' ? (
@@ -335,11 +336,13 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </>
           )}
+          </div>
         </div>
 
         {/* Input */}
-        {courseId && files && files.length > 0 && (
+        {courseId && (
           <div className="border-t border-zinc-800 p-4 bg-zinc-950">
+            <div className="max-w-4xl mx-auto">
             <form onSubmit={handleAsk} className="flex gap-3">
               <input
                 type="text"
@@ -361,8 +364,15 @@ export default function ChatPage() {
               </Button>
             </form>
             <div className="flex items-center gap-2 mt-3 text-xs text-zinc-600">
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Knowledge base: {files.length} files from {course?.title}</span>
+              {files && files.length > 0 ? (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Knowledge base: {files.length} file{files.length !== 1 ? 's' : ''} from {course?.title}</span>
+                </>
+              ) : (
+                <span>No materials uploaded yet — upload files from the course overview for grounded answers.</span>
+              )}
+            </div>
             </div>
           </div>
         )}

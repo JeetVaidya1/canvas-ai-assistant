@@ -35,6 +35,7 @@ import {
   type QuizAnswerResult,
   type QuizResult,
 } from '../lib/api'
+import { apiFetch } from '../lib/api/client'
 import { showError } from '../lib/toast'
 
 interface QuizModeProps {
@@ -53,12 +54,14 @@ interface QuizRun {
 }
 
 const LETTERS = ['A', 'B', 'C', 'D'] as const
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+// Sentinel for "quiz the entire course" — sends a null topic so the backend does
+// broad whole-course retrieval (core concepts) instead of one narrow topic.
+const WHOLE_COURSE = 'Whole course'
 
 export default function QuizMode({ courseId, userId, onModeChange }: QuizModeProps) {
   const [run, setRun] = useState<QuizRun | null>(null)
   const [result, setResult] = useState<QuizResult | null>(null)
-  const [selectedTopic, setSelectedTopic] = useState('')
+  const [selectedTopic, setSelectedTopic] = useState(WHOLE_COURSE)
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
   const [questionCount, setQuestionCount] = useState(10)
   const [loading, setLoading] = useState(false)
@@ -86,40 +89,39 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
   }, [courseId])
 
   const loadTopics = async () => {
+    // "Whole course" is always available and the default — specific topics just
+    // let the user narrow the focus. Routed through apiFetch so the auth token
+    // is attached (the endpoint is auth-scoped).
     if (!courseId) {
-      setAvailableTopics(['General Topics'])
-      setSelectedTopic('General Topics')
-      setTopicsError('Please select a course first')
+      setAvailableTopics([WHOLE_COURSE])
+      setSelectedTopic(WHOLE_COURSE)
       return
     }
     setTopicsLoading(true)
     setTopicsError(null)
     try {
-      const resp = await fetch(`${API_BASE}/practice-topics/${encodeURIComponent(courseId)}`)
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-      const data = (await resp.json()) as { topics?: string[]; error?: string }
-      if (data.topics && data.topics.length > 0) {
-        setAvailableTopics(data.topics)
-        setSelectedTopic(data.topics[0])
-        if (data.error) setTopicsError(data.error)
-      } else {
-        setAvailableTopics(['Course Content', 'General Review'])
-        setSelectedTopic('Course Content')
+      const data = (await apiFetch(`/practice-topics/${encodeURIComponent(courseId)}`)) as {
+        topics?: string[]
+        error?: string
       }
+      const topics = data.topics?.filter(Boolean) ?? []
+      setAvailableTopics([WHOLE_COURSE, ...topics])
+      if (data.error) setTopicsError(data.error)
     } catch {
-      setAvailableTopics(['Course Content', 'General Review'])
-      setSelectedTopic('Course Content')
-      setTopicsError('Failed to load topics. Using defaults.')
+      setAvailableTopics([WHOLE_COURSE])
+      setTopicsError('Could not load specific topics — you can still quiz the whole course.')
     } finally {
       setTopicsLoading(false)
     }
   }
 
   const startQuiz = async () => {
-    if (!courseId || !selectedTopic) return
+    if (!courseId) return
     setLoading(true)
     try {
-      const quiz = await generateQuiz(courseId, selectedTopic, difficulty, questionCount)
+      // Null topic => backend retrieves broadly across the whole course.
+      const topicArg = selectedTopic === WHOLE_COURSE ? null : selectedTopic
+      const quiz = await generateQuiz(courseId, topicArg, difficulty, questionCount)
       if (!quiz.questions.length) {
         showError('No questions could be generated. Try another topic.')
         return
