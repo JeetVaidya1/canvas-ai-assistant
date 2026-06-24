@@ -20,7 +20,7 @@ const VERDICT_TONE: Record<FeynmanResult['verdict'], { ring: string; text: strin
 
 const inputClass =
   'w-full px-3.5 py-2.5 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 ' +
-  'focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-sm transition-colors'
+  'focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 outline-none text-sm transition-colors'
 
 export default function FeynmanMode({ courseId, userId }: FeynmanModeProps) {
   const [concept, setConcept] = useState('')
@@ -120,7 +120,7 @@ export default function FeynmanMode({ courseId, userId }: FeynmanModeProps) {
   return (
     <Card className="space-y-5">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/20 glow-brand-sm flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-400/20 glow-brand-sm flex items-center justify-center flex-shrink-0">
           <Sparkles className="w-4.5 h-4.5 text-cyan-300" />
         </div>
         <div>
@@ -205,7 +205,7 @@ function Field({ label, step, children }: { label: string; step: number; childre
   return (
     <div>
       <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 mb-1.5">
-        <span className="w-4 h-4 rounded-full bg-gradient-brand-soft border border-cyan-500/20 text-[10px] text-cyan-300 flex items-center justify-center">
+        <span className="w-4 h-4 rounded-full bg-gradient-brand-soft border border-cyan-400/20 text-[10px] text-cyan-300 flex items-center justify-center">
           {step}
         </span>
         {label}

@@ -1,199 +1,193 @@
 @import "tailwindcss";
 
+/* ============================================================
+   VINDEXA DESIGN SYSTEM — deep-navy + cyan→blue (matches landing)
+   Navy canvas with a soft blue aurora, a true elevation ladder,
+   crisp high-contrast text, and a cyan→blue accent that echoes the
+   landing page wordmark + CTA. Tokens drive @theme utilities
+   (bg-bg-card, text-accent, …) AND the .brand utilities.
+   ============================================================ */
+
 @theme {
-  --color-bg-primary: #09090b;
-  --color-bg-card: #18181b;
-  --color-bg-elevated: #27272a;
-  --color-border: #3f3f46;
-  --color-text-primary: #fafafa;
-  --color-text-secondary: #a1a1aa;
-  --color-accent: #06b6d4;
+  /* Surfaces — deep navy (matches the landing), real elevation ladder */
+  --color-bg-primary: #0a0c14;   /* app canvas, navy-black */
+  --color-bg-subtle: #0c0f18;    /* sidebar / inset panels */
+  --color-bg-card: #111521;      /* surface-1: cards, default raised */
+  --color-bg-elevated: #19202f;  /* surface-2: hover / nested */
+  --color-bg-overlay: #1f2738;   /* surface-3: popovers, dropdowns, modals */
+
+  /* Borders — hairline → defined (cool tint) */
+  --color-border-subtle: #1a2030;
+  --color-border: #252e42;
+  --color-border-strong: #38445e;
+
+  /* Text — crisp, with a disciplined 3-step muting */
+  --color-text-primary: #f3f6fc;
+  --color-text-secondary: #9aa6bd;
+  --color-text-tertiary: #66708a;
+
+  /* Accent — cyan → blue (matches the landing wordmark + CTA) */
+  --color-accent: #22d3ee;        /* cyan-400, text/icons on dark */
+  --color-accent-soft: #38bdf8;   /* sky-400 */
+  --color-accent-bright: #67e8f9; /* cyan-300 */
+  --color-accent-blue: #3b82f6;   /* blue-500, gradient end */
+
+  /* Semantic */
   --color-success: #34d399;
   --color-warning: #fbbf24;
   --color-danger: #fb7185;
-  --color-info: #22d3ee;
+  --color-info: #38bdf8;
 }
 
-/* Base body styles */
+/* Base canvas — a soft blue aurora (echoes the landing nebula) gives depth */
 body {
-  background-color: #09090b;
-  color: #fafafa;
+  background-color: #0a0c14;
+  color: #f3f6fc;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em;
 }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(1000px 560px at 82% -12%, rgba(56, 189, 248, 0.10), transparent 60%),
+    radial-gradient(820px 620px at -5% 108%, rgba(59, 130, 246, 0.08), transparent 55%);
+}
+#root { position: relative; z-index: 1; }
 
-/* Dark scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+/* Typography rhythm — tight, confident headings */
+h1, h2, h3 { letter-spacing: -0.02em; }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* Scrollbar — thin, unobtrusive */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2c2c34; border-radius: 4px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: #3a3a44; background-clip: padding-box; }
+* { scrollbar-width: thin; scrollbar-color: #2c2c34 transparent; }
 
-::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 3px;
-}
+::selection { background: rgba(34, 211, 238, 0.30); color: #fff; }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
-}
-
-/* Firefox scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #3f3f46 transparent;
-}
-
-/* Markdown rendering (chat, notes, quiz, practice, exams, flashcards) */
-.markdown-body {
-  font-size: inherit;
-  line-height: 1.65;
-  word-break: break-word;
-}
+/* ============================================================
+   Markdown (chat, notes, quiz, practice, exams, flashcards)
+   ============================================================ */
+.markdown-body { font-size: inherit; line-height: 1.7; word-break: break-word; color: #e6e6ec; }
 .markdown-body > :first-child { margin-top: 0; }
 .markdown-body > :last-child { margin-bottom: 0; }
-.markdown-body p { margin: 0.6em 0; }
-.markdown-body h1,
-.markdown-body h2,
-.markdown-body h3,
-.markdown-body h4 {
-  font-weight: 600;
-  line-height: 1.3;
-  margin: 1.1em 0 0.5em;
-  color: #fafafa;
+.markdown-body p { margin: 0.65em 0; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+  font-weight: 650; line-height: 1.3; margin: 1.15em 0 0.5em; color: #f4f4f7; letter-spacing: -0.01em;
 }
 .markdown-body h1 { font-size: 1.35em; }
 .markdown-body h2 { font-size: 1.2em; }
 .markdown-body h3 { font-size: 1.08em; }
 .markdown-body h4 { font-size: 1em; }
-.markdown-body strong { font-weight: 600; color: #fafafa; }
+.markdown-body strong { font-weight: 650; color: #f4f4f7; }
 .markdown-body em { font-style: italic; }
-.markdown-body a { color: #22d3ee; text-decoration: underline; text-underline-offset: 2px; }
-.markdown-body a:hover { color: #67e8f9; }
-.markdown-body ul,
-.markdown-body ol { margin: 0.5em 0; padding-left: 1.4em; }
+.markdown-body a { color: #67e8f9; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(103,232,249,0.4); }
+.markdown-body a:hover { color: #a5f3fc; text-decoration-color: #a5f3fc; }
+.markdown-body ul, .markdown-body ol { margin: 0.55em 0; padding-left: 1.4em; }
 .markdown-body ul { list-style: disc; }
 .markdown-body ol { list-style: decimal; }
-.markdown-body li { margin: 0.25em 0; }
-.markdown-body li > ul,
-.markdown-body li > ol { margin: 0.25em 0; }
+.markdown-body li { margin: 0.3em 0; }
+.markdown-body li > ul, .markdown-body li > ol { margin: 0.3em 0; }
 .markdown-body blockquote {
-  margin: 0.7em 0;
-  padding: 0.2em 0.9em;
-  border-left: 3px solid #3f3f46;
-  color: #a1a1aa;
+  margin: 0.75em 0; padding: 0.3em 1em;
+  border-left: 2px solid #06b6d4; color: #a4a4b0; background: rgba(34,211,238,0.05); border-radius: 0 6px 6px 0;
 }
-.markdown-body hr { border: none; border-top: 1px solid #3f3f46; margin: 1.2em 0; }
+.markdown-body hr { border: none; border-top: 1px solid #292930; margin: 1.3em 0; }
 .markdown-body code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.88em;
-  background: #27272a;
-  border: 1px solid #3f3f46;
-  border-radius: 4px;
-  padding: 0.1em 0.35em;
+  font-size: 0.86em; background: #1b1b20; border: 1px solid #292930; border-radius: 5px; padding: 0.12em 0.38em; color: #e6e6ec;
 }
 .markdown-body pre {
-  margin: 0.7em 0;
-  padding: 0.9em 1em;
-  background: #0d1117;
-  border: 1px solid #3f3f46;
-  border-radius: 8px;
-  overflow-x: auto;
+  margin: 0.8em 0; padding: 1em 1.15em; background: #0b0b0e; border: 1px solid #21212a; border-radius: 10px; overflow-x: auto;
 }
-.markdown-body pre code {
-  background: transparent;
-  border: none;
-  padding: 0;
-  font-size: 0.85em;
-}
-.markdown-body table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0.8em 0;
-  font-size: 0.92em;
-}
-.markdown-body th,
-.markdown-body td {
-  border: 1px solid #3f3f46;
-  padding: 0.45em 0.7em;
-  text-align: left;
-}
-.markdown-body th { background: #27272a; font-weight: 600; }
+.markdown-body pre code { background: transparent; border: none; padding: 0; font-size: 0.85em; }
+.markdown-body table { width: 100%; border-collapse: collapse; margin: 0.85em 0; font-size: 0.92em; }
+.markdown-body th, .markdown-body td { border: 1px solid #292930; padding: 0.5em 0.75em; text-align: left; }
+.markdown-body th { background: #1b1b20; font-weight: 650; color: #f4f4f7; }
 .markdown-body .katex { font-size: 1.05em; }
-.markdown-body .katex-display { margin: 0.7em 0; overflow-x: auto; overflow-y: hidden; }
+.markdown-body .katex-display { margin: 0.75em 0; overflow-x: auto; overflow-y: hidden; }
 
-/* Hero shader animations */
-@keyframes hero-fade-in-down {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes hero-fade-in-up {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-hero-fade-down {
-  animation: hero-fade-in-down 0.8s ease-out forwards;
-}
-
-.animate-hero-fade-up {
-  animation: hero-fade-in-up 0.8s ease-out forwards;
-  opacity: 0;
-}
-
+/* ============================================================
+   Hero animations (landing only)
+   ============================================================ */
+@keyframes hero-fade-in-down { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes hero-fade-in-up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+.animate-hero-fade-down { animation: hero-fade-in-down 0.8s ease-out forwards; }
+.animate-hero-fade-up { animation: hero-fade-in-up 0.8s ease-out forwards; opacity: 0; }
 .hero-delay-200 { animation-delay: 0.2s; }
 .hero-delay-400 { animation-delay: 0.4s; }
 .hero-delay-600 { animation-delay: 0.6s; }
 .hero-delay-800 { animation-delay: 0.8s; }
 
 /* ============================================================
-   Brand design language (cohesive with the landing page).
-   Cyan -> blue gradient accents, subtle depth + glow.
+   BRAND LANGUAGE — indigo→violet accent, premium depth.
+   These class names are kept stable so existing components shift
+   palette instantly; rebuilt pages use them as the vocabulary.
    ============================================================ */
 
-/* Gradient text for headlines / eyebrow accents */
+/* Gradient accent text — eyebrows, key figures */
 .text-gradient-brand {
-  background-image: linear-gradient(100deg, #67e8f9 0%, #22d3ee 40%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  background-image: linear-gradient(100deg, #a5f3fc 0%, #67e8f9 40%, #60a5fa 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
-/* Brand gradient fills (primary actions, accent bars) */
-.bg-gradient-brand { background-image: linear-gradient(100deg, #06b6d4 0%, #3b82f6 100%); }
-.bg-gradient-brand-soft {
-  background-image: linear-gradient(100deg, rgba(6, 182, 212, 0.14), rgba(59, 130, 246, 0.14));
-}
+/* Gradient fills (primary actions, accent bars) — cyan → blue, matches landing CTA */
+.bg-gradient-brand { background-image: linear-gradient(120deg, #06b6d4 0%, #3b82f6 100%); }
+.bg-gradient-brand-soft { background-image: linear-gradient(120deg, rgba(34,211,238,0.16), rgba(59,130,246,0.16)); }
 
-/* Soft outer glow for primary actions / focused cards */
-.glow-brand { box-shadow: 0 6px 20px -6px rgba(34, 211, 238, 0.35); }
-.glow-brand-sm { box-shadow: 0 4px 14px -6px rgba(34, 211, 238, 0.28); }
+/* Accent glow — used sparingly on primary actions & focused surfaces */
+.glow-brand { box-shadow: 0 10px 34px -10px rgba(34,211,238,0.45), 0 4px 16px -8px rgba(59,130,246,0.4); }
+.glow-brand-sm { box-shadow: 0 6px 18px -8px rgba(34,211,238,0.42); }
 
-/* Card lift on hover — used across every surface for consistency */
+/* Elevation ladder — real depth via layered shadow, not glow */
+.elev-1 { box-shadow: 0 1px 2px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(255,255,255,0.015) inset; }
+.elev-2 { box-shadow: 0 4px 16px -4px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.02) inset; }
+.elev-3 { box-shadow: 0 16px 48px -12px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.025) inset; }
+
+/* Card surface — navy, raised, faint top highlight */
 .card-surface {
-  background-color: rgba(24, 24, 27, 0.7);
-  border: 1px solid #27272a;
-  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  background-color: #111521;
+  border: 1px solid #1f2738;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.03) inset;
+  transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
+.card-interactive { cursor: pointer; }
 .card-interactive:hover {
-  border-color: rgba(34, 211, 238, 0.3);
-  background-color: rgba(39, 39, 42, 0.6);
-  box-shadow: 0 10px 30px -16px rgba(34, 211, 238, 0.35);
+  border-color: rgba(56,189,248,0.5);
+  background-color: #141a28;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 38px -16px rgba(34,211,238,0.4), 0 1px 0 rgba(255,255,255,0.05) inset;
 }
 
 /* Subtle gradient hairline at the top of feature cards */
-.accent-top {
-  position: relative;
-}
+.accent-top { position: relative; }
 .accent-top::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 1rem; right: 1rem;
-  height: 1px;
-  background-image: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.5), transparent);
+  content: ""; position: absolute; top: 0; left: 1rem; right: 1rem; height: 1px;
+  background-image: linear-gradient(90deg, transparent, rgba(56,189,248,0.65), transparent);
+}
+
+/* Hairline divider, glass header, and focus ring helpers used by rebuilt pages */
+.hairline { border-color: #1f2738; }
+.glass-bar {
+  background: rgba(10,12,20,0.7);
+  backdrop-filter: blur(16px) saturate(170%);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  border-bottom: 1px solid #1a2030;
+}
+.focus-ring { outline: none; }
+.focus-ring:focus-visible { box-shadow: 0 0 0 2px #0a0c14, 0 0 0 4px rgba(56,189,248,0.6); }
+
+/* Sheen sweep for hero stats / progress reveals */
+@keyframes sheen { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.animate-sheen {
+  background-image: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.06) 50%, transparent 80%);
+  background-size: 200% 100%;
+  animation: sheen 2.2s ease-in-out infinite;
 }

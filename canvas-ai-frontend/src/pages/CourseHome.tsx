@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { motion } from 'motion/react'
 import {
   MessageCircle, Target, ClipboardList, Layers, BarChart3,
-  Upload, ArrowRight, AlertTriangle,
+  Upload, ArrowRight, AlertTriangle, Sparkles, FileText, Clock,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -12,18 +13,22 @@ import { useRecentActivity } from '@/hooks/useRecentActivity'
 import { useUser } from '@/hooks/useUser'
 import { getReadiness, type Readiness } from '@/lib/api'
 
-const ACTIONS = [
-  { key: 'learn', label: 'Learn', desc: 'Ask questions & get tutored, grounded in your files', icon: MessageCircle },
-  { key: 'practice', label: 'Practice', desc: 'Quiz yourself or work adaptive problem sets', icon: Target },
-  { key: 'exam', label: 'Exam', desc: 'Sit a timed mock exam with a readiness score', icon: ClipboardList },
-  { key: 'kit', label: 'Study Kit', desc: 'Generate notes, flashcards & audio overviews', icon: Layers },
-  { key: 'progress', label: 'Progress', desc: 'Track mastery, weak spots & your study plan', icon: BarChart3 },
-] as const
+type Tint = { icon: string; chip: string }
+
+const ACTIONS: ReadonlyArray<{
+  key: string; label: string; desc: string; capability: string; icon: typeof MessageCircle; tint: Tint
+}> = [
+  { key: 'learn', label: 'Learn', desc: 'Chat, Socratic tutor & Feynman checks — grounded in your files.', capability: 'Cites exact pages', icon: MessageCircle, tint: { icon: 'text-cyan-300', chip: 'bg-cyan-500/12 border-cyan-400/20' } },
+  { key: 'practice', label: 'Practice', desc: 'Rapid quiz drills or deep adaptive problem sets.', capability: 'Adapts to mastery', icon: Target, tint: { icon: 'text-sky-300', chip: 'bg-blue-500/12 border-blue-400/20' } },
+  { key: 'exam', label: 'Exam', desc: 'Sit a timed mock exam, graded with concept breakdown.', capability: 'Timed & graded', icon: ClipboardList, tint: { icon: 'text-rose-300', chip: 'bg-rose-500/12 border-rose-400/20' } },
+  { key: 'kit', label: 'Study Kit', desc: 'Generate notes, spaced-repetition flashcards & audio.', capability: 'Notes · cards · audio', icon: Layers, tint: { icon: 'text-emerald-300', chip: 'bg-emerald-500/12 border-emerald-400/20' } },
+  { key: 'progress', label: 'Progress', desc: 'Mastery map, weak spots & an AI study plan.', capability: 'Concept graph', icon: BarChart3, tint: { icon: 'text-sky-300', chip: 'bg-sky-500/12 border-sky-400/20' } },
+]
 
 function tone(score: number) {
-  if (score >= 70) return { label: 'On track', ring: '#34d399', text: 'text-emerald-400' }
-  if (score >= 40) return { label: 'Getting there', ring: '#fbbf24', text: 'text-amber-400' }
-  return { label: 'At risk', ring: '#fb7185', text: 'text-rose-400' }
+  if (score >= 70) return { label: 'On track', ring: '#34d399', text: 'text-emerald-300', soft: 'text-emerald-400/90' }
+  if (score >= 40) return { label: 'Getting there', ring: '#fbbf24', text: 'text-amber-300', soft: 'text-amber-400/90' }
+  return { label: 'Needs work', ring: '#fb7185', text: 'text-rose-300', soft: 'text-rose-400/90' }
 }
 
 export default function CourseHome() {
@@ -31,120 +36,212 @@ export default function CourseHome() {
   const navigate = useNavigate()
   const userId = useUser()
   const { data: courses } = useCourses()
-  const { data: files } = useCourseFiles(courseId)
+  const { data: files, isLoading: filesLoading } = useCourseFiles(courseId)
   const recent = useRecentActivity().filter((e) => e.courseId === courseId).slice(0, 4)
   const course = courses?.find((c) => c.course_id === courseId)
   const [readiness, setReadiness] = useState<Readiness | null>(null)
+  const [readinessLoading, setReadinessLoading] = useState(true)
 
   useEffect(() => {
     if (!courseId) return
     let cancelled = false
-    getReadiness(courseId, userId).then((r) => { if (!cancelled) setReadiness(r) }).catch(() => {})
+    setReadinessLoading(true)
+    getReadiness(courseId, userId)
+      .then((r) => { if (!cancelled) setReadiness(r) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setReadinessLoading(false) })
     return () => { cancelled = true }
   }, [courseId, userId])
 
   const go = (path: string) => navigate(`/course/${courseId}${path ? `/${path}` : ''}`)
   const fileCount = files?.length ?? 0
+  const hasFiles = fileCount > 0
   const score = readiness ? Math.round(readiness.score_pct) : null
   const t = score !== null ? tone(score) : null
-  const circ = 2 * Math.PI * 32
+  const r = 42
+  const circ = 2 * Math.PI * r
+
+  const lastStudied = recent[0]?.page
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-      {/* Header */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Course</p>
-        <h1 className="text-3xl font-semibold text-zinc-50 tracking-tight">{course?.title ?? 'Course'}</h1>
-        <p className="text-sm text-zinc-500 mt-1.5">
-          {fileCount > 0
-            ? `${fileCount} file${fileCount !== 1 ? 's' : ''} in your knowledge base`
-            : 'No materials yet — upload your files to unlock the AI tools.'}
-        </p>
-      </div>
-
-      {/* Readiness band */}
-      {readiness && score !== null && t && (
-        <Card accent padding="lg" className="flex flex-col md:flex-row md:items-center gap-5">
-          <div className="flex items-center gap-4 flex-shrink-0">
-            <div className="relative w-20 h-20">
-              <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-                <circle cx="40" cy="40" r="32" fill="none" stroke="#27272a" strokeWidth="7" />
-                <circle cx="40" cy="40" r="32" fill="none" stroke={t.ring} strokeWidth="7" strokeLinecap="round"
-                  strokeDasharray={circ} strokeDashoffset={circ * (1 - score / 100)}
-                  style={{ transition: 'stroke-dashoffset 0.8s ease' }} />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-xl font-bold ${t.text}`}>{score}%</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1">Exam readiness</p>
-              <p className={`text-lg font-semibold ${t.text}`}>{t.label}</p>
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            {readiness.gaps.length > 0 ? (
-              <>
-                <p className="text-xs text-zinc-500 mb-2 flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Focus on your weakest topics
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {readiness.gaps.slice(0, 4).map((g) => (
-                    <span key={g} className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-full px-2.5 py-0.5">{g}</span>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-zinc-400">No major gaps — keep practicing to hold your edge.</p>
+    <div className="max-w-5xl mx-auto px-6 py-9 space-y-9">
+      {/* ── Header ───────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5"
+      >
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gradient-brand mb-2">Course</p>
+          <h1 className="text-[2rem] leading-tight font-semibold text-zinc-50 tracking-tight truncate">
+            {course?.title ?? 'Course'}
+          </h1>
+          <div className="flex items-center gap-3 mt-2.5 text-sm text-zinc-400">
+            <span className="inline-flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-zinc-500" />
+              {filesLoading ? (
+                <span className="inline-block h-3.5 w-24 rounded bg-zinc-800 animate-pulse align-middle" />
+              ) : (
+                <span>{hasFiles ? `${fileCount} file${fileCount !== 1 ? 's' : ''} indexed` : 'No materials yet'}</span>
+              )}
+            </span>
+            {lastStudied && (
+              <span className="inline-flex items-center gap-1.5 text-zinc-500">
+                <Clock className="w-4 h-4" /> Last: <span className="capitalize text-zinc-400">{lastStudied}</span>
+              </span>
             )}
           </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button variant="secondary" onClick={() => go('practice')}>Practice weak spots</Button>
-            <Button onClick={() => go('exam')}>Mock exam</Button>
-          </div>
-        </Card>
-      )}
+        </div>
+        <Button
+          size="lg" leftIcon={<Sparkles className="w-4 h-4" />}
+          onClick={() => go(lastStudied ?? 'learn')}
+          className="flex-shrink-0"
+        >
+          {lastStudied ? 'Continue studying' : 'Ask your course'}
+        </Button>
+      </motion.div>
 
-      {/* Action grid */}
-      <div>
-        <h2 className="text-base font-semibold text-zinc-100 mb-3">What do you want to do?</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ACTIONS.map((a) => (
-            <Card key={a.key} interactive accent onClick={() => go(a.key)} className="group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center mb-4">
-                <a.icon className="w-5 h-5 text-cyan-300" />
-              </div>
-              <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-1.5">
-                {a.label}
-                <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
-              </h3>
-              <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">{a.desc}</p>
-            </Card>
-          ))}
-          <Card interactive onClick={() => go('materials')} className="group">
-            <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-4">
-              <Upload className="w-5 h-5 text-zinc-400" />
+      {/* ── Readiness hero ───────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {readinessLoading && !readiness ? (
+          <Card padding="lg" elevation={2} className="flex items-center gap-5">
+            <div className="w-[104px] h-[104px] rounded-full bg-zinc-800/60 animate-pulse flex-shrink-0" />
+            <div className="flex-1 space-y-3">
+              <div className="h-3 w-32 rounded bg-zinc-800 animate-pulse" />
+              <div className="h-5 w-40 rounded bg-zinc-800 animate-pulse" />
+              <div className="h-3 w-3/4 rounded bg-zinc-800/70 animate-pulse" />
             </div>
-            <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-1.5">
-              Materials
-              <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
-            </h3>
-            <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">
-              {fileCount > 0 ? `${fileCount} uploaded — add or manage files` : 'Upload PDFs, slides & docs to get started'}
-            </p>
           </Card>
+        ) : readiness && score !== null && t ? (
+          <Card accent padding="lg" elevation={2} className="relative overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-center gap-6">
+              {/* Ring */}
+              <div className="flex items-center gap-5 flex-shrink-0">
+                <div className="relative w-[104px] h-[104px]">
+                  <svg className="w-[104px] h-[104px] -rotate-90" viewBox="0 0 104 104">
+                    <circle cx="52" cy="52" r={r} fill="none" stroke="#222228" strokeWidth="8" />
+                    <motion.circle
+                      cx="52" cy="52" r={r} fill="none" stroke={t.ring} strokeWidth="8" strokeLinecap="round"
+                      strokeDasharray={circ}
+                      initial={{ strokeDashoffset: circ }}
+                      animate={{ strokeDashoffset: circ * (1 - score / 100) }}
+                      transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+                      style={{ filter: `drop-shadow(0 0 6px ${t.ring}55)` }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-2xl font-bold ${t.text}`}>{score}%</span>
+                    <span className="text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">ready</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 mb-1">Exam readiness</p>
+                  <p className={`text-xl font-semibold ${t.text}`}>{t.label}</p>
+                  <p className="text-xs text-zinc-500 mt-1 max-w-[16rem]">Estimated from your topic mastery.</p>
+                </div>
+              </div>
+
+              {/* Gaps */}
+              <div className="flex-1 min-w-0 md:border-l md:border-zinc-800 md:pl-6">
+                {readiness.gaps.length > 0 ? (
+                  <>
+                    <p className="text-xs text-zinc-400 mb-2.5 flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Weakest topics to focus on
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {readiness.gaps.slice(0, 5).map((g) => (
+                        <button
+                          key={g} onClick={() => go('practice')}
+                          className="text-xs text-amber-200 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 hover:border-amber-400/40 rounded-full px-3 py-1 transition-colors"
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-zinc-400">No major gaps — keep practicing to hold your edge.</p>
+                )}
+                <div className="flex gap-2.5 mt-4">
+                  <Button variant="secondary" size="sm" onClick={() => go('practice')}>Practice weak spots</Button>
+                  <Button size="sm" onClick={() => go('exam')}>Take mock exam</Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ) : (
+          /* No readiness yet (e.g. no activity) — invite first action */
+          <Card padding="lg" elevation={2} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-base font-semibold text-zinc-100">Build your readiness score</p>
+              <p className="text-sm text-zinc-400 mt-1">
+                {hasFiles ? 'Ask questions or take a quiz and we’ll start tracking your mastery.' : 'Upload your course materials to unlock the AI tools.'}
+              </p>
+            </div>
+            <Button onClick={() => go(hasFiles ? 'learn' : 'materials')} className="flex-shrink-0">
+              {hasFiles ? 'Start learning' : 'Upload materials'}
+            </Button>
+          </Card>
+        )}
+      </motion.div>
+
+      {/* ── Action grid ──────────────────────────────────── */}
+      <div>
+        <h2 className="text-sm font-semibold text-zinc-300 mb-3.5 px-0.5">What do you want to do?</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {ACTIONS.map((a, i) => (
+            <motion.div
+              key={a.key}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 + i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <Card interactive accent onClick={() => go(a.key)} padding="lg" className="group h-full">
+                <div className="flex items-start justify-between">
+                  <div className={`w-11 h-11 rounded-xl border flex items-center justify-center mb-4 ${a.tint.chip}`}>
+                    <a.icon className={`w-5 h-5 ${a.tint.icon}`} />
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-cyan-300 group-hover:translate-x-0.5 transition-all mt-1" />
+                </div>
+                <h3 className="text-base font-semibold text-zinc-50">{a.label}</h3>
+                <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">{a.desc}</p>
+                <span className={`inline-flex items-center mt-3 text-[11px] font-medium rounded-full px-2 py-0.5 border ${a.tint.chip} ${a.tint.icon}`}>
+                  {a.capability}
+                </span>
+              </Card>
+            </motion.div>
+          ))}
+
+          {/* Materials — the source-of-truth tile */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 + ACTIONS.length * 0.04, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Card interactive onClick={() => go('materials')} padding="lg" className="group h-full border-dashed">
+              <div className="flex items-start justify-between">
+                <div className="w-11 h-11 rounded-xl bg-zinc-800/60 border border-zinc-700 flex items-center justify-center mb-4">
+                  <Upload className="w-5 h-5 text-zinc-400" />
+                </div>
+                <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-cyan-300 group-hover:translate-x-0.5 transition-all mt-1" />
+              </div>
+              <h3 className="text-base font-semibold text-zinc-50">Materials</h3>
+              <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">
+                {hasFiles ? `${fileCount} file${fileCount !== 1 ? 's' : ''} indexed — add or manage your knowledge base.` : 'Upload PDFs, slides & docs to power every tool.'}
+              </p>
+            </Card>
+          </motion.div>
         </div>
       </div>
 
-      {/* Recent activity */}
+      {/* ── Jump back in ─────────────────────────────────── */}
       {recent.length > 0 && (
         <div>
-          <h2 className="text-xs font-semibold text-gradient-brand uppercase tracking-widest mb-3">Jump back in</h2>
+          <h2 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.18em] mb-3 px-0.5">Jump back in</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {recent.map((e) => (
-              <Card key={`${e.page}`} interactive padding="sm" onClick={() => go(e.page)} className="flex items-center justify-between gap-3 group">
-                <span className="text-sm text-zinc-300 capitalize">{e.page}</span>
-                <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-cyan-400 transition-colors" />
+              <Card key={e.page} interactive padding="sm" onClick={() => go(e.page)} className="flex items-center justify-between gap-3 group">
+                <span className="text-sm text-zinc-200 capitalize">{e.page}</span>
+                <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-cyan-300 group-hover:translate-x-0.5 transition-all" />
               </Card>
             ))}
           </div>

@@ -24,14 +24,14 @@ interface Ripple {
 const base =
   'relative overflow-hidden inline-flex items-center justify-center gap-2 font-medium rounded-lg select-none whitespace-nowrap ' +
   'transition-[transform,background-color,border-color,box-shadow,filter,color] duration-150 ease-out ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ' +
-  'active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed disabled:saturate-50 disabled:active:scale-100'
+  'outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0c14] ' +
+  'active:scale-[0.97] disabled:opacity-45 disabled:cursor-not-allowed disabled:saturate-50 disabled:active:scale-100'
 
 const variants: Record<Variant, string> = {
   primary: 'text-white bg-gradient-brand glow-brand-sm hover:brightness-110 hover:glow-brand',
-  secondary: 'text-zinc-200 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700/80 hover:border-zinc-600 hover:text-white',
-  ghost: 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/70',
-  danger: 'text-white bg-red-600 hover:bg-red-500 shadow-[0_4px_14px_-6px_rgba(239,68,68,0.5)]',
+  secondary: 'text-zinc-100 bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] hover:border-white/20',
+  ghost: 'text-zinc-400 hover:text-zinc-50 hover:bg-white/[0.06]',
+  danger: 'text-white bg-rose-600 hover:bg-rose-500 shadow-[0_6px_18px_-8px_rgba(244,63,94,0.6)]',
 }
 
 const rippleTint: Record<Variant, string> = {

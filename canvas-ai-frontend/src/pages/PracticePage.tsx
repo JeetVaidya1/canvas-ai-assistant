@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Brain, Target } from 'lucide-react'
+import { Zap, Target } from 'lucide-react'
 import { SubTabs } from '@/components/ui/SubTabs'
 import { useUser } from '@/hooks/useUser'
-import { useCourses } from '@/hooks/useCourses'
 import { trackVisit } from '@/hooks/useRecentActivity'
 import QuizMode from '@/components/QuizMode'
 import PracticeMode from '@/components/PracticeMode'
@@ -15,8 +14,6 @@ type Mode = 'quiz' | 'problems'
 export default function PracticePage() {
   const { courseId } = useParams<{ courseId: string }>()
   const userId = useUser()
-  const { data: courses } = useCourses()
-  const course = courses?.find((c) => c.course_id === courseId)
   const [mode, setMode] = useState<Mode>('quiz')
 
   useEffect(() => {
@@ -25,14 +22,13 @@ export default function PracticePage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 pt-5 pb-3 border-b border-zinc-800 flex items-center justify-between flex-shrink-0 gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand">Practice</p>
-          <h1 className="text-lg font-semibold text-zinc-100 truncate">{course?.title ?? 'Practice'}</h1>
-        </div>
+      <div className="px-4 h-14 border-b border-[#18181d] flex items-center justify-between flex-shrink-0 gap-4">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 pl-1.5">
+          {mode === 'quiz' ? 'Drill fast, learn faster' : 'Work it through, deeply'}
+        </span>
         <SubTabs
           tabs={[
-            { key: 'quiz', label: 'Quick Quiz', icon: <Brain className="w-4 h-4" />, hint: 'Multiple-choice, graded instantly' },
+            { key: 'quiz', label: 'Quick Quiz', icon: <Zap className="w-4 h-4" />, hint: 'Rapid multiple-choice, graded instantly' },
             { key: 'problems', label: 'Problem Set', icon: <Target className="w-4 h-4" />, hint: 'Open-ended, adaptive difficulty' },
           ]}
           active={mode}

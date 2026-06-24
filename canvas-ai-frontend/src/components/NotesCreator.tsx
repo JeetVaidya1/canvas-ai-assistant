@@ -3,7 +3,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
-import { Card, PageHeader } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
+import { cn } from '@/lib/utils'
 import {
   FileText,
   Save,
@@ -23,8 +24,10 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Check,
 } from 'lucide-react'
+import { BrandMark } from '@/components/ui/BrandMark'
 import {
   generateNotes,
   saveNotes as apiSaveNotes,
@@ -164,7 +167,7 @@ function FlipCard({ card, flipped, onFlip }: { card: Flashcard; flipped: boolean
           <p className="text-xs text-zinc-500 text-center">Tap to reveal answer</p>
         </div>
         {/* Back — Answer */}
-        <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl bg-gradient-brand-soft border border-cyan-500/25 p-7 flex flex-col">
+        <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl bg-gradient-brand-soft border border-cyan-400/25 p-7 flex flex-col">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-cyan-300">
             <Sparkles className="w-3.5 h-3.5" /> Answer
           </div>
@@ -173,7 +176,7 @@ function FlipCard({ card, flipped, onFlip }: { card: Flashcard; flipped: boolean
               <Markdown content={card.a} />
             </div>
           </div>
-          <p className="text-xs text-cyan-400/60 text-center">Tap to flip back</p>
+          <p className="text-xs text-cyan-300/60 text-center">Tap to flip back</p>
         </div>
       </motion.div>
     </button>
@@ -217,8 +220,8 @@ function FlashcardDeck({ cards }: { cards: Flashcard[] }) {
                 i === safeIndex
                   ? 'w-6 bg-gradient-brand'
                   : seen.has(i)
-                  ? 'w-1.5 bg-cyan-500/50'
-                  : 'w-1.5 bg-zinc-700'
+                  ? 'w-1.5 bg-cyan-400/50'
+                  : 'w-1.5 bg-white/15'
               }`}
             />
           ))}
@@ -247,7 +250,7 @@ function FlashcardDeck({ cards }: { cards: Flashcard[] }) {
         >
           Previous
         </Button>
-        <span className="text-xs text-zinc-600">{seen.size}/{cards.length} reviewed</span>
+        <span className="text-xs text-zinc-500">{seen.size}/{cards.length} reviewed</span>
         <Button
           variant="secondary"
           size="sm"
@@ -262,7 +265,7 @@ function FlashcardDeck({ cards }: { cards: Flashcard[] }) {
   )
 }
 
-export default function NotesCreator({ courseId, courseName }: NotesCreatorProps) {
+export default function NotesCreator({ courseId }: NotesCreatorProps) {
   const userId = useUser()
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
   const [availableFiles, setAvailableFiles] = useState<string[]>([])
@@ -275,7 +278,8 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
   const [loading, setLoading] = useState(false)
   const [loadStage, setLoadStage] = useState(0)
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState<'create' | 'saved'>('create')
+  const [libraryOpen, setLibraryOpen] = useState(false)
+  const [sourcesOpen, setSourcesOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [previewMode, setPreviewMode] = useState(true)
   const [errMsg, setErrMsg] = useState<string | null>(null)
@@ -296,6 +300,8 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
     setFlashcards([])
     setShowCardsFor(null)
     setSavedFlashcards([])
+    setSourcesOpen(false)
+    setLibraryOpen(false)
   }, [courseId])
 
   useEffect(() => {
@@ -319,7 +325,11 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
   const loadAvailableFiles = async () => {
     try {
       const files = await listFiles(courseId)
-      setAvailableFiles(files || [])
+      const list = files || []
+      setAvailableFiles(list)
+      // Default to ALL files selected so the common path needs zero file-clicks.
+      // Only auto-fill when nothing is selected yet (don't clobber a viewed note's set).
+      setSelectedFiles((prev) => (prev.length === 0 ? [...list] : prev))
     } catch (error) {
       console.error('Failed to load files:', error)
       setAvailableFiles([])
@@ -337,7 +347,9 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
   }
 
   const handleGenerateNotes = async () => {
-    if (!courseId || selectedFiles.length === 0) return
+    if (!courseId || availableFiles.length === 0) return
+    // Blank file selection == whole course: fall back to all available files.
+    const filesForGen = selectedFiles.length > 0 ? selectedFiles : availableFiles
     setLoading(true)
     setGeneratedNotes('')
     setErrMsg(null)
@@ -346,7 +358,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
     try {
       const response: NotesResponse & { flashcards?: Flashcard[] } = await generateNotes(
         courseId,
-        selectedFiles,
+        filesForGen,
         topic,
         noteStyle
       )
@@ -420,7 +432,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
     setCurrentNoteId(note.id)
     setSelectedFiles(note.source_files || [])
     setFlashcards(parseFlashcardsFromText(note.content || ''))
-    setActiveTab('create')
+    setLibraryOpen(false)
   }
 
   const exportNote = (note: SavedNote) => {
@@ -465,129 +477,181 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
   const getReadingTime = (wc: number) => `${Math.max(1, Math.ceil(wc / 200))} min read`
 
   // ===== Create tab =====
-  const renderConfig = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      {/* File Selection */}
-      <Card accent padding="lg" className="lg:col-span-3">
-        <h3 className="text-base font-semibold text-zinc-100 mb-1 flex items-center gap-3">
-          <span className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
-            <FileText className="w-4 h-4 text-cyan-300" />
-          </span>
-          Source Files
-        </h3>
-        <p className="text-xs text-zinc-500 mb-4 ml-12 -mt-1">
-          Notes are grounded in — and cited from — the files you pick.
-        </p>
+  const allSelected = availableFiles.length > 0 && selectedFiles.length === availableFiles.length
+  const toggleSelectAll = () => {
+    setSelectedFiles(allSelected ? [] : [...availableFiles])
+  }
+  const toggleFile = (file: string) => {
+    setSelectedFiles((prev) =>
+      prev.includes(file) ? prev.filter((f) => f !== file) : [...prev, file]
+    )
+  }
 
-        {!courseId ? (
-          <div className="text-center py-8 text-amber-500">Select a course to choose files.</div>
-        ) : availableFiles.length === 0 ? (
-          <div className="text-center py-10 text-zinc-400">
-            <BookOpen className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-            <p>No files uploaded to this course yet.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-72 overflow-auto pr-1">
-            {availableFiles.map((file) => {
-              const checked = selectedFiles.includes(file)
-              return (
-                <label
-                  key={file}
-                  className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                    checked
-                      ? 'bg-gradient-brand-soft border-cyan-500/30 text-cyan-200'
-                      : 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-600'
-                  }`}
-                >
-                  <span
-                    className={`w-5 h-5 mr-3 rounded-md border flex items-center justify-center flex-shrink-0 transition-colors ${
-                      checked ? 'bg-cyan-500 border-cyan-400' : 'border-zinc-600'
-                    }`}
-                  >
-                    {checked && <Check className="w-3.5 h-3.5 text-zinc-950" />}
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(e) => {
-                      if (e.target.checked) setSelectedFiles(prev => [...prev, file])
-                      else setSelectedFiles(prev => prev.filter(f => f !== file))
-                    }}
-                    className="sr-only"
-                  />
-                  <FileText className="w-4 h-4 mr-2 opacity-70 flex-shrink-0" />
-                  <span className="text-sm truncate">{file}</span>
-                </label>
-              )
-            })}
-          </div>
-        )}
+  // ── Center-first studio (mirrors ChatPage's empty state) ──────────────
+  const usingAllFiles = selectedFiles.length === 0 || selectedFiles.length === availableFiles.length
+  const noFiles = availableFiles.length === 0
 
-        <div className="mt-4 text-sm text-zinc-500">
-          {selectedFiles.length} file{selectedFiles.length === 1 ? '' : 's'} selected
+  const renderStudio = () => (
+    <div className="flex min-h-full flex-col items-center justify-center px-4 py-10">
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-2xl"
+      >
+        {/* Heading */}
+        <div className="mb-6 text-center">
+          <BrandMark className="mx-auto mb-5 h-14 w-14 glow-brand" />
+          <h1 className="text-[28px] font-semibold tracking-tight text-zinc-50">
+            Create study notes
+          </h1>
+          <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+            Grounded in your materials, with auto-generated flashcards.
+          </p>
         </div>
-      </Card>
 
-      {/* Configuration */}
-      <Card accent padding="lg" className="lg:col-span-2 flex flex-col">
-        <h3 className="text-base font-semibold text-zinc-100 mb-4 flex items-center gap-3">
-          <span className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
-            <Brain className="w-4 h-4 text-cyan-300" />
+        {/* Centerpiece: focus-topic input (styled like the chat composer) */}
+        <div
+          className={cn(
+            'relative flex w-full items-center rounded-[20px] border border-white/12 bg-white/[0.03] p-2 shadow-lg transition-all',
+            'focus-within:border-cyan-400/60 focus-within:bg-white/[0.05] focus-within:glow-brand-sm',
+          )}
+        >
+          <span className="pl-3 pr-1 text-cyan-300/70">
+            <Sparkles className="h-5 w-5" />
           </span>
-          Configure
-        </h3>
+          <input
+            type="text"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !noFiles && !loading) handleGenerateNotes()
+            }}
+            placeholder="What should these notes cover?  (e.g. Binary Search Trees — or leave blank for the whole course)"
+            className="flex-1 bg-transparent px-2 py-2.5 text-[15px] text-zinc-100 placeholder-zinc-500 outline-none"
+          />
+        </div>
 
-        <div className="space-y-5 flex-1">
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-zinc-400">Focus topic (optional)</label>
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g., Binary Search Trees"
-              className="w-full px-3 py-2.5 bg-zinc-800/70 border border-zinc-700 text-zinc-100 placeholder-zinc-600 rounded-lg text-sm outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
-            />
-            <p className="text-xs text-zinc-500">Leave blank for full coverage.</p>
-          </div>
+        {/* Style — inline segmented pills */}
+        <div className="mt-4 flex items-center justify-center gap-2">
+          {NOTE_STYLES.map((style) => {
+            const active = noteStyle === style.value
+            return (
+              <button
+                key={style.value}
+                type="button"
+                onClick={() => setNoteStyle(style.value)}
+                title={style.hint}
+                className={cn(
+                  'rounded-full border px-4 py-1.5 text-[13px] font-medium transition-all',
+                  active
+                    ? 'bg-gradient-brand-soft border-cyan-400/40 text-cyan-100 ring-1 ring-inset ring-cyan-400/30'
+                    : 'border-white/10 bg-white/[0.02] text-zinc-300 hover:border-white/20 hover:bg-white/[0.05] hover:text-zinc-100',
+                )}
+              >
+                {style.label}
+              </button>
+            )
+          })}
+        </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-zinc-400">Style</label>
-            <div className="flex flex-col gap-1.5">
-              {NOTE_STYLES.map((style) => {
-                const active = noteStyle === style.value
-                return (
+        {/* Sources — single collapsible control, defaults to ALL selected */}
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setSourcesOpen((v) => !v)}
+            disabled={noFiles}
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-[13px] text-zinc-300 transition-colors hover:border-cyan-400/40 hover:bg-white/[0.06] hover:text-zinc-100 disabled:opacity-50"
+          >
+            <FileText className="h-3.5 w-3.5 text-cyan-300/80" />
+            {noFiles
+              ? 'No files in this course'
+              : usingAllFiles
+                ? `Using all ${availableFiles.length} file${availableFiles.length === 1 ? '' : 's'}`
+                : `Using ${selectedFiles.length} of ${availableFiles.length} files`}
+            {!noFiles && <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', sourcesOpen && 'rotate-180')} />}
+          </button>
+        </div>
+
+        <AnimatePresence initial={false}>
+          {sourcesOpen && !noFiles && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <Card padding="md" className="mt-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-400">Pick the files to ground these notes in</span>
                   <button
-                    key={style.value}
                     type="button"
-                    onClick={() => setNoteStyle(style.value)}
-                    className={`text-left px-3 py-2.5 rounded-lg border transition-all ${
-                      active
-                        ? 'bg-gradient-brand-soft text-cyan-200 border-cyan-500/30'
-                        : 'bg-zinc-800/40 text-zinc-300 border-zinc-700 hover:border-zinc-600'
-                    }`}
+                    onClick={toggleSelectAll}
+                    className="text-xs font-medium text-cyan-300 transition-colors hover:text-cyan-200"
                   >
-                    <span className="text-sm font-medium">{style.label}</span>
-                    <span className="block text-xs text-zinc-500">{style.hint}</span>
+                    {allSelected ? 'Clear' : 'Select all'}
                   </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
+                </div>
+                <div className="grid max-h-72 grid-cols-1 gap-1.5 overflow-auto pr-1 sm:grid-cols-2">
+                  {availableFiles.map((file) => {
+                    const checked = selectedFiles.includes(file)
+                    return (
+                      <button
+                        type="button"
+                        key={file}
+                        onClick={() => toggleFile(file)}
+                        title={file}
+                        aria-pressed={checked}
+                        className={cn(
+                          'group flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all',
+                          checked
+                            ? 'border-cyan-400/40 bg-gradient-brand-soft'
+                            : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-[5px] border transition-colors',
+                            checked ? 'border-transparent bg-gradient-brand' : 'border-white/20 group-hover:border-white/40',
+                          )}
+                        >
+                          {checked && <Check className="h-3 w-3 text-white" />}
+                        </span>
+                        <span className={cn('truncate text-sm', checked ? 'font-medium text-zinc-100' : 'text-zinc-300')}>
+                          {file}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
+        {/* Primary action */}
         <Button
           size="lg"
           onClick={handleGenerateNotes}
           loading={loading}
-          disabled={loading || selectedFiles.length === 0 || !courseId}
+          disabled={loading || noFiles || !courseId}
           leftIcon={<Sparkles className="w-5 h-5" />}
-          className="mt-6 w-full"
+          className="mt-5 w-full"
         >
-          {loading ? 'Generating…' : 'Generate Notes'}
+          {loading ? 'Generating…' : 'Generate notes'}
         </Button>
 
-        {errMsg && <div className="mt-3 text-sm text-red-400">{errMsg}</div>}
-      </Card>
+        {noFiles && courseId && (
+          <p className="mt-2.5 text-center text-xs text-zinc-500">
+            Upload course files from Materials to generate notes.
+          </p>
+        )}
+        {!courseId && (
+          <p className="mt-2.5 text-center text-xs text-amber-400">Select a course to get started.</p>
+        )}
+        {errMsg && <div className="mt-3 text-center text-sm text-rose-400">{errMsg}</div>}
+      </motion.div>
     </div>
   )
 
@@ -596,7 +660,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
       <div className="text-center py-10">
         <div className="relative w-20 h-20 mx-auto mb-6">
           <div className="absolute inset-0 rounded-full bg-gradient-brand opacity-20 blur-xl animate-pulse" />
-          <div className="absolute inset-0 border-4 border-cyan-500/15 border-t-cyan-400 rounded-full animate-spin" />
+          <div className="absolute inset-0 border-4 border-cyan-400/15 border-t-cyan-400 rounded-full animate-spin" />
           <div className="absolute inset-0 flex items-center justify-center">
             <Sparkles className="w-7 h-7 text-cyan-300" />
           </div>
@@ -614,11 +678,11 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
             {LOADING_STAGES[loadStage]}
           </motion.p>
         </AnimatePresence>
-        <p className="text-xs text-zinc-600 mt-4">Analyzing {selectedFiles.length} file(s)</p>
+        <p className="text-xs text-zinc-500 mt-4">Analyzing {selectedFiles.length} file(s)</p>
 
         <div className="mt-6 max-w-md mx-auto space-y-2">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-3 rounded bg-zinc-800/60 overflow-hidden">
+            <div key={i} className="h-3 rounded bg-white/[0.04] overflow-hidden">
               <motion.div
                 className="h-full bg-gradient-brand-soft"
                 initial={{ width: '0%' }}
@@ -636,7 +700,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       {/* Notes reader */}
       <Card accent padding="none" className="overflow-hidden xl:col-span-2">
-        <div className="bg-zinc-800/40 px-6 py-4 border-b border-zinc-800">
+        <div className="bg-white/[0.03] px-6 py-4 border-b border-white/10">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <Edit3 className="w-5 h-5 text-cyan-300 flex-shrink-0" />
@@ -645,7 +709,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
                 value={noteTitle}
                 onChange={(e) => setNoteTitle(e.target.value)}
                 placeholder="Enter note title…"
-                className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 text-zinc-50 placeholder-zinc-600 min-w-0 w-full"
+                className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 text-zinc-50 placeholder-zinc-500 min-w-0 w-full"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -692,13 +756,13 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
             <textarea
               value={generatedNotes}
               onChange={(e) => setGeneratedNotes(e.target.value)}
-              className="w-full h-[28rem] p-4 bg-zinc-800/70 border border-zinc-700 text-zinc-100 rounded-lg outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 resize-none font-mono text-sm transition-colors"
+              className="w-full h-[28rem] p-4 bg-white/[0.03] border border-white/10 text-zinc-100 rounded-lg outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25 resize-none font-mono text-sm transition-colors"
               placeholder="Your generated notes will appear here…"
             />
           )}
 
           {generatedNotes && (
-            <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center gap-6 text-sm text-zinc-500 flex-wrap">
+            <div className="mt-6 pt-4 border-t border-white/10 flex items-center gap-6 text-sm text-zinc-400 flex-wrap">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 <span>{getReadingTime(getWordCount(generatedNotes))}</span>
@@ -723,16 +787,16 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
             <h3 className="text-base font-semibold text-zinc-100 mb-1 flex items-center gap-2">
               <Layers className="w-5 h-5 text-cyan-300" />
               Flashcard Deck
-              <span className="ml-1 text-xs font-medium text-cyan-300 bg-gradient-brand-soft border border-cyan-500/20 px-2 py-0.5 rounded-full">
+              <span className="ml-1 text-xs font-medium text-cyan-300 bg-gradient-brand-soft border border-cyan-400/20 px-2 py-0.5 rounded-full">
                 {flashcards.length}
               </span>
             </h3>
-            <p className="text-xs text-zinc-500 mb-5">Auto-generated from your notes. Flip to study.</p>
+            <p className="text-xs text-zinc-400 mb-5">Auto-generated from your notes. Flip to study.</p>
             <FlashcardDeck cards={flashcards} />
           </Card>
         ) : (
-          <Card padding="lg" className="text-center text-sm text-zinc-500">
-            <Layers className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
+          <Card padding="lg" className="text-center text-sm text-zinc-400">
+            <Layers className="w-8 h-8 text-zinc-600 mx-auto mb-3" />
             No flashcards were generated for this note.
           </Card>
         )}
@@ -746,7 +810,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
               <BookOpen className="w-5 h-5 text-cyan-300" />
               Spaced Repetition
             </h3>
-            <p className="text-xs text-zinc-500 mb-5">
+            <p className="text-xs text-zinc-400 mb-5">
               Save this deck and review it on an SM-2 schedule to lock it into memory.
             </p>
             <Flashcards cards={flashcards} courseId={courseId} userId={userId} />
@@ -756,143 +820,159 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
     </div>
   )
 
-  const renderCreateTab = () => (
-    <div className="space-y-8">
-      {renderConfig()}
-      {loading && renderLoading()}
-      {!loading && generatedNotes && renderReader()}
-    </div>
-  )
+  // When no note is being viewed and we're not generating, show the centered studio.
+  // Otherwise show the loading state or the reader.
+  const showReader = !loading && !!generatedNotes
 
-  // ===== Saved tab =====
-  const renderSavedTab = () => (
-    <div className="space-y-6">
-      <Card padding="md">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search your notes…"
-              className="w-full pl-10 pr-4 py-2.5 bg-zinc-800/70 border border-zinc-700 text-zinc-100 placeholder-zinc-600 rounded-lg text-sm outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
-            />
-          </div>
-          <div className="text-sm text-zinc-500">{filteredNotes.length} note(s)</div>
-        </div>
-      </Card>
+  // ===== Library slide-over (compact saved-notes list) =====
+  const renderLibrary = () => (
+    <AnimatePresence>
+      {libraryOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLibraryOpen(false)}
+            className="absolute inset-0 z-30 bg-black/50 backdrop-blur-sm"
+          />
+          <motion.aside
+            initial={{ x: 380 }}
+            animate={{ x: 0 }}
+            exit={{ x: 380 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+            className="absolute inset-y-0 right-0 z-40 flex w-[380px] max-w-[88vw] flex-col border-l border-white/10 bg-[#0c0f18]"
+          >
+            <div className="flex h-14 flex-shrink-0 items-center justify-between px-4">
+              <span className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+                <Bookmark className="h-4 w-4 text-cyan-300" />
+                Library ({savedNotes.length})
+              </span>
+              <button
+                onClick={() => setLibraryOpen(false)}
+                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-zinc-100"
+                aria-label="Close library"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-      {filteredNotes.length === 0 ? (
-        <Card padding="none" className="py-16 px-8 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
-            <BookOpen className="w-7 h-7 text-cyan-300" />
-          </div>
-          <h3 className="text-lg font-semibold text-zinc-100 mb-2">
-            {searchTerm ? 'No notes found' : 'No saved notes yet'}
-          </h3>
-          <p className="text-sm text-zinc-500 mb-6">
-            {searchTerm ? 'Try adjusting your search terms' : 'Generate your first set of notes to get started'}
-          </p>
-          {!searchTerm && (
-            <Button onClick={() => setActiveTab('create')}>Create Your First Notes</Button>
-          )}
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredNotes.map((note) => {
-            const cardsCount = parseFlashcardsFromText(note.content || '').length
-            return (
-              <motion.div key={note.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-                <Card accent padding="lg" interactive className="group h-full">
-                  <div className="flex items-start justify-between mb-4 gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-semibold text-zinc-100 mb-2 truncate">{note.title}</h3>
-                      <div className="flex items-center gap-4 text-sm text-zinc-500 mb-3 flex-wrap">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-4 h-4" />
-                          <span>{note.reading_time}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <FileText className="w-4 h-4" />
-                          <span>{note.word_count} words</span>
-                        </div>
-                        <span className={`px-2 py-0.5 text-xs rounded-full ${cardsCount > 0 ? 'bg-gradient-brand-soft border border-cyan-500/20 text-cyan-300' : 'bg-zinc-800 text-zinc-400'}`}>
-                          {cardsCount} cards
+            <div className="flex-shrink-0 px-3 pb-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search your notes…"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] py-2 pl-10 pr-4 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-2 overflow-y-auto px-3 pb-4">
+              {filteredNotes.length === 0 ? (
+                <div className="px-2 py-12 text-center">
+                  <BrandMark className="mx-auto mb-4 h-12 w-12" />
+                  <p className="text-sm font-medium text-zinc-200">
+                    {searchTerm ? 'No notes found' : 'No saved notes yet'}
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {searchTerm ? 'Try a different search.' : 'Generate notes to build your library.'}
+                  </p>
+                </div>
+              ) : (
+                filteredNotes.map((note) => {
+                  const cardsCount = parseFlashcardsFromText(note.content || '').length
+                  const active = currentNoteId === note.id
+                  return (
+                    <motion.div
+                      key={note.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => loadNote(note)}
+                      className={cn(
+                        'group cursor-pointer rounded-xl border p-3 transition-colors',
+                        active
+                          ? 'border-cyan-400/30 bg-cyan-500/[0.08]'
+                          : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]',
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-100">{note.title}</h3>
+                        <span className="flex-shrink-0 text-[11px] text-zinc-500">
+                          {new Date(note.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => loadNote(note)}
-                        className="p-2 text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors"
-                        title="Open note"
-                        aria-label="Open note"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSavedFlashcards(parseFlashcardsFromText(note.content || ''))
-                          setShowCardsFor(note.id)
-                        }}
-                        className="p-2 text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors"
-                        title="Study flashcards"
-                        aria-label="Study flashcards"
-                      >
-                        <Layers className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => exportNote(note)}
-                        className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
-                        title="Download note"
-                        aria-label="Download note"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => confirmDeleteNote(note.id)}
-                        className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title="Delete note"
-                        aria-label="Delete note"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="text-zinc-400 text-sm mb-4 line-clamp-3">
-                    {(note.content || '').slice(0, 200)}…
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex flex-wrap gap-2">
-                      {(note.topics || []).slice(0, 3).map((t, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-1 bg-gradient-brand-soft border border-cyan-500/20 text-cyan-300 text-xs rounded-full"
+                      <div className="mt-1.5 flex items-center gap-3 text-[11px] text-zinc-400">
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {note.reading_time}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          {note.word_count} words
+                        </span>
+                        {cardsCount > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-gradient-brand-soft border border-cyan-400/20 px-1.5 py-0.5 text-cyan-300">
+                            <Layers className="h-3 w-3" />
+                            {cardsCount}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2.5 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); loadNote(note) }}
+                          className="rounded-md p-1.5 text-cyan-300 transition-colors hover:bg-cyan-500/10"
+                          title="Open note"
+                          aria-label="Open note"
                         >
-                          {t}
-                        </span>
-                      ))}
-                      {note.topics && note.topics.length > 3 && (
-                        <span className="px-2 py-1 bg-zinc-800 text-zinc-400 text-xs rounded-full">
-                          +{note.topics.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-zinc-600 flex-shrink-0">
-                      {new Date(note.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            )
-          })}
-        </div>
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSavedFlashcards(parseFlashcardsFromText(note.content || ''))
+                            setShowCardsFor(note.id)
+                          }}
+                          className="rounded-md p-1.5 text-cyan-300 transition-colors hover:bg-cyan-500/10"
+                          title="Study flashcards"
+                          aria-label="Study flashcards"
+                        >
+                          <Layers className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); exportNote(note) }}
+                          className="rounded-md p-1.5 text-emerald-400 transition-colors hover:bg-emerald-500/10"
+                          title="Download note"
+                          aria-label="Download note"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); confirmDeleteNote(note.id) }}
+                          className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+                          title="Delete note"
+                          aria-label="Delete note"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )
+                })
+              )}
+            </div>
+          </motion.aside>
+        </>
       )}
+    </AnimatePresence>
+  )
 
+  // ===== Flashcards Modal for Saved Notes =====
+  const renderCardsModal = () => (
+    <>
       {/* Flashcards Modal for Saved Notes */}
       <AnimatePresence>
         {showCardsFor && (
@@ -910,18 +990,18 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
               exit={{ scale: 0.96, y: 8 }}
               transition={{ duration: 0.2 }}
             >
-              <Card padding="lg" className="space-y-5 shadow-2xl !bg-zinc-900">
+              <Card padding="lg" className="space-y-5 elev-3 !bg-[#16161b]">
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
                     <Layers className="w-5 h-5 text-cyan-300" />
                     Study Flashcards
-                    <span className="ml-2 text-xs font-medium text-cyan-300 bg-gradient-brand-soft border border-cyan-500/20 px-2 py-0.5 rounded-full">
+                    <span className="ml-2 text-xs font-medium text-cyan-300 bg-gradient-brand-soft border border-cyan-400/20 px-2 py-0.5 rounded-full">
                       {savedFlashcards.length}
                     </span>
                   </h3>
                   <button
                     onClick={() => { setShowCardsFor(null); setSavedFlashcards([]) }}
-                    className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
+                    className="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.06] rounded-lg transition-colors"
                     aria-label="Close"
                   >
                     <X className="w-4 h-4" />
@@ -931,7 +1011,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
                 {savedFlashcards.length > 0 ? (
                   <>
                     <FlashcardDeck cards={savedFlashcards} />
-                    <div className="pt-4 border-t border-zinc-800">
+                    <div className="pt-4 border-t border-white/10">
                       <Flashcards cards={savedFlashcards} courseId={courseId} userId={userId} />
                     </div>
                   </>
@@ -943,58 +1023,45 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   )
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <PageHeader
-          eyebrow="Notes Studio"
-          title="Notes Creator"
-          subtitle={`Grounded notes + auto-generated flashcards from your ${courseName} materials`}
-          className="mb-5"
-          actions={
-            (generatedNotes || selectedFiles.length > 0) ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={clearConversations}
-                leftIcon={<RotateCcw className="w-4 h-4" />}
-              >
-                Clear All
-              </Button>
-            ) : undefined
-          }
-        />
-
-        <div className="flex items-center gap-1 bg-zinc-800/70 border border-zinc-700 p-1 rounded-lg w-fit">
+    <div className="relative flex min-h-full flex-col">
+      {/* Floating controls (no competing tab-pill row) — mirrors ChatPage's History button */}
+      <div className="absolute right-0 top-0 z-20 flex items-center gap-2">
+        {(generatedNotes || !usingAllFiles || topic) && (
           <button
-            onClick={() => setActiveTab('create')}
-            className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === 'create'
-                ? 'bg-gradient-brand-soft text-cyan-300 border border-cyan-500/30'
-                : 'text-zinc-400 border border-transparent hover:text-zinc-200'
-            }`}
+            onClick={clearConversations}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[13px] text-zinc-300 backdrop-blur transition-colors hover:bg-white/[0.08] hover:text-zinc-100"
           >
-            <Sparkles className="w-4 h-4 inline mr-2" />
-            Create Notes
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">New</span>
           </button>
-          <button
-            onClick={() => setActiveTab('saved')}
-            className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === 'saved'
-                ? 'bg-gradient-brand-soft text-cyan-300 border border-cyan-500/30'
-                : 'text-zinc-400 border border-transparent hover:text-zinc-200'
-            }`}
-          >
-            <Bookmark className="w-4 h-4 inline mr-2" />
-            Library ({savedNotes.length})
-          </button>
-        </div>
+        )}
+        <button
+          onClick={() => setLibraryOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[13px] text-zinc-300 backdrop-blur transition-colors hover:bg-white/[0.08] hover:text-zinc-100"
+        >
+          <Bookmark className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Library</span>
+          {savedNotes.length > 0 && (
+            <span className="rounded-full bg-white/[0.1] px-1.5 text-[11px] text-zinc-400">{savedNotes.length}</span>
+          )}
+        </button>
       </div>
 
-      {activeTab === 'create' ? renderCreateTab() : renderSavedTab()}
+      {/* Main content: centered studio, loading, or reader */}
+      {loading ? (
+        <div className="flex-1 pt-14">{renderLoading()}</div>
+      ) : showReader ? (
+        <div className="flex-1 pt-14">{renderReader()}</div>
+      ) : (
+        <div className="flex-1">{renderStudio()}</div>
+      )}
+
+      {renderLibrary()}
+      {renderCardsModal()}
 
       <ConfirmDialog
         open={!!deleteConfirmId}

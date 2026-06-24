@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Send, User, Compass, MessageCircleQuestion, Sparkles } from 'lucide-react'
+import { BrandMark } from '@/components/ui/BrandMark'
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
 import { socraticTurn, type TutorTurn } from '@/lib/api'
@@ -63,9 +64,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
             className="max-w-xl mx-auto text-center py-12"
           >
             <div className="relative w-16 h-16 mx-auto mb-6">
-              <div className="absolute inset-0 rounded-2xl bg-gradient-brand-soft border border-cyan-500/20 glow-brand flex items-center justify-center">
-                <Compass className="w-8 h-8 text-cyan-300" />
-              </div>
+              <BrandMark className="absolute inset-0 h-full w-full glow-brand" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-2">
               Socratic tutor
@@ -87,7 +86,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
                   transition={{ delay: 0.15 + i * 0.08, duration: 0.3 }}
                   className="flex items-center gap-3 rounded-xl card-surface px-4 py-2.5"
                 >
-                  <span className="w-7 h-7 rounded-lg bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                  <span className="w-7 h-7 rounded-lg bg-gradient-brand-soft border border-cyan-400/20 flex items-center justify-center flex-shrink-0">
                     <Icon className="w-3.5 h-3.5 text-cyan-300" />
                   </span>
                   <span className="text-sm text-zinc-300">{text}</span>
@@ -100,7 +99,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
                 <button
                   key={s}
                   onClick={() => setInput(s)}
-                  className="bg-zinc-800/70 hover:bg-zinc-700/80 text-zinc-300 px-3.5 py-1.5 rounded-full text-sm border border-zinc-700 hover:border-cyan-500/40 transition-all"
+                  className="bg-zinc-800/70 hover:bg-zinc-700/80 text-zinc-300 px-3.5 py-1.5 rounded-full text-sm border border-zinc-700 hover:border-cyan-400/40 transition-all"
                 >
                   {s}
                 </button>
@@ -122,7 +121,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                       t.role === 'user'
                         ? 'bg-zinc-700'
-                        : 'bg-gradient-brand-soft border border-cyan-500/20 glow-brand-sm'
+                        : 'bg-gradient-brand-soft border border-cyan-400/20 glow-brand-sm'
                     }`}
                   >
                     {t.role === 'user' ? (
@@ -161,7 +160,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-start gap-3"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-brand-soft border border-cyan-500/20 glow-brand-sm flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-gradient-brand-soft border border-cyan-400/20 glow-brand-sm flex items-center justify-center">
                   <Compass className="w-4 h-4 text-cyan-300" />
                 </div>
                 <div className="card-surface rounded-2xl rounded-tl-sm px-4 py-3.5">
@@ -184,7 +183,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
       </div>
 
       <form onSubmit={send} className="max-w-3xl w-full mx-auto pt-3">
-        <div className="flex items-end gap-2 rounded-2xl card-surface p-2 focus-within:border-cyan-500/50 transition-colors">
+        <div className="flex items-end gap-2 rounded-2xl card-surface p-2 focus-within:border-cyan-400/50 transition-colors">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}

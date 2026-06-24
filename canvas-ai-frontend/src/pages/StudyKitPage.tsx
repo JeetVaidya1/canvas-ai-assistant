@@ -31,13 +31,10 @@ export default function StudyKitPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 pt-5 pb-3 border-b border-zinc-800 flex items-center justify-between flex-shrink-0">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand">
-            Study Kit
-          </p>
-          <h1 className="text-lg font-semibold text-zinc-100">{title}</h1>
-        </div>
+      <div className="px-4 h-14 border-b border-[#18181d] flex items-center justify-between flex-shrink-0 gap-4">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 pl-1.5">
+          {tab === 'notes' ? 'Grounded notes & flashcards' : 'Listen on the go'}
+        </span>
         <SubTabs
           tabs={TABS}
           active={tab}
@@ -46,7 +43,7 @@ export default function StudyKitPage() {
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto">
         {tab === 'notes' ? (
-          <div className="p-5 max-w-4xl mx-auto" data-user-id={userId}>
+          <div className="h-full px-5 py-4 max-w-4xl mx-auto" data-user-id={userId}>
             <NotesCreator courseId={courseId || ''} courseName={title} />
           </div>
         ) : (

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
-  Play,
   CheckCircle,
   XCircle,
   Clock,
@@ -9,20 +8,19 @@ import {
   Trophy,
   RotateCcw,
   Brain,
+  Zap,
   ArrowRight,
   BookOpen,
-  ChevronDown,
   RefreshCw,
   FileText,
   Sparkles,
-  Layers,
-  Globe,
-  Check,
 } from 'lucide-react'
+import { BrandMark } from '@/components/ui/BrandMark'
 
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
-import { Card, PageHeader } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
+import { Select } from '@/components/ui/Select'
 import {
   generateQuiz,
   submitQuizAnswer,
@@ -84,7 +82,7 @@ function SourceTag({ source, label }: { source: QuizSource; label?: string }) {
 function ConceptTag({ concept }: { concept?: string }) {
   if (!concept) return null
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-300 bg-gradient-brand-soft border border-cyan-500/20 rounded-full px-2.5 py-1">
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-300 bg-gradient-brand-soft border border-cyan-400/20 rounded-full px-2.5 py-1">
       <Sparkles className="w-3 h-3" />
       <span className="truncate max-w-[14rem]">{concept}</span>
     </span>
@@ -103,7 +101,6 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
   const [availableTopics, setAvailableTopics] = useState<string[]>([])
   const [topicsLoading, setTopicsLoading] = useState(false)
   const [topicsError, setTopicsError] = useState<string | null>(null)
-  const [topicDropdownOpen, setTopicDropdownOpen] = useState(false)
 
   // Whole-quiz timer (for the summary screen).
   useEffect(() => {
@@ -245,181 +242,132 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  // ── Setup screen ───────────────────────────────────────────────────────────
+  // ── Setup screen — center-first, focused, tactile ───────────────────────────
   if (!run) {
+    const topicOptions = availableTopics.map((t) => ({
+      value: t,
+      label: t === WHOLE_COURSE ? 'Whole course' : t,
+      hint: t === WHOLE_COURSE ? 'Broad — core concepts from everywhere' : undefined,
+    }))
+
     return (
-      <div className="max-w-3xl mx-auto px-5 py-8">
+      <div className="flex min-h-full flex-col items-center justify-center px-4 py-10">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-xl"
         >
-          <Card accent>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-11 h-11 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0 glow-brand-sm">
-                <Brain className="w-5 h-5 text-cyan-300" />
-              </div>
-              <PageHeader
-                eyebrow="Quiz"
-                title="Build your quiz"
-                subtitle="Grounded questions drawn straight from your own course materials"
-              />
-            </div>
+          {/* Identity */}
+          <div className="mb-8 text-center">
+            <BrandMark className="mx-auto mb-5 h-14 w-14 glow-brand-sm" />
+            <h1 className="text-[28px] font-semibold tracking-tight text-zinc-50">
+              Set up your quiz drill
+            </h1>
+            <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+              Rapid multiple-choice, graded the instant you answer. Pick your focus and go.
+            </p>
+          </div>
 
-            {/* Topic */}
-            <div className="mb-5">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-cyan-400/70" />
-                  Topic
-                </label>
-                <button
-                  onClick={() => void loadTopics()}
-                  disabled={topicsLoading}
-                  className="text-cyan-400 hover:text-cyan-300 text-xs flex items-center gap-1 transition-colors"
-                  aria-label="Refresh topics"
-                >
-                  <RefreshCw className={`w-3 h-3 ${topicsLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </button>
-              </div>
-              <div className="relative">
-                <button
-                  onClick={() => setTopicDropdownOpen(!topicDropdownOpen)}
-                  disabled={topicsLoading || !courseId}
-                  className="w-full px-3.5 py-2.5 bg-zinc-800/70 border border-zinc-700 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-zinc-100 text-sm text-left flex items-center justify-between disabled:opacity-50 transition-colors hover:border-zinc-600"
-                >
-                  <span className="flex items-center gap-2 truncate">
-                    {selectedTopic === WHOLE_COURSE ? (
-                      <Globe className="w-4 h-4 text-cyan-300 flex-shrink-0" />
-                    ) : (
-                      <Layers className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-                    )}
-                    <span className="truncate">
-                      {topicsLoading ? 'Loading topics…' : selectedTopic || 'Select topic'}
-                    </span>
-                  </span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${topicDropdownOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                <AnimatePresence>
-                  {topicDropdownOpen && !topicsLoading && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute z-20 w-full mt-1.5 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl max-h-56 overflow-y-auto"
-                    >
-                      {availableTopics.map((topic) => {
-                        const active = selectedTopic === topic
-                        const isWhole = topic === WHOLE_COURSE
-                        return (
-                          <button
-                            key={topic}
-                            onClick={() => {
-                              setSelectedTopic(topic)
-                              setTopicDropdownOpen(false)
-                            }}
-                            className={`w-full px-3.5 py-2.5 text-left text-sm transition-colors flex items-center gap-2 ${
-                              active
-                                ? 'bg-gradient-brand-soft text-cyan-300 font-medium'
-                                : 'text-zinc-400 hover:bg-zinc-700/70 hover:text-zinc-200'
-                            }`}
-                          >
-                            {isWhole ? (
-                              <Globe className="w-4 h-4 flex-shrink-0" />
-                            ) : (
-                              <Layers className="w-4 h-4 flex-shrink-0 opacity-60" />
-                            )}
-                            <span className="truncate flex-1">{topic}</span>
-                            {isWhole && !active && (
-                              <span className="text-[10px] uppercase tracking-wide text-zinc-500">
-                                broad
-                              </span>
-                            )}
-                            {active && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
-                          </button>
-                        )
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              {selectedTopic === WHOLE_COURSE && (
-                <p className="text-xs text-zinc-500 mt-1.5">
-                  Pulls core concepts broadly from across the entire course.
-                </p>
-              )}
-              {topicsError && <p className="text-xs text-amber-500 mt-1.5">{topicsError}</p>}
+          {/* Difficulty — 3 big selectable tiles */}
+          <div className="mb-6">
+            <div className="mb-2.5 flex items-center justify-center text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+              Difficulty
             </div>
-
-            {/* Difficulty */}
-            <div className="mb-5">
-              <label className="block text-xs font-medium text-zinc-400 mb-2">Difficulty</label>
-              <div className="grid grid-cols-3 gap-2">
-                {DIFFICULTIES.map((d) => {
-                  const active = difficulty === d.value
-                  return (
-                    <button
-                      key={d.value}
-                      onClick={() => setDifficulty(d.value)}
-                      className={`rounded-lg border px-3 py-2.5 text-left transition-all ${
-                        active
-                          ? 'border-cyan-500/40 bg-gradient-brand-soft ring-2 ring-cyan-500/20'
-                          : 'border-zinc-700 bg-zinc-800/60 hover:border-zinc-600 hover:bg-zinc-800'
-                      }`}
-                    >
-                      <div className={`text-sm font-medium ${active ? 'text-cyan-300' : 'text-zinc-200'}`}>
-                        {d.label}
-                      </div>
-                      <div className="text-[11px] text-zinc-500">{d.hint}</div>
-                    </button>
-                  )
-                })}
-              </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              {DIFFICULTIES.map((d) => {
+                const active = difficulty === d.value
+                return (
+                  <button
+                    key={d.value}
+                    onClick={() => setDifficulty(d.value)}
+                    className={`group rounded-2xl border px-4 py-5 text-center transition-all ${
+                      active
+                        ? 'border-cyan-400/50 bg-gradient-brand-soft ring-2 ring-cyan-400/25 shadow-[0_8px_24px_-12px_rgba(34,211,238,0.5)]'
+                        : 'border-white/10 bg-white/[0.03] hover:border-cyan-400/30 hover:bg-white/[0.05]'
+                    }`}
+                  >
+                    <div className={`text-base font-semibold ${active ? 'text-cyan-200' : 'text-zinc-200'}`}>
+                      {d.label}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-zinc-500">{d.hint}</div>
+                  </button>
+                )
+              })}
             </div>
+          </div>
 
-            {/* Count */}
-            <div className="mb-6">
-              <label className="block text-xs font-medium text-zinc-400 mb-2">Questions</label>
-              <div className="grid grid-cols-4 gap-2">
-                {COUNTS.map((c) => {
-                  const active = questionCount === c
-                  return (
-                    <button
-                      key={c}
-                      onClick={() => setQuestionCount(c)}
-                      className={`rounded-lg border py-2.5 text-sm font-medium transition-all ${
-                        active
-                          ? 'border-cyan-500/40 bg-gradient-brand-soft text-cyan-300 ring-2 ring-cyan-500/20'
-                          : 'border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800'
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  )
-                })}
-              </div>
+          {/* Count — segmented control */}
+          <div className="mb-6">
+            <div className="mb-2.5 flex items-center justify-center text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+              Questions
             </div>
+            <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
+              {COUNTS.map((c) => {
+                const active = questionCount === c
+                return (
+                  <button
+                    key={c}
+                    onClick={() => setQuestionCount(c)}
+                    className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${
+                      active
+                        ? 'bg-gradient-brand text-white shadow-[0_6px_18px_-8px_rgba(34,211,238,0.5)]'
+                        : 'text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
-            <Button
-              onClick={() => void startQuiz()}
-              disabled={loading || topicsLoading || !selectedTopic || !courseId}
-              loading={loading}
-              size="lg"
-              leftIcon={<Play className="w-4 h-4" />}
-              className="w-full"
-            >
-              {loading ? 'Generating your quiz…' : 'Start Quiz'}
-            </Button>
-            {loading && (
-              <p className="text-xs text-zinc-500 mt-2.5 text-center">
-                Retrieving from your materials, reranking, and writing questions — this can take a moment.
+          {/* Topic — Select primitive */}
+          <div className="mb-8">
+            <div className="mb-2.5 flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Topic</span>
+              <button
+                onClick={() => void loadTopics()}
+                disabled={topicsLoading}
+                className="inline-flex items-center gap-1 text-xs text-cyan-300 transition-colors hover:text-cyan-200 disabled:opacity-50"
+                aria-label="Refresh topics"
+              >
+                <RefreshCw className={`h-3 w-3 ${topicsLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+            <Select
+              value={selectedTopic}
+              onChange={setSelectedTopic}
+              options={topicOptions}
+              disabled={topicsLoading || !courseId}
+              ariaLabel="Quiz topic"
+              placeholder={topicsLoading ? 'Loading topics…' : 'Select topic'}
+            />
+            {selectedTopic === WHOLE_COURSE && (
+              <p className="mt-2 text-center text-xs text-zinc-500">
+                Pulls core concepts broadly from across the entire course.
               </p>
             )}
-          </Card>
+            {topicsError && <p className="mt-2 text-center text-xs text-amber-500">{topicsError}</p>}
+          </div>
+
+          {/* One prominent CTA */}
+          <Button
+            onClick={() => void startQuiz()}
+            disabled={loading || topicsLoading || !selectedTopic || !courseId}
+            loading={loading}
+            size="lg"
+            leftIcon={<Zap className="h-4 w-4" />}
+            className="w-full !py-3.5 !text-base"
+          >
+            {loading ? 'Generating your drill…' : 'Start drill'}
+          </Button>
+          {loading && (
+            <p className="mt-3 text-center text-xs text-zinc-500">
+              Retrieving from your materials, reranking, and writing questions — this can take a moment.
+            </p>
+          )}
         </motion.div>
       </div>
     )
@@ -442,7 +390,7 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
         >
           <Card accent>
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-11 h-11 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0 glow-brand-sm">
+              <div className="w-11 h-11 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0 glow-brand-sm">
                 <Trophy className="w-5 h-5 text-cyan-300" />
               </div>
               <div>
@@ -594,32 +542,28 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
   const isLast = run.currentIndex === run.questions.length - 1
 
   return (
-    <div className="max-w-3xl mx-auto p-5">
-      {/* Sticky progress + meta header */}
-      <Card className="mb-5" padding="sm">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
-              <Brain className="w-5 h-5 text-cyan-300" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand">
-                Question {run.currentIndex + 1} of {run.questions.length}
-              </p>
-              <p className="text-xs text-zinc-500">
-                {selectedTopic} &middot; {difficulty}
-              </p>
-            </div>
+    <div className="mx-auto max-w-2xl px-5 py-7">
+      {/* Slim progress strip — question N of M + meta + live counters */}
+      <div className="mb-6">
+        <div className="mb-2.5 flex items-center justify-between">
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-semibold text-zinc-100">
+              Question {run.currentIndex + 1}
+              <span className="text-zinc-500"> of {run.questions.length}</span>
+            </span>
+            <span className="hidden text-xs text-zinc-500 sm:inline">
+              · {selectedTopic} · {difficulty}
+            </span>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 text-sm text-emerald-400/90">
-              <CheckCircle className="w-4 h-4" />
+          <div className="flex items-center gap-3.5">
+            <span className="inline-flex items-center gap-1.5 text-sm text-emerald-400/90">
+              <CheckCircle className="h-4 w-4" />
               {run.correctCount}
-            </div>
-            <div className="flex items-center gap-1.5 text-sm text-zinc-400">
-              <Clock className="w-4 h-4 text-cyan-300" />
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-sm text-zinc-400">
+              <Clock className="h-4 w-4 text-cyan-300" />
               {formatTime(timeElapsed)}
-            </div>
+            </span>
           </div>
         </div>
         {/* Segmented progress */}
@@ -631,14 +575,14 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
               <div
                 key={i}
                 className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${
-                  done ? 'bg-gradient-brand' : current ? 'bg-cyan-500/40' : 'bg-zinc-700/60'
+                  done ? 'bg-gradient-brand' : current ? 'bg-cyan-400/40' : 'bg-white/[0.08]'
                 }`}
               />
             )
           })}
         </div>
         <div className="sr-only">{Math.round(progress)}% complete</div>
-      </Card>
+      </div>
 
       {/* Question card — animated per-question */}
       <AnimatePresence mode="wait">
@@ -649,14 +593,14 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
           exit={{ opacity: 0, x: -24 }}
           transition={{ duration: 0.28, ease: 'easeOut' }}
         >
-          <Card accent={!!feedback}>
+          <Card accent={!!feedback} padding="lg">
             {/* Concept + source tags */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <ConceptTag concept={question.concept} />
               <SourceTag source={question.source} />
             </div>
 
-            <div className="text-lg font-medium text-zinc-100 mb-5">
+            <div className="text-xl font-medium leading-snug text-zinc-50 mb-6">
               <Markdown content={question.question} />
             </div>
 
@@ -667,7 +611,7 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
                 const isCorrectOption = feedback ? letter === feedback.correct_answer : false
 
                 let klass =
-                  'w-full p-3.5 border rounded-xl text-left transition-all text-sm disabled:cursor-default '
+                  'w-full p-4 border rounded-xl text-left transition-all text-[15px] disabled:cursor-default '
                 if (feedback) {
                   if (isCorrectOption)
                     klass += 'border-emerald-500/70 bg-emerald-500/10 text-emerald-300'
@@ -675,10 +619,10 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
                   else klass += 'border-zinc-700/60 bg-zinc-800/40 text-zinc-500'
                 } else if (isSelected) {
                   klass +=
-                    'border-transparent bg-gradient-brand-soft text-cyan-200 ring-2 ring-cyan-500/40'
+                    'border-transparent bg-gradient-brand-soft text-cyan-200 ring-2 ring-cyan-400/40'
                 } else {
                   klass +=
-                    'border-zinc-700 text-zinc-200 hover:border-cyan-500/40 hover:bg-cyan-500/5'
+                    'border-zinc-700 text-zinc-200 hover:border-cyan-400/40 hover:bg-cyan-400/5'
                 }
 
                 return (

@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card'
 
 const inputClass =
   'w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 ' +
-  'focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-sm transition-colors'
+  'focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 outline-none text-sm transition-colors'
 
 interface IntegrationsPanelProps {
   courseId: string
@@ -137,7 +137,7 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
         className="w-full flex items-center justify-between p-4 text-left"
       >
         <span className="text-sm font-semibold text-zinc-100 flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-lg bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+          <span className="w-8 h-8 rounded-lg bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center">
             <Github className="w-4 h-4 text-cyan-300" />
           </span>
           Export &amp; integrations
@@ -155,7 +155,7 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
                   <span className="text-sm font-medium text-zinc-100">Published to the class catalog</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <code className="px-2.5 py-1 bg-zinc-900 border border-cyan-500/20 rounded text-cyan-300 text-sm font-mono tracking-widest">{shareCode}</code>
+                  <code className="px-2.5 py-1 bg-zinc-900 border border-cyan-400/20 rounded text-cyan-300 text-sm font-mono tracking-widest">{shareCode}</code>
                   <button
                     onClick={() => { void navigator.clipboard.writeText(shareCode); showSuccess('Share code copied') }}
                     className="p-1.5 text-zinc-400 hover:text-cyan-300 hover:bg-zinc-800 rounded-lg transition-colors"

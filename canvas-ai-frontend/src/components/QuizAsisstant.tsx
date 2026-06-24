@@ -139,7 +139,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
       <div className="card-surface accent-top rounded-t-xl p-5">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0">
               <Brain className="w-5 h-5 text-cyan-300" />
             </div>
             <div>
@@ -191,7 +191,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
 
                 {/* AI Response */}
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0">
                     <Brain className="w-4 h-4 text-cyan-300" />
                   </div>
                   <div className="flex-1">
@@ -204,13 +204,13 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                           <div className={`px-3 py-1 rounded-full text-xs font-medium ${getConfidenceColor(conv.response.confidence)}`}>
                             {getConfidenceText(conv.response.confidence)}
                           </div>
-                          <div className="px-3 py-1 bg-gradient-brand-soft border border-cyan-500/15 text-cyan-300 text-xs font-medium rounded-full">
+                          <div className="px-3 py-1 bg-gradient-brand-soft border border-cyan-400/15 text-cyan-300 text-xs font-medium rounded-full">
                             {formatQuestionType(conv.response.question_type)}
                           </div>
                         </div>
 
                         {/* Main Answer */}
-                        <div className="bg-gradient-brand-soft border border-cyan-500/15 rounded-lg p-4">
+                        <div className="bg-gradient-brand-soft border border-cyan-400/15 rounded-lg p-4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
                               <div className="text-lg font-semibold text-zinc-100">
@@ -219,7 +219,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                             </div>
                             <button
                               onClick={() => copyAnswer(conv.response.answer)}
-                              className="p-2 text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors flex-shrink-0"
+                              className="p-2 text-cyan-300 hover:bg-cyan-400/10 rounded-lg transition-colors flex-shrink-0"
                               aria-label="Copy answer"
                               title="Copy answer"
                             >
@@ -344,7 +344,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="Example:&#10;&#10;Which of the following best describes photosynthesis?&#10;A) The process by which plants break down glucose&#10;B) The process by which plants convert light energy into chemical energy&#10;C) The process by which plants absorb water&#10;D) The process by which plants release oxygen"
-              className="w-full min-h-[120px] p-4 bg-zinc-800/70 border border-zinc-700 text-zinc-50 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none resize-none transition-colors text-sm placeholder-zinc-500"
+              className="w-full min-h-[120px] p-4 bg-zinc-800/70 border border-zinc-700 text-zinc-50 rounded-lg focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 outline-none resize-none transition-colors text-sm placeholder-zinc-500"
               disabled={loading}
             />
           </div>
@@ -386,7 +386,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
       {conversations.length === 0 && (
         <div className="card-surface border-t-0 rounded-t-none rounded-b-xl p-6">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0">
               <HelpCircle className="w-5 h-5 text-cyan-300" />
             </div>
             <div>

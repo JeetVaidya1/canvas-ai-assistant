@@ -25,17 +25,17 @@ export default function TopBar() {
   const initial = (displayName || 'U').charAt(0).toUpperCase()
 
   return (
-    <div className="h-12 flex items-center justify-between px-5 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-xl">
+    <div className="h-14 flex items-center justify-between px-6 glass-bar sticky top-0 z-20">
       <span className="text-sm font-semibold text-zinc-100 tracking-tight">{pageTitle}</span>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         <button
           onClick={() => navigate('/settings')}
-          className="p-1.5 text-zinc-500 hover:text-cyan-300 hover:bg-zinc-800 rounded-lg transition-colors"
+          className="p-2 text-zinc-500 hover:text-cyan-300 hover:bg-white/[0.05] rounded-lg transition-colors"
           aria-label="Settings"
         >
           <Settings className="w-4 h-4" />
         </button>
-        <div className="w-7 h-7 rounded-full bg-gradient-brand flex items-center justify-center text-xs font-semibold text-white glow-brand-sm">
+        <div className="w-8 h-8 rounded-full bg-gradient-brand flex items-center justify-center text-xs font-semibold text-white glow-brand-sm ring-1 ring-white/10">
           {initial}
         </div>
       </div>

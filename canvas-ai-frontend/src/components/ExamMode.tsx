@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
-import { Card, PageHeader } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
 import {
   Upload,
   Timer,
@@ -12,17 +12,19 @@ import {
   CheckCircle,
   XCircle,
   CircleDot,
-  Brain,
   Eye,
   Lightbulb,
   ChevronLeft,
   ChevronRight,
   FileText,
-  Sparkles,
   Flag,
   Target,
   Trophy,
+  LayoutGrid,
+  X,
+  GraduationCap,
 } from 'lucide-react'
+import { BrandMark } from '@/components/ui/BrandMark'
 
 import {
   generatePracticeExam,
@@ -106,6 +108,15 @@ interface ExamResults {
   breakdown: BreakdownItem[]
 }
 
+// Centered setup choices — tactile, mirrors QuizMode's center-first flow.
+const DIFFICULTIES: { value: 'easy' | 'medium' | 'hard' | 'mixed'; label: string; hint: string }[] = [
+  { value: 'easy', label: 'Easy', hint: 'Warm-up' },
+  { value: 'medium', label: 'Medium', hint: 'Balanced' },
+  { value: 'hard', label: 'Hard', hint: 'Exam-grade' },
+  { value: 'mixed', label: 'Mixed', hint: 'Like the real thing' },
+]
+const COUNTS = [5, 8, 12, 15] as const
+
 export default function ExamMode({ courseId, userId }: ExamModeProps) {
   const [examSession, setExamSession] = useState<ExamSession | null>(null)
   const [examDifficulty, setExamDifficulty] = useState<'easy' | 'medium' | 'hard' | 'mixed'>('mixed')
@@ -125,6 +136,12 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
   const [solving, setSolving] = useState(false)
   const [hints, setHints] = useState<Record<string, SolveJSON>>({})
   const [solutions, setSolutions] = useState<Record<string, SolveJSON>>({})
+
+  // Past-paper upload is now a secondary, opt-in section on the setup screen.
+  const [showUpload, setShowUpload] = useState(false)
+
+  // Question navigator now lives in a slide-over panel rather than a competing card.
+  const [navOpen, setNavOpen] = useState(false)
 
   // Direction of the last navigation, used to drive the question slide animation.
   const [navDirection, setNavDirection] = useState(1)
@@ -516,9 +533,9 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
       default:
         return {
           label: 'Incorrect',
-          tone: 'border-red-500/25 bg-red-500/[0.06]',
-          text: 'text-red-400',
-          chip: 'bg-red-500/15 text-red-300 border border-red-500/25',
+          tone: 'border-rose-500/25 bg-rose-500/[0.06]',
+          text: 'text-rose-400',
+          chip: 'bg-rose-500/15 text-rose-300 border border-rose-500/25',
           Icon: XCircle,
         }
     }
@@ -572,25 +589,31 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
     const ringPct = Math.max(0, Math.min(100, r.percentage))
 
     return (
-      <div className="max-w-3xl mx-auto p-5 space-y-5">
-        <PageHeader
-          eyebrow="Exam Mode"
-          title="Results"
-          subtitle="AI-judged with partial credit and grounded explanations"
-        />
-
-        {/* Readiness hero — radial score + letter grade */}
+      <div className="max-w-3xl mx-auto px-5 py-8 space-y-6">
+        {/* Graded-report hero — big score ring, verdict, letter grade, tally */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
+          <div className="mb-6 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gradient-brand mb-1.5">
+              Your graded report
+            </p>
+            <h1 className="text-[28px] font-semibold tracking-tight text-zinc-50">{readinessLabel(r.percentage)}</h1>
+          </div>
+
           <Card accent padding="lg">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              {/* Radial readiness gauge */}
-              <div className="relative flex-shrink-0">
-                <svg width="132" height="132" viewBox="0 0 132 132" className="-rotate-90">
-                  <circle cx="66" cy="66" r="58" fill="none" stroke="rgb(39 39 42)" strokeWidth="9" />
+            <div className="flex flex-col sm:flex-row items-center gap-7">
+              {/* Big radial score */}
+              <motion.div
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, type: 'spring', stiffness: 180, damping: 16 }}
+                className="relative flex-shrink-0"
+              >
+                <svg width="156" height="156" viewBox="0 0 156 156" className="-rotate-90">
+                  <circle cx="78" cy="78" r="68" fill="none" stroke="rgb(39 39 42)" strokeWidth="10" />
                   <defs>
                     <linearGradient id="examReadiness" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor="#06b6d4" />
@@ -598,26 +621,26 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
                     </linearGradient>
                   </defs>
                   <motion.circle
-                    cx="66" cy="66" r="58" fill="none"
-                    stroke="url(#examReadiness)" strokeWidth="9" strokeLinecap="round"
-                    strokeDasharray={2 * Math.PI * 58}
-                    initial={{ strokeDashoffset: 2 * Math.PI * 58 }}
-                    animate={{ strokeDashoffset: 2 * Math.PI * 58 * (1 - ringPct / 100) }}
-                    transition={{ duration: 1, ease: 'easeOut', delay: 0.15 }}
+                    cx="78" cy="78" r="68" fill="none"
+                    stroke="url(#examReadiness)" strokeWidth="10" strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 68}
+                    initial={{ strokeDashoffset: 2 * Math.PI * 68 }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 68 * (1 - ringPct / 100) }}
+                    transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-bold tracking-tight text-gradient-brand">{r.percentage}%</span>
+                  <span className="text-4xl font-bold tracking-tight text-gradient-brand">{r.percentage}%</span>
                   <span className="text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">Readiness</span>
                 </div>
-              </div>
+              </motion.div>
 
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-2">
                   <Trophy className="w-4 h-4 text-cyan-300" />
                   <span className="text-sm font-semibold text-zinc-100">{readinessLabel(r.percentage)}</span>
                   {r.letterGrade && (
-                    <span className="text-lg font-bold text-zinc-100 px-2.5 py-0.5 rounded-lg bg-gradient-brand-soft border border-cyan-500/20">
+                    <span className="text-lg font-bold text-zinc-100 px-2.5 py-0.5 rounded-lg bg-gradient-brand-soft border border-cyan-400/20">
                       {r.letterGrade}
                     </span>
                   )}
@@ -629,7 +652,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
                   <p className="text-xs text-zinc-500 mt-1">{r.timeEfficiency}</p>
                 )}
                 {/* Verdict tally bar */}
-                <div className="mt-4 flex items-center gap-2 justify-center sm:justify-start">
+                <div className="mt-4 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
                   {(['correct', 'partial', 'incorrect'] as Verdict[]).map((v) => {
                     const m = verdictMeta(v)
                     return (
@@ -675,7 +698,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
             </div>
             <div className="space-y-3">
               {topicRows.map((t, i) => {
-                const barTone = t.pct >= 70 ? 'bg-emerald-500' : t.pct >= 45 ? 'bg-amber-500' : 'bg-red-500'
+                const barTone = t.pct >= 70 ? 'bg-emerald-500' : t.pct >= 45 ? 'bg-amber-500' : 'bg-rose-500'
                 return (
                   <div key={t.topic}>
                     <div className="flex items-center justify-between mb-1.5 text-xs">
@@ -701,8 +724,8 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
 
         {/* Per-question AI-judge verdicts */}
         {breakdown.length > 0 && (
-          <Card padding="md" className="space-y-2.5">
-            <h3 className="text-sm font-semibold text-zinc-100 mb-1">Question-by-question verdicts</h3>
+          <div className="space-y-2.5">
+            <h3 className="text-sm font-semibold text-zinc-100 px-1">Question-by-question review</h3>
             {breakdown.map((b, i) => {
               const v = verdictOf(b)
               const m = verdictMeta(v)
@@ -712,9 +735,9 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: 0.02 * i }}
-                  className={`border rounded-xl p-3.5 ${m.tone}`}
+                  className={`border rounded-xl p-4 ${m.tone}`}
                 >
-                  <div className="flex items-start justify-between gap-3 mb-1.5">
+                  <div className="flex items-start justify-between gap-3 mb-2">
                     <span className="text-xs text-zinc-400">Q{i + 1} &middot; {b.topic ?? 'General'}</span>
                     <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${m.text}`}>
                       <m.Icon className="w-3.5 h-3.5" />
@@ -722,15 +745,15 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
                       {typeof b.timeSpent === 'number' ? ` · ${b.timeSpent}s` : ''}
                     </span>
                   </div>
-                  <p className="text-sm text-zinc-200 mb-1.5">{b.question}</p>
+                  <p className="text-sm text-zinc-100 mb-1.5 leading-relaxed">{b.question}</p>
                   {b.userAnswer && (
-                    <p className="text-xs text-zinc-500 mb-1">
-                      <span className="text-zinc-600">Your answer: </span>{b.userAnswer}
+                    <p className="text-xs text-zinc-400 mb-1">
+                      <span className="text-zinc-500">Your answer: </span>{b.userAnswer}
                     </p>
                   )}
                   {b.gradeReason && <p className="text-xs text-zinc-400 italic">{b.gradeReason}</p>}
                   {b.mistakeExplanation && (
-                    <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-500/[0.08] border border-amber-500/15 p-2">
+                    <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-500/[0.08] border border-amber-500/15 p-2.5">
                       <Lightbulb className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-amber-300/90">
                         <span className="font-medium text-amber-300">Where it went wrong: </span>{b.mistakeExplanation}
@@ -740,11 +763,12 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
                 </motion.div>
               )
             })}
-          </Card>
+          </div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-1">
           <Button
+            size="lg"
             onClick={() => {
               setShowResults(false)
               setExamSession(null)
@@ -762,112 +786,166 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
     )
   }
 
-  // ---- Landing — no session yet ---------------------------------------------
+  // ---- Setup — center-first, focused "Set up your mock exam" ----------------
   if (!examSession) {
     return (
-      <div className="max-w-3xl mx-auto px-5 py-5 space-y-5">
-        <PageHeader
-          eyebrow="Exam Mode"
-          title="Start an exam"
-          subtitle="Generate a timed practice exam or upload a past paper"
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Generate */}
-          <Card accent padding="md">
-            <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
-                <Brain className="w-4.5 h-4.5 text-cyan-300" />
-              </div>
-              <h3 className="text-sm font-semibold text-zinc-100">Generate from course materials</h3>
-            </div>
-            <p className="text-xs text-zinc-500 mb-4">AI creates a practice exam from your uploaded files</p>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5">Difficulty</label>
-                <select
-                  value={examDifficulty}
-                  onChange={(e) => setExamDifficulty(e.target.value as 'easy' | 'medium' | 'hard' | 'mixed')}
-                  className="w-full px-2.5 py-2 border border-zinc-700 rounded-lg bg-zinc-800/70 text-zinc-100 text-xs focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-colors"
-                >
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                  <option value="mixed">Mixed</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5">Questions</label>
-                <select
-                  value={examQuestionCount}
-                  onChange={(e) => setExamQuestionCount(Number(e.target.value))}
-                  className="w-full px-2.5 py-2 border border-zinc-700 rounded-lg bg-zinc-800/70 text-zinc-100 text-xs focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-colors"
-                >
-                  <option value={5}>5</option>
-                  <option value={8}>8</option>
-                  <option value={12}>12</option>
-                  <option value={15}>15</option>
-                </select>
-              </div>
-            </div>
-            <Button
-              onClick={generateExamFromPastPaper}
-              disabled={loading || !courseId}
-              loading={loading}
-              leftIcon={<Sparkles className="w-4 h-4" />}
-            >
-              {loading ? 'Generating...' : 'Generate Exam'}
-            </Button>
-          </Card>
-
-          {/* Upload */}
-          <Card padding="md">
-            <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center">
-                <FileText className="w-4.5 h-4.5 text-zinc-400" />
-              </div>
-              <h3 className="text-sm font-semibold text-zinc-100">Upload a past paper</h3>
-            </div>
-            <p className="text-xs text-zinc-500 mb-4">We'll analyze it to create similar practice questions</p>
-            <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all border ${
-              courseId
-                ? 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700/80 hover:border-zinc-600'
-                : 'bg-zinc-800 border-zinc-700 text-zinc-500 cursor-not-allowed'
-            }`}>
-              <Upload className="w-4 h-4" />
-              {uploading ? 'Uploading...' : 'Choose File'}
-              <input
-                type="file"
-                accept=".pdf"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f && courseId) onUploadPastPaper(f)
-                }}
-                disabled={!courseId}
-              />
-            </label>
-            {analysisSummary && (
-              <div className="text-xs text-zinc-500 mt-3">
-                {analysisSummary.status === 'success' ? (
-                  <span className="inline-flex items-center gap-1.5 text-emerald-400">
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    {analysisSummary.questions_found} questions found
-                  </span>
-                ) : (
-                  <span className="text-red-400">{analysisSummary.message ?? 'Upload failed'}</span>
-                )}
-              </div>
-            )}
-          </Card>
-        </div>
-
-        <button
-          onClick={() => setExamSession(sampleExam)}
-          className="text-xs text-zinc-500 hover:text-cyan-400 transition-colors"
+      <div className="flex min-h-full flex-col items-center justify-center px-4 py-10">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-xl"
         >
-          Or try a sample exam
-        </button>
+          {/* Identity */}
+          <div className="mb-8 text-center">
+            <BrandMark className="mx-auto mb-5 h-14 w-14 glow-brand-sm" />
+            <h1 className="text-[28px] font-semibold tracking-tight text-zinc-50">
+              Set up your mock exam
+            </h1>
+            <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+              A timed simulation built from your materials. Answers and the clock auto-save — close the tab and pick up
+              exactly where you left off. AI judges with partial credit and grounded explanations.
+            </p>
+          </div>
+
+          {/* Difficulty — 4 big selectable tiles */}
+          <div className="mb-6">
+            <div className="mb-2.5 flex items-center justify-center text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+              Difficulty
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {DIFFICULTIES.map((d) => {
+                const active = examDifficulty === d.value
+                return (
+                  <button
+                    key={d.value}
+                    onClick={() => setExamDifficulty(d.value)}
+                    className={`group rounded-2xl border px-3 py-4 text-center transition-all ${
+                      active
+                        ? 'border-cyan-400/50 bg-gradient-brand-soft ring-2 ring-cyan-400/25 shadow-[0_8px_24px_-12px_rgba(34,211,238,0.5)]'
+                        : 'border-white/10 bg-white/[0.03] hover:border-cyan-400/30 hover:bg-white/[0.05]'
+                    }`}
+                  >
+                    <div className={`text-sm font-semibold ${active ? 'text-cyan-200' : 'text-zinc-200'}`}>
+                      {d.label}
+                    </div>
+                    <div className="mt-0.5 text-[10px] text-zinc-500 leading-tight">{d.hint}</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Question count — segmented control */}
+          <div className="mb-8">
+            <div className="mb-2.5 flex items-center justify-center text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+              Questions
+            </div>
+            <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
+              {COUNTS.map((c) => {
+                const active = examQuestionCount === c
+                return (
+                  <button
+                    key={c}
+                    onClick={() => setExamQuestionCount(c)}
+                    className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${
+                      active
+                        ? 'bg-gradient-brand text-white shadow-[0_6px_18px_-8px_rgba(34,211,238,0.5)]'
+                        : 'text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Prominent CTA */}
+          <Button
+            onClick={generateExamFromPastPaper}
+            disabled={loading || !courseId}
+            loading={loading}
+            size="lg"
+            leftIcon={<Timer className="h-4 w-4" />}
+            className="w-full !py-3.5 !text-base"
+          >
+            {loading ? 'Generating your exam…' : 'Start exam'}
+          </Button>
+          {loading && (
+            <p className="mt-3 text-center text-xs text-zinc-500">
+              Retrieving from your materials and writing exam questions — this can take a moment.
+            </p>
+          )}
+
+          {/* Secondary options — past paper + sample, subtle */}
+          <div className="mt-6 flex items-center justify-center gap-4 text-xs">
+            <button
+              onClick={() => setShowUpload((v) => !v)}
+              className="text-zinc-400 transition-colors hover:text-cyan-300"
+            >
+              or solve a past paper
+            </button>
+            <span className="text-zinc-700">·</span>
+            <button
+              onClick={() => setExamSession(sampleExam)}
+              className="text-zinc-400 transition-colors hover:text-cyan-300"
+            >
+              try a sample exam
+            </button>
+          </div>
+
+          {/* Past-paper upload — revealed on demand, doesn't clutter the main flow */}
+          <AnimatePresence>
+            {showUpload && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-center">
+                  <div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] border border-white/10">
+                    <FileText className="h-4.5 w-4.5 text-zinc-300" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-zinc-100 mb-1">Upload a past paper</h3>
+                  <p className="text-xs text-zinc-400 mb-4">We'll analyze it to generate similar practice questions.</p>
+                  <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all border ${
+                    courseId
+                      ? 'bg-white/[0.04] border-white/10 text-zinc-200 hover:bg-white/[0.08] hover:border-white/20'
+                      : 'bg-white/[0.04] border-white/10 text-zinc-500 cursor-not-allowed'
+                  }`}>
+                    <Upload className="w-4 h-4" />
+                    {uploading ? 'Uploading…' : 'Choose file'}
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f && courseId) onUploadPastPaper(f)
+                      }}
+                      disabled={!courseId}
+                    />
+                  </label>
+                  {analysisSummary && (
+                    <div className="text-xs text-zinc-500 mt-3">
+                      {analysisSummary.status === 'success' ? (
+                        <span className="inline-flex items-center gap-1.5 text-emerald-400">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          {analysisSummary.questions_found} questions found
+                        </span>
+                      ) : (
+                        <span className="text-rose-400">{analysisSummary.message ?? 'Upload failed'}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
     )
   }
@@ -878,54 +956,53 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
     const answeredCount = Object.keys(examSession.userAnswers).length
     const isResume = answeredCount > 0 || timeRemaining > 0
     return (
-      <div className="max-w-3xl mx-auto px-5 py-5">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-          <Card accent padding="lg">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center flex-shrink-0 glow-brand-sm">
-                <Timer className="w-5.5 h-5.5 text-cyan-300" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-gradient-brand mb-1">
-                  {isResume ? 'Resume your exam' : 'Mock exam simulation'}
-                </p>
-                <h2 className="text-xl font-semibold text-zinc-50 tracking-tight truncate">{examSession.examName}</h2>
-                {isResume && (
-                  <p className="text-xs text-amber-400/90 mt-1">
-                    In progress — {answeredCount}/{examSession.questions.length} answered, clock resumes where you left off
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              {[
-                { label: 'Questions', value: examSession.questions.length },
-                { label: 'Total points', value: totalPoints },
-                { label: 'Time limit', value: `${examSession.timeLimit}m` },
-              ].map((s) => (
-                <div key={s.label} className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-3 text-center">
-                  <div className="text-xl font-bold text-zinc-100">{s.value}</div>
-                  <div className="text-[11px] text-zinc-500 mt-0.5">{s.label}</div>
-                </div>
-              ))}
-            </div>
-
-            <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
-              Timed simulation. Your answers and the clock are saved automatically — close the tab and pick up exactly
-              where you left off. Submit early or run out of time, and the AI judge scores with partial credit plus
-              grounded explanations.
+      <div className="flex min-h-full flex-col items-center justify-center px-4 py-10">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-md"
+        >
+          <div className="mb-7 text-center">
+            <BrandMark className="mx-auto mb-5 h-14 w-14 glow-brand-sm" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gradient-brand mb-1.5">
+              {isResume ? 'Resume your exam' : 'Ready when you are'}
             </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 truncate">{examSession.examName}</h1>
+            {isResume && (
+              <p className="text-xs text-amber-400/90 mt-2">
+                In progress — {answeredCount}/{examSession.questions.length} answered, clock resumes where you left off.
+              </p>
+            )}
+          </div>
 
-            <Button
-              size="lg"
-              onClick={startExam}
-              leftIcon={<Play className="w-4 h-4" />}
-              className="w-full sm:w-auto"
-            >
-              {isResume ? 'Resume Exam' : 'Begin Exam'}
-            </Button>
-          </Card>
+          <div className="grid grid-cols-3 gap-3 mb-7">
+            {[
+              { label: 'Questions', value: examSession.questions.length },
+              { label: 'Points', value: totalPoints },
+              { label: 'Time', value: `${examSession.timeLimit}m` },
+            ].map((s) => (
+              <div key={s.label} className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center">
+                <div className="text-xl font-bold text-zinc-100">{s.value}</div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <Button
+            size="lg"
+            onClick={startExam}
+            leftIcon={<Play className="w-4 h-4" />}
+            className="w-full !py-3.5 !text-base"
+          >
+            {isResume ? 'Resume exam' : 'Begin exam'}
+          </Button>
+          <button
+            onClick={() => { clearPersistedExam(); setExamSession(null); setSessionId(null) }}
+            className="mt-4 w-full text-center text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+          >
+            ← Back to setup
+          </button>
         </motion.div>
       </div>
     )
@@ -936,6 +1013,12 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
   const progress = ((examSession.currentQuestion + 1) / examSession.questions.length) * 100
   const answeredCount = Object.keys(examSession.userAnswers).filter((k) => examSession.userAnswers[k]).length
   const timeLow = timeRemaining < 300
+  const timeCritical = timeRemaining < 60
+  const timerTone = timeCritical
+    ? 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+    : timeLow
+    ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+    : 'border-cyan-400/25 bg-gradient-brand-soft text-cyan-200'
   const isLast = examSession.currentQuestion === examSession.questions.length - 1
 
   const slideVariants = {
@@ -945,29 +1028,33 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-5">
-      {/* Sticky exam header: title + prominent timer + progress */}
-      <div className="sticky top-0 z-10 -mx-5 px-5 pt-1 pb-3 mb-5 bg-zinc-950/85 backdrop-blur-md border-b border-zinc-800/60">
-        <div className="flex items-center justify-between gap-4 mb-3">
+    <div className="relative flex min-h-full flex-col">
+      {/* Slim sticky top bar: title + counter · timer + Questions + Pause, thin progress under */}
+      <div className="sticky top-0 z-20 glass-bar">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-2.5">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-zinc-100 truncate">{examSession.examName}</h2>
-            <p className="text-[11px] text-zinc-500 mt-0.5">
+            <p className="text-[11px] text-zinc-400 mt-0.5">
               Question {examSession.currentQuestion + 1} of {examSession.questions.length} &middot; {answeredCount} answered
             </p>
           </div>
-          <div className="flex items-center gap-2.5 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <motion.div
               animate={timeLow && !examSession.isPaused ? { scale: [1, 1.04, 1] } : { scale: 1 }}
               transition={timeLow ? { repeat: Infinity, duration: 1.4 } : { duration: 0.2 }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl border tabular-nums ${
-                timeLow
-                  ? 'border-red-500/40 bg-red-500/10 text-red-400'
-                  : 'border-cyan-500/25 bg-gradient-brand-soft text-cyan-300'
-              }`}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border tabular-nums ${timerTone}`}
             >
               <Timer className="w-4 h-4" />
               <span className="text-lg font-semibold tracking-tight">{formatTime(timeRemaining)}</span>
             </motion.div>
+            <button
+              onClick={() => setNavOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 text-[13px] text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-zinc-100"
+              aria-label="Open question navigator"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Questions</span>
+            </button>
             <Button
               variant="secondary"
               size="sm"
@@ -978,116 +1065,123 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
             </Button>
           </div>
         </div>
-        <div className="w-full bg-zinc-800 rounded-full h-1 overflow-hidden">
+        {/* Thin progress bar */}
+        <div className="h-0.5 w-full bg-white/[0.06]">
           <motion.div
-            className="bg-gradient-brand h-1 rounded-full"
+            className="h-0.5 bg-gradient-brand"
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
           />
         </div>
       </div>
 
-      {/* Paused overlay banner */}
-      <AnimatePresence>
-        {examSession.isPaused && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-5 overflow-hidden"
-          >
-            <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-4 py-3">
-              <Pause className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span className="text-sm text-amber-300">Exam paused — the timer is frozen. Resume when you're ready.</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Focused reading column */}
+      <div className="mx-auto w-full max-w-2xl flex-1 px-5 py-7">
+        {/* Paused overlay banner */}
+        <AnimatePresence>
+          {examSession.isPaused && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-5 overflow-hidden"
+            >
+              <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-4 py-3">
+                <Pause className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                <span className="text-sm text-amber-300">Exam paused — the timer is frozen. Resume when you're ready.</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Distraction-free question view with slide transition */}
-      <div className="relative mb-5" style={{ minHeight: 280 }}>
-        <AnimatePresence mode="wait" custom={navDirection}>
-          <motion.div
-            key={currentQ.id}
-            custom={navDirection}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.28, ease: 'easeOut' }}
-          >
-            <Card padding="md">
-              <div className="mb-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-gradient-brand-soft border border-cyan-500/20 text-cyan-300">
-                    {currentQ.points} pt{currentQ.points !== 1 ? 's' : ''}
-                  </span>
-                  <span className="text-zinc-600 text-xs">&middot;</span>
-                  <span className="text-xs text-zinc-500">{currentQ.topic}</span>
-                  <span className="text-zinc-600 text-xs">&middot;</span>
-                  <span className="text-xs text-zinc-500 capitalize">{currentQ.difficulty}</span>
-                </div>
-                <div className="text-base font-medium text-zinc-100 leading-relaxed">
-                  <Markdown content={currentQ.question} />
-                </div>
+        {/* Distraction-free question view with slide transition */}
+        <div className="relative" style={{ minHeight: 320 }}>
+          <AnimatePresence mode="wait" custom={navDirection}>
+            <motion.div
+              key={currentQ.id}
+              custom={navDirection}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.28, ease: 'easeOut' }}
+            >
+              {/* Meta chips — small + subtle */}
+              <div className="flex items-center gap-2 mb-5">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-gradient-brand-soft border border-cyan-400/20 text-cyan-200">
+                  {currentQ.points} pt{currentQ.points !== 1 ? 's' : ''}
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-white/10 bg-white/[0.03] text-zinc-400">
+                  {currentQ.topic}
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-white/10 bg-white/[0.03] text-zinc-400 capitalize">
+                  {currentQ.difficulty}
+                </span>
               </div>
 
-              {/* Answer input */}
+              {/* Large readable question text */}
+              <div className="text-lg sm:text-xl font-medium text-zinc-100 leading-relaxed mb-7">
+                <Markdown content={currentQ.question} />
+              </div>
+
+              {/* Answer area — prominent */}
               {currentQ.type === 'multiple_choice' && currentQ.options ? (
-                <div className="space-y-2 mb-5">
+                <div className="space-y-2.5 mb-6">
                   {currentQ.options.map((option, index) => {
                     const letter = String.fromCharCode(65 + index)
                     const isSelected = currentAnswer === letter
                     return (
-                      <button
+                      <motion.button
                         key={index}
+                        whileTap={{ scale: 0.99 }}
                         onClick={() => setCurrentAnswer(letter)}
-                        className={`w-full p-3 border rounded-lg text-left transition-all text-sm ${
+                        className={`w-full p-4 border rounded-xl text-left transition-all text-[15px] ${
                           isSelected
-                            ? 'border-cyan-500/40 bg-gradient-brand-soft glow-brand-sm'
-                            : 'border-zinc-700 hover:border-cyan-500/30 hover:bg-zinc-800/70'
+                            ? 'border-cyan-400/50 bg-gradient-brand-soft ring-2 ring-cyan-400/30 glow-brand-sm'
+                            : 'border-white/10 bg-white/[0.02] hover:border-cyan-400/40 hover:bg-cyan-400/[0.05]'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                            isSelected ? 'bg-gradient-brand text-white' : 'bg-zinc-800 text-zinc-400'
+                        <div className="flex items-center gap-3.5">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-colors ${
+                            isSelected ? 'bg-gradient-brand text-white' : 'bg-white/[0.06] text-zinc-300'
                           }`}>
                             {letter}
                           </div>
                           <span className="flex-1 text-zinc-100">{option}</span>
                         </div>
-                      </button>
+                      </motion.button>
                     )
                   })}
                 </div>
               ) : (
-                <div className="mb-5">
+                <div className="mb-6">
                   <textarea
                     value={currentAnswer}
                     onChange={(e) => setCurrentAnswer(e.target.value)}
-                    placeholder="Enter your answer here..."
-                    className="w-full h-32 p-3 bg-zinc-800/70 border border-zinc-700 text-zinc-100 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none resize-none placeholder-zinc-600 text-sm transition-colors"
+                    placeholder="Write your answer here…"
+                    className="w-full h-40 p-4 bg-white/[0.03] border border-white/10 text-zinc-100 rounded-xl focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25 outline-none resize-none placeholder-zinc-500 text-[15px] leading-relaxed transition-colors"
                   />
                 </div>
               )}
 
-              {/* Hint / Solution */}
-              <div className="flex items-center gap-2 mb-5">
+              {/* Hint / Solution — subtle secondary actions */}
+              <div className="flex items-center gap-3 mb-5">
                 <button
                   onClick={requestHint}
                   disabled={hinting || !courseId}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 disabled:opacity-50 text-xs font-medium transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-amber-300 disabled:opacity-50 transition-colors"
                 >
                   <Lightbulb className="w-3.5 h-3.5" />
-                  {hinting ? 'Getting hint...' : 'Get Hint'}
+                  {hinting ? 'Getting hint…' : 'Get hint'}
                 </button>
+                <span className="text-zinc-700">·</span>
                 <button
                   onClick={requestSolution}
                   disabled={solving || !courseId}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 text-xs font-medium transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-emerald-300 disabled:opacity-50 transition-colors"
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  {solving ? 'Solving...' : 'Show Solution'}
+                  {solving ? 'Solving…' : 'Show solution'}
                 </button>
               </div>
 
@@ -1098,7 +1192,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3"
+                    className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3.5"
                   >
                     <div className="text-xs font-medium text-amber-400 mb-1">Hint</div>
                     <ul className="list-disc pl-4 text-xs text-amber-400/80 space-y-0.5">
@@ -1112,7 +1206,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="mb-4 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3"
+                    className="mb-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3.5"
                   >
                     <div className="text-xs font-medium text-emerald-400 mb-1">Solution</div>
                     {solutions[currentQ.id].choice && (
@@ -1127,91 +1221,139 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              {/* Navigation */}
-              <div className="flex items-center justify-between pt-1">
-                <Button
-                  variant="secondary"
-                  onClick={previousQuestion}
-                  disabled={examSession.currentQuestion === 0}
-                  leftIcon={<ChevronLeft className="w-4 h-4" />}
-                >
-                  Previous
-                </Button>
-
-                {isLast ? (
-                  <Button
-                    onClick={submitExam}
-                    className="!bg-emerald-600 hover:!bg-emerald-500 !glow-brand-sm"
-                    leftIcon={<Flag className="w-4 h-4" />}
-                  >
-                    Submit Exam
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={nextQuestion}
-                    rightIcon={<ChevronRight className="w-4 h-4" />}
-                  >
-                    Next
-                  </Button>
-                )}
-              </div>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {/* Question navigator */}
-      <Card padding="md">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-zinc-100">Question navigator</h3>
-          <div className="flex items-center gap-3 text-[11px] text-zinc-500">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-gradient-brand" /> Current
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/40 border border-emerald-500/40" /> Answered
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-zinc-800 border border-zinc-700" /> Unanswered
-            </span>
-          </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
-        <div className="grid grid-cols-10 gap-1.5">
-          {examSession.questions.map((q, index) => {
-            const isAnswered = !!examSession.userAnswers[q.id]
-            const isCurrent = index === examSession.currentQuestion
-            return (
-              <button
-                key={q.id}
-                onClick={() => goToQuestion(index)}
-                aria-label={`Go to question ${index + 1}${isAnswered ? ', answered' : ', unanswered'}${isCurrent ? ', current' : ''}`}
-                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                  isCurrent
-                    ? 'bg-gradient-brand text-white glow-brand-sm scale-105'
-                    : isAnswered
-                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                    : 'bg-zinc-800 border border-zinc-700 text-zinc-500 hover:border-cyan-500/30 hover:text-zinc-300'
-                }`}
-              >
-                {index + 1}
-              </button>
-            )
-          })}
-        </div>
-        {/* Submit shortcut always reachable */}
-        <div className="mt-4 pt-4 border-t border-zinc-800 flex items-center justify-between">
-          <span className="text-xs text-zinc-500">{answeredCount}/{examSession.questions.length} answered</span>
+
+        {/* Bottom navigation — Previous / Next, Submit prominent only on the last question */}
+        <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-5">
           <Button
             variant="secondary"
-            size="sm"
-            onClick={submitExam}
-            leftIcon={<Flag className="w-3.5 h-3.5" />}
+            onClick={previousQuestion}
+            disabled={examSession.currentQuestion === 0}
+            leftIcon={<ChevronLeft className="w-4 h-4" />}
           >
-            Finish &amp; submit
+            Previous
           </Button>
+
+          <div className="flex items-center gap-2">
+            {!isLast && (
+              <button
+                onClick={submitExam}
+                className="text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+              >
+                Finish early
+              </button>
+            )}
+            {isLast ? (
+              <Button
+                onClick={submitExam}
+                className="!bg-emerald-600 hover:!bg-emerald-500 !glow-brand-sm"
+                leftIcon={<Flag className="w-4 h-4" />}
+              >
+                Submit exam
+              </Button>
+            ) : (
+              <Button
+                onClick={nextQuestion}
+                rightIcon={<ChevronRight className="w-4 h-4" />}
+              >
+                Next
+              </Button>
+            )}
+          </div>
         </div>
-      </Card>
+      </div>
+
+      {/* Question navigator — slide-over panel */}
+      <AnimatePresence>
+        {navOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setNavOpen(false)}
+              className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+            />
+            <motion.aside
+              initial={{ x: 360 }}
+              animate={{ x: 0 }}
+              exit={{ x: 360 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+              className="fixed inset-y-0 right-0 z-40 flex w-[340px] max-w-[88vw] flex-col border-l border-white/10 bg-[#0c0f18]"
+            >
+              <div className="flex h-14 items-center justify-between px-4 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="h-4 w-4 text-cyan-300" />
+                  <span className="text-sm font-semibold text-zinc-100">Questions</span>
+                </div>
+                <button
+                  onClick={() => setNavOpen(false)}
+                  className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-zinc-100"
+                  aria-label="Close navigator"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-3 px-4 py-3 text-[11px] text-zinc-400 border-b border-white/10">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-gradient-brand" /> Current
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/40 border border-emerald-500/40" /> Answered
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-white/[0.04] border border-white/10" /> Empty
+                </span>
+              </div>
+
+              {/* Numbered grid */}
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="grid grid-cols-6 gap-2">
+                  {examSession.questions.map((q, index) => {
+                    const isAnswered = !!examSession.userAnswers[q.id]
+                    const isCurrent = index === examSession.currentQuestion
+                    return (
+                      <button
+                        key={q.id}
+                        onClick={() => { goToQuestion(index); setNavOpen(false) }}
+                        aria-label={`Go to question ${index + 1}${isAnswered ? ', answered' : ', unanswered'}${isCurrent ? ', current' : ''}`}
+                        className={`aspect-square rounded-lg text-sm font-bold transition-all ${
+                          isCurrent
+                            ? 'bg-gradient-brand text-white ring-1 ring-inset ring-cyan-400/30 glow-brand-sm'
+                            : isAnswered
+                            ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                            : 'bg-white/[0.04] border border-white/10 text-zinc-400 hover:border-cyan-400/30 hover:text-zinc-200'
+                        }`}
+                      >
+                        {index + 1}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Footer — progress + submit */}
+              <div className="border-t border-white/10 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs text-zinc-400">
+                  <GraduationCap className="h-3.5 w-3.5" />
+                  {answeredCount}/{examSession.questions.length} answered
+                </div>
+                <Button
+                  onClick={() => { setNavOpen(false); submitExam() }}
+                  leftIcon={<Flag className="w-3.5 h-3.5" />}
+                  className="w-full !bg-emerald-600 hover:!bg-emerald-500"
+                >
+                  Finish &amp; submit
+                </Button>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

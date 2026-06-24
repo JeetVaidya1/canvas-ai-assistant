@@ -111,7 +111,7 @@ export default function CourseOverview() {
               onClick={() => navigate(`/course/${courseId}${action.path}`)}
               className="flex items-center gap-3 group"
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0">
                 <action.icon className="w-5 h-5 text-cyan-300" />
               </div>
               <span className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors">{action.label}</span>
@@ -127,7 +127,7 @@ export default function CourseOverview() {
       {!hasFiles && !filesLoading ? (
         // Onboarding state
         <Card accent padding="lg">
-          <div className="w-12 h-12 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center mb-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center mb-4">
             <Upload className="w-6 h-6 text-cyan-300" />
           </div>
           <h2 className="text-lg font-semibold text-zinc-100 mb-2">Upload your course materials</h2>
@@ -142,8 +142,8 @@ export default function CourseOverview() {
             onDrop={handleDrop}
             className={`flex flex-col items-center justify-center gap-2 px-6 py-8 rounded-xl border-2 border-dashed cursor-pointer transition-all ${
               dragActive
-                ? 'border-cyan-500/60 bg-gradient-brand-soft'
-                : 'border-zinc-700 bg-zinc-900/40 hover:border-cyan-500/40 hover:bg-zinc-900/60'
+                ? 'border-cyan-400/60 bg-gradient-brand-soft'
+                : 'border-zinc-700 bg-zinc-900/40 hover:border-cyan-400/40 hover:bg-zinc-900/60'
             }`}
           >
             <Upload className={`w-6 h-6 transition-colors ${dragActive ? 'text-cyan-300' : 'text-zinc-500'}`} />

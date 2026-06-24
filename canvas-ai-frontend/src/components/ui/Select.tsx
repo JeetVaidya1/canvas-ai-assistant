@@ -89,7 +89,7 @@ export function Select({ value, options, onChange, placeholder, className, disab
         className={cn(
           'w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm text-left transition-all duration-150',
           'bg-zinc-800/70 border text-zinc-100',
-          open ? 'border-cyan-500/60 ring-2 ring-cyan-500/20' : 'border-zinc-700 hover:border-zinc-600',
+          open ? 'border-cyan-400/60 ring-2 ring-cyan-400/20' : 'border-zinc-700 hover:border-zinc-600',
           disabled && 'opacity-50 cursor-not-allowed',
         )}
       >
