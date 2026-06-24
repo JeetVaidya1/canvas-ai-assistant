@@ -24,7 +24,7 @@ import {
   Calendar,
   Flame
 } from 'lucide-react'
-import { getReadiness, getConceptGraph, type Readiness, type ConceptBlocker } from '@/lib/api'
+import { getReadiness, getConceptGraph, getLearningAnalytics, type Readiness, type ConceptBlocker } from '@/lib/api'
 import { Card, PageHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import ReviewPanel from './ReviewPanel'
@@ -127,6 +127,40 @@ function ReadinessHero({ readiness }: { readiness: Readiness }) {
   )
 }
 
+function topicBarColor(pct: number): string {
+  if (pct >= 70) return '#34d399'
+  if (pct >= 40) return '#fbbf24'
+  return '#fb7185'
+}
+
+/** Per-topic mastery breakdown — uses readiness.by_topic (previously fetched but
+ *  never rendered). Shows where the readiness score actually comes from. */
+function TopicMastery({ readiness }: { readiness: Readiness }) {
+  const topics = (readiness.by_topic ?? []).filter((t) => t.has_data).slice(0, 12)
+  if (topics.length === 0) return null
+  return (
+    <Card padding="md">
+      <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-4">Topic mastery</p>
+      <div className="space-y-3">
+        {topics.map((t) => (
+          <div key={t.topic}>
+            <div className="flex items-center justify-between text-sm mb-1">
+              <span className="text-zinc-300 truncate pr-3">{t.topic}</span>
+              <span className="text-zinc-500 tabular-nums">{Math.round(t.mastery_pct)}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${Math.min(100, Math.max(2, t.mastery_pct))}%`, backgroundColor: topicBarColor(t.mastery_pct) }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
 export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashboardProps) {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [readiness, setReadiness] = useState<Readiness | null>(null)
@@ -149,14 +183,13 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
 
   const loadAnalytics = async () => {
     try {
-      const [response, r] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'}/analytics/${courseId}/${userId}`),
+      // Use the authed wrapper (was a token-less raw fetch → wrong-user/401 data
+      // now that the endpoint derives identity from the bearer token).
+      const [a, r] = await Promise.all([
+        getLearningAnalytics(courseId, userId).catch(() => null),
         getReadiness(courseId, userId).catch(() => null),
       ])
-      if (response.ok) {
-        const data = await response.json()
-        setAnalytics(data.analytics)
-      }
+      setAnalytics(a)
       setReadiness(r)
     } catch (error) {
       console.error('Failed to load analytics:', error)
@@ -210,6 +243,7 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
 
       {/* Exam readiness hero */}
       {readiness && <ReadinessHero readiness={readiness} />}
+      {readiness && <TopicMastery readiness={readiness} />}
 
       {/* Mistake-driven review queue (hidden when nothing is due) */}
       <ReviewPanel courseId={courseId} userId={userId} />
