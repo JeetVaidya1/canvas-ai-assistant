@@ -51,7 +51,7 @@ export default function AppSidebar() {
 
   return (
     <aside
-      className={`flex flex-col bg-zinc-950/80 backdrop-blur-xl border-r border-zinc-800 transition-all duration-300 ${
+      className={`flex flex-col bg-zinc-950 border-r border-zinc-800 transition-all duration-300 ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >

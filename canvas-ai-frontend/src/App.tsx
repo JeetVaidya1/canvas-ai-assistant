@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import RequireAuth from '@/components/RequireAuth'
 import ErrorBoundary from '@/components/shared/ErrorBoundary'
@@ -31,11 +31,25 @@ function PageFallback() {
   )
 }
 
+/** The animated WebGL shader + falling books are a MARKETING background only.
+ *  Rendering them app-wide pinned the GPU on every screen (and the shell's
+ *  backdrop-blur re-blurred the moving canvas every frame) — the source of the
+ *  app-wide lag. Restrict them to the landing + login routes. */
+function MarketingBackground() {
+  const { pathname } = useLocation()
+  if (pathname !== '/' && pathname !== '/login') return null
+  return (
+    <>
+      <ShaderCanvas />
+      <FallingBooks />
+    </>
+  )
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <ShaderCanvas />
-      <FallingBooks />
+      <MarketingBackground />
       <div className="relative z-10">
       <Routes>
         <Route path="/" element={<Suspense fallback={<PageFallback />}><LandingPage /></Suspense>} />
