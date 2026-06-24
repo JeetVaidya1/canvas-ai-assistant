@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Markdown } from '@/components/ui/Markdown'
+import { Button } from '@/components/ui/Button'
+import { Card, PageHeader } from '@/components/ui/Card'
 import {
   Play,
   CheckCircle,
@@ -12,7 +14,8 @@ import {
   ArrowRight,
   BookOpen,
   ChevronDown,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react'
 
 import {
@@ -196,22 +199,41 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
   const getCurrentProblem = () => session?.problems[session.currentProblemIndex]
   const getAnswerLabel = (i: number) => String.fromCharCode(65 + i)
 
+  const selectClass =
+    'w-full px-3 py-2.5 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 ' +
+    'focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-sm transition-colors'
+
   // Setup screen
   if (!session) {
     return (
-      <div className="max-w-3xl mx-auto px-5 py-5">
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
-          <h2 className="text-base font-medium text-zinc-100 mb-4">Start a practice session</h2>
+      <div className="max-w-3xl mx-auto px-5 py-5 space-y-6">
+        <PageHeader
+          eyebrow="Practice"
+          title="Start a practice session"
+          subtitle="Pick a topic and difficulty — Vindexa generates fresh problems from your course."
+        />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <Card accent padding="lg" className="space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-5 h-5 text-cyan-300" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-zinc-100">Adaptive practice</div>
+              <div className="text-xs text-zinc-500">Difficulty adjusts to your performance over time.</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Topic */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-zinc-500">Topic</label>
+                <label className="text-xs font-medium text-zinc-400">Topic</label>
                 <button
                   onClick={() => loadTopics()}
                   disabled={topicsLoading}
-                  className="text-cyan-400 hover:text-cyan-300 text-xs flex items-center gap-1"
+                  className="text-cyan-300 hover:text-cyan-200 text-xs flex items-center gap-1 transition-colors"
+                  aria-label="Reload topics"
                 >
                   <RefreshCw className={`w-3 h-3 ${topicsLoading ? 'animate-spin' : ''}`} />
                 </button>
@@ -220,12 +242,12 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
                 <button
                   onClick={() => setTopicDropdownOpen(!topicDropdownOpen)}
                   disabled={topicsLoading || !courseId}
-                  className="w-full px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-800 text-zinc-100 text-sm text-left flex items-center justify-between disabled:opacity-50"
+                  className="w-full px-3 py-2.5 border border-zinc-700 rounded-lg bg-zinc-800/70 text-zinc-100 text-sm text-left flex items-center justify-between disabled:opacity-50 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-colors"
                 >
                   <span className="truncate">
                     {topicsLoading ? 'Loading...' : selectedTopic || 'Select topic'}
                   </span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${topicDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${topicDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {topicDropdownOpen && !topicsLoading && (
                   <div className="absolute z-10 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -236,8 +258,10 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
                           setSelectedTopic(topic)
                           setTopicDropdownOpen(false)
                         }}
-                        className={`w-full px-3 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
-                          selectedTopic === topic ? 'text-cyan-400 font-medium' : 'text-zinc-400'
+                        className={`w-full px-3 py-2 text-left text-sm transition-colors ${
+                          selectedTopic === topic
+                            ? 'bg-gradient-brand-soft text-cyan-300 font-medium'
+                            : 'text-zinc-400 hover:bg-zinc-700'
                         } ${index === 0 ? 'rounded-t-lg' : ''} ${index === availableTopics.length - 1 ? 'rounded-b-lg' : ''}`}
                       >
                         <div className="truncate">{topic}</div>
@@ -246,16 +270,16 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
                   </div>
                 )}
               </div>
-              {topicsError && <p className="text-xs text-red-500 mt-1">{topicsError}</p>}
+              {topicsError && <p className="text-xs text-red-400 mt-1">{topicsError}</p>}
             </div>
 
             {/* Difficulty */}
             <div>
-              <label className="block text-xs font-medium text-zinc-500 mb-1.5">Difficulty</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Difficulty</label>
               <select
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value as 'adaptive' | 'easy' | 'medium' | 'hard')}
-                className="w-full px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-800 text-zinc-100 text-sm"
+                className={selectClass}
               >
                 <option value="adaptive">Adaptive</option>
                 <option value="easy">Easy</option>
@@ -266,11 +290,11 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
 
             {/* Problem count */}
             <div>
-              <label className="block text-xs font-medium text-zinc-500 mb-1.5">Problems</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Problems</label>
               <select
                 value={problemCount}
                 onChange={(e) => setProblemCount(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-800 text-zinc-100 text-sm"
+                className={selectClass}
               >
                 <option value={3}>3</option>
                 <option value={5}>5</option>
@@ -280,24 +304,15 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
             </div>
           </div>
 
-          <button
+          <Button
             onClick={startPracticeSession}
             disabled={loading || topicsLoading || !selectedTopic || !courseId}
-            className="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2 transition-colors"
+            loading={loading}
+            leftIcon={<Play className="w-4 h-4" />}
           >
-            {loading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4" />
-                Start Session
-              </>
-            )}
-          </button>
-        </div>
+            {loading ? 'Generating...' : 'Start Session'}
+          </Button>
+        </Card>
       </div>
     )
   }
@@ -306,65 +321,63 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
   if (session.isComplete) {
     const correctCount = session.userAnswers.filter((a, i) => a === session.problems[i].correct_answer).length
     return (
-      <div className="max-w-3xl mx-auto px-5 py-5">
-        <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
-          <div className="mb-5">
-            <h2 className="text-xl font-semibold text-zinc-100 mb-1">Practice Complete</h2>
-            <p className="text-sm text-zinc-500">Here's how you did</p>
-          </div>
+      <div className="max-w-3xl mx-auto px-5 py-5 space-y-6">
+        <PageHeader
+          eyebrow="Session complete"
+          title="Practice Complete"
+          subtitle="Here's how you did"
+        />
 
-          <div className="grid grid-cols-3 gap-4 mb-5">
-            <div className="bg-zinc-800 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold mb-0.5 text-cyan-400">{session.score}%</div>
+        <Card accent padding="lg" className="space-y-5">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-gradient-brand-soft border border-cyan-500/15 rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold mb-0.5 text-gradient-brand">{session.score}%</div>
               <div className="text-xs text-zinc-500">Score</div>
             </div>
-            <div className="bg-zinc-800 rounded-lg p-4 text-center">
+            <div className="bg-zinc-800/70 border border-zinc-700/50 rounded-xl p-4 text-center">
               <div className="text-2xl font-bold mb-0.5 text-emerald-400">{correctCount}/{session.problems.length}</div>
               <div className="text-xs text-zinc-500">Correct</div>
             </div>
-            <div className="bg-zinc-800 rounded-lg p-4 text-center">
+            <div className="bg-zinc-800/70 border border-zinc-700/50 rounded-xl p-4 text-center">
               <div className="text-2xl font-bold mb-0.5 text-zinc-100">{formatTime(timeElapsed)}</div>
               <div className="text-xs text-zinc-500">Time</div>
             </div>
           </div>
 
           {/* Performance summary */}
-          <div className="mb-5">
-            {session.score >= 80 ? (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-                <p className="text-sm text-emerald-400">Strong mastery of {selectedTopic}. Try harder difficulty or new topics.</p>
-              </div>
-            ) : session.score >= 60 ? (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-center gap-3">
-                <Target className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                <p className="text-sm text-amber-400">Good progress on {selectedTopic}. A bit more practice will help.</p>
-              </div>
-            ) : (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-3">
-                <BookOpen className="w-5 h-5 text-red-400 flex-shrink-0" />
-                <p className="text-sm text-red-400">Review {selectedTopic} and try easier problems first.</p>
-              </div>
-            )}
-          </div>
+          {session.score >= 80 ? (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+              <p className="text-sm text-emerald-400">Strong mastery of {selectedTopic}. Try harder difficulty or new topics.</p>
+            </div>
+          ) : session.score >= 60 ? (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-center gap-3">
+              <Target className="w-5 h-5 text-amber-400 flex-shrink-0" />
+              <p className="text-sm text-amber-400">Good progress on {selectedTopic}. A bit more practice will help.</p>
+            </div>
+          ) : (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-3">
+              <BookOpen className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <p className="text-sm text-red-400">Review {selectedTopic} and try easier problems first.</p>
+            </div>
+          )}
 
           <div className="flex gap-3">
-            <button
+            <Button
               onClick={() => setSession(null)}
-              className="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-500 text-sm font-medium flex items-center gap-2 transition-colors"
+              leftIcon={<RotateCcw className="w-4 h-4" />}
             >
-              <RotateCcw className="w-4 h-4" />
               Practice Again
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => onModeChange ? onModeChange('analytics') : window.dispatchEvent(new CustomEvent('navigateToAnalytics'))}
-              className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-4 py-2 rounded-lg hover:bg-zinc-700 text-sm font-medium flex items-center gap-2 transition-colors"
+              leftIcon={<Brain className="w-4 h-4" />}
             >
-              <Brain className="w-4 h-4" />
               View Analytics
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     )
   }
@@ -377,13 +390,18 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
   const progress = ((session.currentProblemIndex + 1) / session.problems.length) * 100
 
   return (
-    <div className="max-w-3xl mx-auto p-5">
+    <div className="max-w-3xl mx-auto p-5 space-y-5">
       {/* Header */}
-      <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5 mb-5">
+      <Card padding="md">
         <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-base font-medium text-zinc-100">Practice Session</h2>
-            <p className="text-xs text-zinc-500">{selectedTopic} &middot; {difficulty}</p>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+              <Target className="w-4 h-4 text-cyan-300" />
+            </div>
+            <div>
+              <h2 className="text-base font-medium text-zinc-100">Practice Session</h2>
+              <p className="text-xs text-zinc-500 capitalize">{selectedTopic} &middot; {difficulty}</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5 text-sm text-zinc-400">
@@ -395,18 +413,18 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
             </div>
           </div>
         </div>
-        <div className="w-full bg-zinc-700 rounded-full h-1.5">
+        <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
           <div
-            className="bg-cyan-600 h-1.5 rounded-full transition-all duration-500"
+            className="bg-gradient-brand h-1.5 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
-      </div>
+      </Card>
 
       {/* Question */}
-      <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
+      <Card accent padding="lg">
         <div className="mb-5">
-          <span className="text-xs font-medium text-cyan-400 mb-2 block">
+          <span className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-2 block">
             Question {session.currentProblemIndex + 1}
           </span>
           <div className="text-base font-medium text-zinc-100">
@@ -427,9 +445,9 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
               else if (isSelected) klass += 'border-red-500 bg-red-500/10 text-red-400'
               else klass += 'border-zinc-700 bg-zinc-800 text-zinc-400'
             } else if (isSelected) {
-              klass += 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400'
+              klass += 'border-cyan-500/40 bg-gradient-brand-soft text-cyan-300 ring-1 ring-cyan-500/30'
             } else {
-              klass += 'border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800'
+              klass += 'border-zinc-700 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800'
             }
 
             return (
@@ -446,7 +464,7 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
                       : showExplanation && isSelected && !isCorrectOption
                       ? 'bg-red-500 text-white'
                       : isSelected
-                      ? 'bg-cyan-600 text-white'
+                      ? 'bg-gradient-brand text-white'
                       : 'bg-zinc-700 text-zinc-400'
                   }`}>
                     {showExplanation && isCorrectOption ? (
@@ -488,34 +506,24 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
         {/* Actions */}
         <div>
           {!showExplanation ? (
-            <button
+            <Button
               onClick={submitAnswer}
               disabled={!selectedAnswer}
-              className="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2 transition-colors"
+              leftIcon={<CheckCircle className="w-4 h-4" />}
             >
-              <CheckCircle className="w-4 h-4" />
               Submit Answer
-            </button>
+            </Button>
+          ) : session.currentProblemIndex < session.problems.length - 1 ? (
+            <Button onClick={nextProblem} rightIcon={<ArrowRight className="w-4 h-4" />}>
+              Next Question
+            </Button>
           ) : (
-            <button
-              onClick={nextProblem}
-              className="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-500 text-sm font-medium flex items-center gap-2 transition-colors"
-            >
-              {session.currentProblemIndex < session.problems.length - 1 ? (
-                <>
-                  Next Question
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  View Results
-                  <Trophy className="w-4 h-4" />
-                </>
-              )}
-            </button>
+            <Button onClick={nextProblem} rightIcon={<Trophy className="w-4 h-4" />}>
+              View Results
+            </Button>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

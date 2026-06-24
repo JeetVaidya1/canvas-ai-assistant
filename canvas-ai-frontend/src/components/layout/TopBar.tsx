@@ -26,15 +26,16 @@ export default function TopBar() {
 
   return (
     <div className="h-12 flex items-center justify-between px-5 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-xl">
-      <span className="text-sm font-medium text-zinc-100">{pageTitle}</span>
+      <span className="text-sm font-semibold text-zinc-100 tracking-tight">{pageTitle}</span>
       <div className="flex items-center gap-2">
         <button
           onClick={() => navigate('/settings')}
-          className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
+          className="p-1.5 text-zinc-500 hover:text-cyan-300 hover:bg-zinc-800 rounded-lg transition-colors"
+          aria-label="Settings"
         >
           <Settings className="w-4 h-4" />
         </button>
-        <div className="w-7 h-7 rounded-full bg-cyan-600 flex items-center justify-center text-xs font-medium text-white">
+        <div className="w-7 h-7 rounded-full bg-gradient-brand flex items-center justify-center text-xs font-semibold text-white glow-brand-sm">
           {initial}
         </div>
       </div>

@@ -1,6 +1,8 @@
 // src/components/NotesCreator.tsx — GPT-5 aligned, robust (Saved Notes practice button always visible)
 import { useState, useEffect, useMemo } from 'react'
 import { Markdown } from '@/components/ui/Markdown'
+import { Button } from '@/components/ui/Button'
+import { Card, PageHeader } from '@/components/ui/Card'
 import {
   FileText,
   Save,
@@ -11,11 +13,11 @@ import {
   Clock,
   Eye,
   Copy,
-  Loader2,
   Brain,
   Search,
   Bookmark,
-  RotateCcw
+  RotateCcw,
+  X
 } from 'lucide-react'
 import {
   generateNotes,
@@ -49,6 +51,15 @@ interface SavedNote {
 }
 
 type Flashcard = { q: string; a: string }
+
+type NoteStyle = 'detailed' | 'summary' | 'outline'
+
+// Segmented control options for note generation style.
+const NOTE_STYLES: { value: NoteStyle; label: string; hint: string }[] = [
+  { value: 'detailed', label: 'Detailed', hint: 'Comprehensive, in-depth notes' },
+  { value: 'summary', label: 'Summary', hint: 'Key points only' },
+  { value: 'outline', label: 'Outline', hint: 'Structured outline format' },
+]
 
 /** More forgiving parser:
  * - Matches "FLASHCARDS" with or without "(JSON)" and ":".
@@ -143,7 +154,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
   const [availableFiles, setAvailableFiles] = useState<string[]>([])
   const [topic, setTopic] = useState('')
-  const [noteStyle, setNoteStyle] = useState<'detailed' | 'summary' | 'outline'>('detailed')
+  const [noteStyle, setNoteStyle] = useState<NoteStyle>('detailed')
   const [generatedNotes, setGeneratedNotes] = useState<string>('')
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([])
   const [currentNoteId, setCurrentNoteId] = useState<string | undefined>(undefined)
@@ -328,19 +339,21 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
   const renderCreateTab = () => (
     <div className="space-y-8">
       {/* File Selection */}
-      <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
-        <h3 className="text-xl font-bold text-zinc-50 mb-4 flex items-center gap-3">
-          <FileText className="w-5 h-5 text-cyan-400" />
+      <Card accent padding="lg">
+        <h3 className="text-base font-semibold text-zinc-100 mb-4 flex items-center gap-3">
+          <span className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+            <FileText className="w-4 h-4 text-cyan-300" />
+          </span>
           Select Lecture Files
         </h3>
 
         {!courseId ? (
-          <div className="text-center py-8 text-amber-600">
+          <div className="text-center py-8 text-amber-500">
             Select a course to choose files.
           </div>
         ) : availableFiles.length === 0 ? (
           <div className="text-center py-8 text-zinc-400">
-            <BookOpen className="w-12 h-12 text-zinc-400 mx-auto mb-3" />
+            <BookOpen className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
             <p>No files uploaded to this course yet.</p>
           </div>
         ) : (
@@ -350,8 +363,10 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
               return (
                 <label
                   key={file}
-                  className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all hover:bg-zinc-800 ${
-                    checked ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' : 'bg-zinc-900 border-zinc-700'
+                  className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
+                    checked
+                      ? 'bg-gradient-brand-soft border-cyan-500/30 text-cyan-300'
+                      : 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-600'
                   }`}
                 >
                   <input
@@ -361,9 +376,9 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
                       if (e.target.checked) setSelectedFiles(prev => [...prev, file])
                       else setSelectedFiles(prev => prev.filter(f => f !== file))
                     }}
-                    className="mr-3 text-cyan-600 focus:ring-cyan-500/50"
+                    className="mr-3 accent-cyan-500"
                   />
-                  <FileText className="w-4 h-4 mr-2 text-zinc-400" />
+                  <FileText className="w-4 h-4 mr-2 opacity-70" />
                   <span className="text-sm truncate">{file}</span>
                 </label>
               )
@@ -371,118 +386,123 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
           </div>
         )}
 
-        <div className="mt-4 text-sm text-zinc-400">
+        <div className="mt-4 text-sm text-zinc-500">
           {selectedFiles.length} file(s) selected
         </div>
-      </div>
+      </Card>
 
       {/* Notes Configuration */}
-      <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
-        <h3 className="text-xl font-bold text-zinc-50 mb-4 flex items-center gap-3">
-          <Brain className="w-5 h-5 text-cyan-400" />
+      <Card accent padding="lg">
+        <h3 className="text-base font-semibold text-zinc-100 mb-4 flex items-center gap-3">
+          <span className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+            <Brain className="w-4 h-4 text-cyan-300" />
+          </span>
           Notes Configuration
         </h3>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-zinc-400">Specific Topic (Optional)</label>
+            <label className="text-xs font-medium text-zinc-400">Specific Topic (Optional)</label>
             <input
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="e.g., Binary Search Trees, Machine Learning Algorithms"
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 text-zinc-50 rounded-lg focus:ring-2 focus:ring-cyan-500/50 focus:border-transparent transition-all"
+              className="w-full px-3 py-2.5 bg-zinc-800/70 border border-zinc-700 text-zinc-100 placeholder-zinc-600 rounded-lg text-sm outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
             />
-            <p className="text-xs text-zinc-400">Leave blank to generate notes for all content</p>
+            <p className="text-xs text-zinc-500">Leave blank to generate notes for all content</p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-zinc-400">Note Style</label>
-            <select
-              value={noteStyle}
-              onChange={(e) => setNoteStyle(e.target.value as 'detailed' | 'summary' | 'outline')}
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 text-zinc-50 rounded-lg focus:ring-2 focus:ring-cyan-500/50 focus:border-transparent transition-all"
-            >
-              <option value="detailed">📝 Detailed Notes (Comprehensive)</option>
-              <option value="summary">📋 Summary Notes (Key Points)</option>
-              <option value="outline">📑 Outline Format (Structured)</option>
-            </select>
+            <label className="text-xs font-medium text-zinc-400">Note Style</label>
+            <div className="flex items-center gap-1 bg-zinc-800/70 border border-zinc-700 p-1 rounded-lg">
+              {NOTE_STYLES.map((style) => {
+                const active = noteStyle === style.value
+                return (
+                  <button
+                    key={style.value}
+                    type="button"
+                    onClick={() => setNoteStyle(style.value)}
+                    className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                      active
+                        ? 'bg-gradient-brand-soft text-cyan-300 border border-cyan-500/30'
+                        : 'text-zinc-400 border border-transparent hover:text-zinc-200'
+                    }`}
+                  >
+                    {style.label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-zinc-500">{NOTE_STYLES.find(s => s.value === noteStyle)?.hint}</p>
           </div>
         </div>
 
-        <button
+        <Button
+          size="lg"
           onClick={handleGenerateNotes}
+          loading={loading}
           disabled={loading || selectedFiles.length === 0 || !courseId}
-          className="mt-6 bg-cyan-600 text-white px-8 py-4 rounded-lg hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center gap-3 text-lg transition-all"
+          leftIcon={<Brain className="w-5 h-5" />}
+          className="mt-6"
         >
-          {loading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Generating Notes...
-            </>
-          ) : (
-            <>
-              <Brain className="w-5 h-5" />
-              Generate Notes
-            </>
-          )}
-        </button>
+          {loading ? 'Generating Notes...' : 'Generate Notes'}
+        </Button>
 
         {errMsg && (
-          <div className="mt-4 text-sm text-red-600">{errMsg}</div>
+          <div className="mt-4 text-sm text-red-400">{errMsg}</div>
         )}
-      </div>
+      </Card>
 
       {/* Generated Notes */}
       {(generatedNotes || loading) && (
-        <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 overflow-hidden">
-          <div className="bg-gradient-to-r from-zinc-800 to-zinc-800 px-6 py-4 border-b border-zinc-700">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Edit3 className="w-5 h-5 text-zinc-400" />
+        <Card accent padding="none" className="overflow-hidden">
+          <div className="bg-zinc-800/40 px-6 py-4 border-b border-zinc-800">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3 min-w-0">
+                <Edit3 className="w-5 h-5 text-cyan-300 flex-shrink-0" />
                 <input
                   type="text"
                   value={noteTitle}
                   onChange={(e) => setNoteTitle(e.target.value)}
                   placeholder="Enter note title..."
-                  className="text-lg font-bold bg-transparent border-none focus:outline-none focus:ring-0 text-zinc-50 placeholder-zinc-400"
+                  className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 text-zinc-50 placeholder-zinc-600 min-w-0"
                 />
               </div>
 
               <div className="flex items-center gap-2">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setPreviewMode(!previewMode)}
-                  className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
                   title={previewMode ? 'Edit mode' : 'Preview mode'}
+                  aria-label={previewMode ? 'Switch to edit mode' : 'Switch to preview mode'}
+                  className="!px-2"
                 >
                   {previewMode ? <Edit3 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </Button>
 
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => copyToClipboard(generatedNotes)}
-                  className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
                   title="Copy notes"
+                  aria-label="Copy notes"
+                  className="!px-2"
                 >
                   <Copy className="w-4 h-4" />
-                </button>
+                </Button>
 
-                <button
+                <Button
                   onClick={handleSaveNotes}
+                  loading={saving}
                   disabled={saving || !generatedNotes.trim() || !noteTitle.trim()}
-                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium transition-all"
+                  leftIcon={<Save className="w-4 h-4" />}
                 >
-                  {saving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {currentNoteId ? 'Updating...' : 'Saving...'}
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      {currentNoteId ? 'Update Note' : 'Save'}
-                    </>
-                  )}
-                </button>
+                  {saving
+                    ? (currentNoteId ? 'Updating...' : 'Saving...')
+                    : (currentNoteId ? 'Update Note' : 'Save')}
+                </Button>
               </div>
             </div>
           </div>
@@ -490,9 +510,9 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
           <div className="p-6">
             {loading ? (
               <div className="text-center py-12">
-                <div className="w-16 h-16 border-4 border-cyan-500/20 border-t-cyan-600 rounded-full animate-spin mx-auto mb-4"></div>
-                <h3 className="text-lg font-semibold text-zinc-400 mb-2">Generating Your Notes...</h3>
-                <p className="text-zinc-400">Analyzing {selectedFiles.length} file(s) and creating detailed notes</p>
+                <div className="w-16 h-16 border-4 border-cyan-500/20 border-t-cyan-400 rounded-full animate-spin mx-auto mb-4"></div>
+                <h3 className="text-lg font-semibold text-zinc-200 mb-2">Generating Your Notes...</h3>
+                <p className="text-zinc-500">Analyzing {selectedFiles.length} file(s) and creating detailed notes</p>
               </div>
             ) : previewMode ? (
               <div className="prose prose-lg prose-invert max-w-none">
@@ -502,7 +522,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
               <textarea
                 value={generatedNotes}
                 onChange={(e) => setGeneratedNotes(e.target.value)}
-                className="w-full h-96 p-4 bg-zinc-800 border border-zinc-700 text-zinc-50 rounded-lg focus:ring-2 focus:ring-cyan-500/50 focus:border-transparent resize-none font-mono text-sm"
+                className="w-full h-96 p-4 bg-zinc-800/70 border border-zinc-700 text-zinc-100 rounded-lg outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 resize-none font-mono text-sm transition-colors"
                 placeholder="Your generated notes will appear here..."
               />
             )}
@@ -510,10 +530,10 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
             {/* Create tab flashcards */}
             {flashcards.length > 0 && (
               <div className="mt-8">
-                <h3 className="text-lg font-bold text-zinc-50 mb-3 flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-base font-semibold text-zinc-100 mb-3 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-cyan-300" />
                   Practice Flashcards
-                  <span className="ml-2 text-xs font-medium text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full">
+                  <span className="ml-2 text-xs font-medium text-cyan-300 bg-gradient-brand-soft border border-cyan-500/20 px-2 py-0.5 rounded-full">
                     {flashcards.length}
                   </span>
                 </h3>
@@ -522,7 +542,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
             )}
 
             {generatedNotes && (
-              <div className="mt-6 pt-4 border-t border-zinc-700 flex items-center gap-6 text-sm text-zinc-400">
+              <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center gap-6 text-sm text-zinc-500">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
                   <span>{getReadingTime(getWordCount(generatedNotes))}</span>
@@ -538,7 +558,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
               </div>
             )}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   )
@@ -546,78 +566,73 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
   const renderSavedTab = () => (
     <div className="space-y-6">
       {/* Search and Count */}
-      <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
+      <Card padding="md">
         <div className="flex items-center gap-4">
           <div className="flex-1 relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search your notes..."
-              className="w-full pl-10 pr-4 py-3 bg-zinc-800 border border-zinc-700 text-zinc-50 rounded-lg focus:ring-2 focus:ring-cyan-500/50 focus:border-transparent transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-zinc-800/70 border border-zinc-700 text-zinc-100 placeholder-zinc-600 rounded-lg text-sm outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
             />
           </div>
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm text-zinc-500">
             {filteredNotes.length} note(s)
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Notes List */}
       {filteredNotes.length === 0 ? (
-        <div className="text-center py-16 bg-zinc-900/60 rounded-lg border border-zinc-800">
-          <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-8 h-8 text-zinc-400" />
+        <Card padding="none" className="py-16 px-8 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
+            <BookOpen className="w-7 h-7 text-cyan-300" />
           </div>
-          <h3 className="text-xl font-semibold text-zinc-400 mb-2">
+          <h3 className="text-lg font-semibold text-zinc-100 mb-2">
             {searchTerm ? 'No notes found' : 'No saved notes yet'}
           </h3>
-          <p className="text-zinc-400 mb-6">
+          <p className="text-sm text-zinc-500 mb-6">
             {searchTerm ? 'Try adjusting your search terms' : 'Generate your first set of notes to get started'}
           </p>
           {!searchTerm && (
-            <button
-              onClick={() => setActiveTab('create')}
-              className="bg-cyan-600 text-white px-6 py-3 rounded-lg hover:bg-cyan-500 transition-colors"
-            >
+            <Button onClick={() => setActiveTab('create')}>
               Create Your First Notes
-            </button>
+            </Button>
           )}
-        </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredNotes.map((note) => {
             const cardsCount = parseFlashcardsFromText(note.content || '').length
 
             return (
-              <div
-                key={note.id}
-                className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6 hover:border-zinc-600 transition-all"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-zinc-50 mb-2">{note.title}</h3>
-                    <div className="flex items-center gap-4 text-sm text-zinc-400 mb-3">
-                      <div className="flex items-center gap-1">
+              <Card key={note.id} accent padding="lg" className="group">
+                <div className="flex items-start justify-between mb-4 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-semibold text-zinc-100 mb-2 truncate">{note.title}</h3>
+                    <div className="flex items-center gap-4 text-sm text-zinc-500 mb-3 flex-wrap">
+                      <div className="flex items-center gap-1.5">
                         <Clock className="w-4 h-4" />
                         <span>{note.reading_time}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <FileText className="w-4 h-4" />
                         <span>{note.word_count} words</span>
                       </div>
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${cardsCount > 0 ? 'bg-cyan-500/10 text-cyan-400' : 'bg-zinc-800 text-zinc-400'}`}>
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${cardsCount > 0 ? 'bg-gradient-brand-soft border border-cyan-500/20 text-cyan-300' : 'bg-zinc-800 text-zinc-400'}`}>
                         {cardsCount} cards
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => loadNote(note)}
-                      className="p-2 text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors"
+                      className="p-2 text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors"
                       title="Open note"
+                      aria-label="Open note"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
@@ -628,8 +643,9 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
                         setSavedFlashcards(parseFlashcardsFromText(note.content || ''))
                         setShowCardsFor(note.id)
                       }}
-                      className="p-2 text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors"
+                      className="p-2 text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors"
                       title="Practice flashcards"
+                      aria-label="Practice flashcards"
                     >
                       <BookOpen className="w-4 h-4" />
                     </button>
@@ -638,14 +654,16 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
                       onClick={() => exportNote(note)}
                       className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
                       title="Download note"
+                      aria-label="Download note"
                     >
                       <Download className="w-4 h-4" />
                     </button>
 
                     <button
                       onClick={() => confirmDeleteNote(note.id)}
-                      className="p-2 text-red-600 hover:bg-red-500/10 rounded-lg transition-colors"
+                      className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                       title="Delete note"
+                      aria-label="Delete note"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -656,12 +674,12 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
                   {(note.content || '').slice(0, 200)}...
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex flex-wrap gap-2">
                     {(note.topics || []).slice(0, 3).map((t, i) => (
                       <span
                         key={i}
-                        className="px-2 py-1 bg-cyan-500/10 text-cyan-400 text-xs rounded-full"
+                        className="px-2 py-1 bg-gradient-brand-soft border border-cyan-500/20 text-cyan-300 text-xs rounded-full"
                       >
                         {t}
                       </span>
@@ -673,11 +691,11 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
                     )}
                   </div>
 
-                  <div className="text-xs text-zinc-400">
+                  <div className="text-xs text-zinc-600 flex-shrink-0">
                     {new Date(note.created_at).toLocaleDateString()}
                   </div>
                 </div>
-              </div>
+              </Card>
             )
           })}
         </div>
@@ -685,22 +703,23 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
 
       {/* Flashcards Modal for Saved Notes */}
       {showCardsFor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => { setShowCardsFor(null); setSavedFlashcards([]) }} />
-          <div className="relative bg-zinc-900 rounded-lg shadow-xl w-full max-w-3xl mx-4 p-6 border border-zinc-700">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-zinc-50 flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-cyan-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { setShowCardsFor(null); setSavedFlashcards([]) }} />
+          <Card padding="lg" className="relative z-10 w-full max-w-3xl space-y-4 shadow-2xl !bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-cyan-300" />
                 Practice Flashcards
-                <span className="ml-2 text-xs font-medium text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full">
+                <span className="ml-2 text-xs font-medium text-cyan-300 bg-gradient-brand-soft border border-cyan-500/20 px-2 py-0.5 rounded-full">
                   {savedFlashcards.length}
                 </span>
               </h3>
               <button
                 onClick={() => { setShowCardsFor(null); setSavedFlashcards([]) }}
-                className="px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:bg-zinc-700 text-sm"
+                className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
+                aria-label="Close"
               >
-                Close
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -709,7 +728,7 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
             ) : (
               <div className="text-zinc-400">No flashcards found in this note.</div>
             )}
-          </div>
+          </Card>
         </div>
       )}
     </div>
@@ -719,36 +738,33 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-zinc-800 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-zinc-400" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-zinc-50">Notes Creator</h1>
-              <p className="text-zinc-400">Generate comprehensive notes from your {courseName} lectures</p>
-            </div>
-          </div>
-
-          {(generatedNotes || selectedFiles.length > 0) && (
-            <button
-              onClick={clearConversations}
-              className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-sm font-medium text-zinc-400"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Clear All
-            </button>
-          )}
-        </div>
+        <PageHeader
+          eyebrow="Notes"
+          title="Notes Creator"
+          subtitle={`Generate comprehensive notes from your ${courseName} lectures`}
+          className="mb-5"
+          actions={
+            (generatedNotes || selectedFiles.length > 0) ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={clearConversations}
+                leftIcon={<RotateCcw className="w-4 h-4" />}
+              >
+                Clear All
+              </Button>
+            ) : undefined
+          }
+        />
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 bg-zinc-800 p-1 rounded-lg w-fit">
+        <div className="flex items-center gap-1 bg-zinc-800/70 border border-zinc-700 p-1 rounded-lg w-fit">
           <button
             onClick={() => setActiveTab('create')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === 'create'
-                ? 'bg-zinc-900 text-zinc-50 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-50'
+                ? 'bg-gradient-brand-soft text-cyan-300 border border-cyan-500/30'
+                : 'text-zinc-400 border border-transparent hover:text-zinc-200'
             }`}
           >
             <Brain className="w-4 h-4 inline mr-2" />
@@ -756,10 +772,10 @@ export default function NotesCreator({ courseId, courseName }: NotesCreatorProps
           </button>
           <button
             onClick={() => setActiveTab('saved')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === 'saved'
-                ? 'bg-zinc-900 text-zinc-50 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-50'
+                ? 'bg-gradient-brand-soft text-cyan-300 border border-cyan-500/30'
+                : 'text-zinc-400 border border-transparent hover:text-zinc-200'
             }`}
           >
             <Bookmark className="w-4 h-4 inline mr-2" />

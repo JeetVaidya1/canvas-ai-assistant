@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, User, Bot, Lightbulb } from 'lucide-react'
+import { Send, User, Bot, Lightbulb } from 'lucide-react'
 import { Markdown } from '@/components/ui/Markdown'
+import { Button } from '@/components/ui/Button'
 import { socraticTurn, type TutorTurn } from '@/lib/api'
 
 interface SocraticTutorProps {
@@ -36,12 +37,12 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-9rem)]">
+    <div className="flex flex-col h-[calc(100vh-12rem)]">
       <div className="flex-1 overflow-y-auto p-2 space-y-5">
         {turns.length === 0 && !thinking ? (
           <div className="text-center py-16">
-            <div className="w-14 h-14 rounded-full bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
-              <Lightbulb className="w-7 h-7 text-violet-400" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
+              <Lightbulb className="w-7 h-7 text-cyan-300" />
             </div>
             <h3 className="text-lg font-semibold text-zinc-100 mb-2">Socratic tutor</h3>
             <p className="text-sm text-zinc-500 max-w-md mx-auto mb-6">
@@ -53,7 +54,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
                 <button
                   key={s}
                   onClick={() => setInput(s)}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg text-sm border border-zinc-700"
+                  className="bg-zinc-800/70 hover:bg-zinc-700/80 text-zinc-300 px-3 py-1.5 rounded-lg text-sm border border-zinc-700 hover:border-cyan-500/30 transition-all"
                 >
                   {s}
                 </button>
@@ -63,11 +64,11 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
         ) : (
           turns.map((t, i) => (
             <div key={i} className={`flex items-start gap-3 ${t.role === 'user' ? 'flex-row-reverse' : ''}`}>
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${t.role === 'user' ? 'bg-zinc-700' : 'bg-violet-500/15'}`}>
-                {t.role === 'user' ? <User className="w-3.5 h-3.5 text-zinc-300" /> : <Bot className="w-3.5 h-3.5 text-violet-400" />}
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${t.role === 'user' ? 'bg-zinc-700' : 'bg-gradient-brand-soft border border-cyan-500/20'}`}>
+                {t.role === 'user' ? <User className="w-3.5 h-3.5 text-zinc-300" /> : <Bot className="w-3.5 h-3.5 text-cyan-300" />}
               </div>
               <div className={`max-w-2xl ${t.role === 'user' ? 'text-right' : ''}`}>
-                <div className={`inline-block px-4 py-3 rounded-lg ${t.role === 'user' ? 'bg-cyan-600 text-white' : 'bg-zinc-800 text-zinc-200 border border-zinc-700'}`}>
+                <div className={`inline-block px-4 py-3 rounded-xl ${t.role === 'user' ? 'bg-gradient-brand text-white glow-brand-sm' : 'card-surface text-zinc-200'}`}>
                   {t.role === 'user' ? (
                     <p className="whitespace-pre-wrap leading-relaxed text-sm">{t.content}</p>
                   ) : (
@@ -80,14 +81,14 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
         )}
         {thinking && (
           <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full bg-violet-500/15 flex items-center justify-center">
-              <Bot className="w-3.5 h-3.5 text-violet-400" />
+            <div className="w-7 h-7 rounded-full bg-gradient-brand-soft border border-cyan-500/20 flex items-center justify-center">
+              <Bot className="w-3.5 h-3.5 text-cyan-300" />
             </div>
-            <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3">
+            <div className="card-surface rounded-xl px-4 py-3">
               <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <div className="w-2 h-2 bg-cyan-400/70 rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-cyan-400/70 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                <div className="w-2 h-2 bg-cyan-400/70 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
               </div>
             </div>
           </div>
@@ -101,15 +102,17 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
           onChange={(e) => setInput(e.target.value)}
           placeholder="What are you working on?"
           disabled={thinking}
-          className="flex-1 px-4 py-2.5 bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-zinc-600 outline-none text-sm"
+          className="flex-1 px-4 py-2.5 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-sm transition-colors"
         />
-        <button
+        <Button
           type="submit"
+          loading={thinking}
           disabled={thinking || !input.trim()}
-          className="bg-violet-600 hover:bg-violet-500 text-white p-2.5 rounded-lg disabled:opacity-50 transition-colors"
+          aria-label="Send message"
+          className="px-3"
         >
-          {thinking ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-        </button>
+          {!thinking && <Send className="w-5 h-5" />}
+        </Button>
       </form>
     </div>
   )

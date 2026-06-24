@@ -3,6 +3,12 @@ import { Download, Github, Upload, ChevronDown, Sparkles, GraduationCap, Users, 
 import { exportCourseMarkdown, githubPush, githubImport, getContextPack, importCanvasLms, publishCourse, getShareInfo } from '@/lib/api'
 import { useUser } from '@/hooks/useUser'
 import { showError, showSuccess } from '@/lib/toast'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+
+const inputClass =
+  'w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 ' +
+  'focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-sm transition-colors'
 
 interface IntegrationsPanelProps {
   courseId: string
@@ -125,13 +131,16 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
   }
 
   return (
-    <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl">
+    <Card padding="none">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-4 text-left"
       >
-        <span className="text-sm font-medium text-zinc-100 flex items-center gap-2">
-          <Github className="w-4 h-4 text-zinc-400" /> Export &amp; integrations
+        <span className="text-sm font-semibold text-zinc-100 flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-lg bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+            <Github className="w-4 h-4 text-cyan-300" />
+          </span>
+          Export &amp; integrations
         </span>
         <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -142,15 +151,16 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
             {shareCode ? (
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <Users className="w-4 h-4 text-emerald-400" />
+                  <Users className="w-4 h-4 text-cyan-300" />
                   <span className="text-sm font-medium text-zinc-100">Published to the class catalog</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <code className="px-2.5 py-1 bg-zinc-900 border border-zinc-700 rounded text-emerald-400 text-sm font-mono tracking-widest">{shareCode}</code>
+                  <code className="px-2.5 py-1 bg-zinc-900 border border-cyan-500/20 rounded text-cyan-300 text-sm font-mono tracking-widest">{shareCode}</code>
                   <button
                     onClick={() => { void navigator.clipboard.writeText(shareCode); showSuccess('Share code copied') }}
-                    className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg"
+                    className="p-1.5 text-zinc-400 hover:text-cyan-300 hover:bg-zinc-800 rounded-lg transition-colors"
                     title="Copy share code"
+                    aria-label="Copy share code"
                   >
                     <Copy className="w-4 h-4" />
                   </button>
@@ -160,39 +170,38 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
               </div>
             ) : (
               <div>
-                <button
+                <Button
                   onClick={() => void handlePublish()}
-                  disabled={busy === 'publish'}
-                  className="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-500 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
+                  loading={busy === 'publish'}
+                  leftIcon={<Users className="w-4 h-4" />}
                 >
-                  <Users className="w-4 h-4" /> {busy === 'publish' ? 'Publishing…' : 'Share with your class'}
-                </button>
+                  {busy === 'publish' ? 'Publishing…' : 'Share with your class'}
+                </Button>
                 <p className="text-xs text-zinc-500 mt-1.5">Publish this course so classmates can join with a code. You stay the owner.</p>
               </div>
             )}
           </div>
 
           <div>
-            <button
+            <Button
               onClick={() => void handleCopyContext()}
-              disabled={busy === 'context'}
-              className="bg-cyan-600 text-white px-3 py-2 rounded-lg hover:bg-cyan-500 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
+              loading={busy === 'context'}
+              leftIcon={<Sparkles className="w-4 h-4" />}
             >
-              <Sparkles className="w-4 h-4" />
               {busy === 'context' ? 'Building…' : 'Copy study context for AI'}
-            </button>
+            </Button>
             <p className="text-xs text-zinc-500 mt-1.5">A grounded brief of your weak areas + source excerpts — paste into Claude, ChatGPT, or a Project. (Vindexa also runs as an MCP server; see mcp_server.py.)</p>
           </div>
 
           <div>
-            <button
+            <Button
+              variant="secondary"
               onClick={() => void handleExport()}
-              disabled={busy === 'export'}
-              className="bg-zinc-800 border border-zinc-700 text-zinc-200 px-3 py-2 rounded-lg hover:bg-zinc-700 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
+              loading={busy === 'export'}
+              leftIcon={<Download className="w-4 h-4" />}
             >
-              <Download className="w-4 h-4" />
               {busy === 'export' ? 'Exporting…' : 'Export course as Markdown (.zip)'}
-            </button>
+            </Button>
             <p className="text-xs text-zinc-500 mt-1.5">Notes, flashcards, and your study plan as version-control-friendly Markdown.</p>
           </div>
 
@@ -202,7 +211,7 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
               value={repo}
               onChange={(e) => setRepo(e.target.value)}
               placeholder="yourname/study-notes"
-              className="w-full px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm"
+              className={inputClass}
             />
             <div className="grid grid-cols-2 gap-2">
               <input
@@ -210,30 +219,32 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
                 onChange={(e) => setToken(e.target.value)}
                 type="password"
                 placeholder="token (push / private)"
-                className="px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm"
+                className={inputClass}
               />
               <input
                 value={subdir}
                 onChange={(e) => setSubdir(e.target.value)}
                 placeholder="import subdir (optional)"
-                className="px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm"
+                className={inputClass}
               />
             </div>
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => void handlePush()}
-                disabled={busy === 'push'}
-                className="bg-zinc-800 border border-zinc-700 text-zinc-200 px-3 py-2 rounded-lg hover:bg-zinc-700 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
+                loading={busy === 'push'}
+                leftIcon={<Upload className="w-4 h-4" />}
               >
-                <Upload className="w-4 h-4" /> {busy === 'push' ? 'Pushing…' : 'Push to GitHub'}
-              </button>
-              <button
+                {busy === 'push' ? 'Pushing…' : 'Push to GitHub'}
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={() => void handleImport()}
-                disabled={busy === 'import'}
-                className="bg-zinc-800 border border-zinc-700 text-zinc-200 px-3 py-2 rounded-lg hover:bg-zinc-700 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
+                loading={busy === 'import'}
+                leftIcon={<Download className="w-4 h-4" />}
               >
-                <Download className="w-4 h-4" /> {busy === 'import' ? 'Importing…' : 'Import materials'}
-              </button>
+                {busy === 'import' ? 'Importing…' : 'Import materials'}
+              </Button>
             </div>
             <p className="text-xs text-zinc-500">
               Tokens are sent only with your request and never stored. Importing pulls text/Markdown files into this course.
@@ -242,20 +253,20 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
 
           <div className="space-y-2 border-t border-zinc-700/40 pt-4">
             <label className="block text-xs font-medium text-zinc-500 flex items-center gap-1.5">
-              <GraduationCap className="w-3.5 h-3.5" /> Import from Canvas LMS
+              <GraduationCap className="w-3.5 h-3.5 text-cyan-300" /> Import from Canvas LMS
             </label>
             <div className="grid grid-cols-2 gap-2">
               <input
                 value={canvasUrl}
                 onChange={(e) => setCanvasUrl(e.target.value)}
                 placeholder="https://canvas.school.edu"
-                className="px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm"
+                className={inputClass}
               />
               <input
                 value={canvasCourse}
                 onChange={(e) => setCanvasCourse(e.target.value)}
                 placeholder="Canvas course id"
-                className="px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm"
+                className={inputClass}
               />
             </div>
             <input
@@ -263,19 +274,20 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
               onChange={(e) => setCanvasToken(e.target.value)}
               type="password"
               placeholder="Canvas access token"
-              className="w-full px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm"
+              className={inputClass}
             />
-            <button
+            <Button
+              variant="secondary"
               onClick={() => void handleCanvasImport()}
-              disabled={busy === 'canvas'}
-              className="bg-zinc-800 border border-zinc-700 text-zinc-200 px-3 py-2 rounded-lg hover:bg-zinc-700 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
+              loading={busy === 'canvas'}
+              leftIcon={<GraduationCap className="w-4 h-4" />}
             >
-              <GraduationCap className="w-4 h-4" /> {busy === 'canvas' ? 'Importing…' : 'Import syllabus, materials & exam dates'}
-            </button>
+              {busy === 'canvas' ? 'Importing…' : 'Import syllabus, materials & exam dates'}
+            </Button>
             <p className="text-xs text-zinc-500">Pulls your syllabus and files, and detects your next exam to prefill the planner.</p>
           </div>
         </div>
       )}
-    </div>
+    </Card>
   )
 }

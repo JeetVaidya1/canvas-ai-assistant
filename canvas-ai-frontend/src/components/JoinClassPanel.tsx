@@ -4,6 +4,8 @@ import { Users, Search, Loader2, ArrowRight } from 'lucide-react'
 import { joinCourse, browseSharedCourses, type SharedCourse } from '@/lib/api'
 import { useUser } from '@/hooks/useUser'
 import { showError, showSuccess } from '@/lib/toast'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 export default function JoinClassPanel() {
   const userId = useUser()
@@ -41,10 +43,16 @@ export default function JoinClassPanel() {
     }
   }
 
+  const inputClass =
+    'flex-1 px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 ' +
+    'focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-sm transition-colors'
+
   return (
-    <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <Users className="w-4 h-4 text-cyan-400" />
+    <Card padding="md">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center">
+          <Users className="w-5 h-5 text-cyan-300" />
+        </div>
         <h2 className="text-sm font-semibold text-zinc-100">Join a class</h2>
       </div>
       <div className="flex gap-2">
@@ -53,21 +61,20 @@ export default function JoinClassPanel() {
           onChange={(e) => setCode(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void join(code) }}
           placeholder="Enter a class share code"
-          className="flex-1 px-3 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm font-mono tracking-widest uppercase"
+          className={`${inputClass} font-mono tracking-widest uppercase`}
         />
-        <button
+        <Button
           onClick={() => void join(code)}
           disabled={joining || !code.trim()}
-          className="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-500 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
+          leftIcon={joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
         >
-          {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
           Join
-        </button>
+        </Button>
       </div>
 
       <button
         onClick={() => { setBrowseOpen(!browseOpen); if (!browseOpen && results.length === 0) void search() }}
-        className="text-xs text-cyan-400 hover:text-cyan-300 mt-2.5 flex items-center gap-1"
+        className="text-xs text-cyan-300 hover:text-cyan-200 mt-2.5 flex items-center gap-1 transition-colors"
       >
         <Search className="w-3 h-3" /> {browseOpen ? 'Hide catalog' : 'Browse shared classes'}
       </button>
@@ -80,20 +87,22 @@ export default function JoinClassPanel() {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void search() }}
               placeholder="Search by subject, school, or title"
-              className="flex-1 px-3 py-1.5 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 text-sm"
+              className={inputClass}
             />
-            <button onClick={() => void search()} className="px-3 py-1.5 border border-zinc-700 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800">
+            <Button variant="secondary" onClick={() => void search()}>
               {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
-            </button>
+            </Button>
           </div>
           {results.length === 0 ? (
             <p className="text-xs text-zinc-500 py-2">No published classes match yet.</p>
           ) : (
             results.map((c) => (
-              <button
+              <Card
                 key={c.course_id}
+                interactive
+                padding="sm"
                 onClick={() => void join(c.share_code)}
-                className="w-full text-left p-3 rounded-lg border border-zinc-700/50 bg-zinc-900/50 hover:bg-zinc-800 transition-colors"
+                className="group"
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
@@ -104,11 +113,11 @@ export default function JoinClassPanel() {
                   </div>
                   <span className="text-xs text-zinc-500 flex-shrink-0 ml-2">{c.join_count} joined</span>
                 </div>
-              </button>
+              </Card>
             ))
           )}
         </div>
       )}
-    </div>
+    </Card>
   )
 }
