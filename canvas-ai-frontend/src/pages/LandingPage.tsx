@@ -2,11 +2,11 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import {
   MessageCircle,
+  GraduationCap,
   Target,
-  FileText,
   ClipboardList,
-  BarChart3,
-  Headphones,
+  RefreshCw,
+  FileText,
   Upload,
   Brain,
   Zap,
@@ -16,33 +16,33 @@ import {
 const features = [
   {
     icon: MessageCircle,
-    title: 'AI Chat',
-    description: 'Ask questions about your course materials and get precise, contextual answers grounded in your actual content.',
+    title: 'Grounded AI Chat',
+    description: 'Ask anything about your course and get precise answers cited to your actual materials — not the open internet.',
+  },
+  {
+    icon: GraduationCap,
+    title: 'Socratic Tutor',
+    description: 'A tutor that guides you to the answer with questions instead of handing it over — so the understanding sticks.',
   },
   {
     icon: Target,
-    title: 'Practice Problems',
-    description: 'Generate adaptive problem sets that target your weak areas across multiple difficulty levels.',
-  },
-  {
-    icon: FileText,
-    title: 'Smart Notes',
-    description: 'Transform lectures into comprehensive study notes with key concepts, summaries, and auto-generated flashcards.',
+    title: 'Adaptive Practice & Quizzes',
+    description: 'Problem sets and quizzes that adjust to your level and zero in on the topics you keep getting wrong.',
   },
   {
     icon: ClipboardList,
-    title: 'Mock Exams',
-    description: 'Prepare with AI-generated exams featuring timed sessions, step-by-step hints, and detailed solutions.',
+    title: 'Exam Simulator',
+    description: 'Timed mock exams generated from your materials, plus a readiness score that tells you when you’re ready.',
   },
   {
-    icon: BarChart3,
-    title: 'Analytics',
-    description: 'Track your progress across every topic. See what you know, what needs work, and how you improve over time.',
+    icon: RefreshCw,
+    title: 'Smart Review',
+    description: 'Every mistake feeds a spaced-repetition queue that resurfaces exactly what you’re weakest on, right before you forget it.',
   },
   {
-    icon: Headphones,
-    title: 'Audio Overviews',
-    description: 'Listen to AI-generated audio summaries of your materials while commuting, exercising, or on the go.',
+    icon: FileText,
+    title: 'Notes, Flashcards & Audio',
+    description: 'Turn lectures into study notes, auto-generated flashcards, and audio overviews you can review anywhere.',
   },
 ]
 
@@ -68,7 +68,7 @@ const steps = [
 ]
 
 const stats = [
-  { value: '6', label: 'Study tools' },
+  { value: '10+', label: 'Study tools' },
   { value: '< 30s', label: 'To generate a quiz' },
   { value: 'Any', label: 'Course or subject' },
   { value: 'Free', label: 'To get started' },
@@ -246,7 +246,7 @@ export default function LandingPage() {
                 Everything you need to excel
               </h2>
               <p className="mt-4 text-zinc-400 text-base max-w-lg mx-auto">
-                Six AI-powered tools that work together to transform how you study.
+                A connected study system where every tool feeds the next.
               </p>
             </motion.div>
 
@@ -286,7 +286,7 @@ export default function LandingPage() {
                   students actually study
                 </h2>
                 <p className="text-zinc-400 text-sm leading-relaxed">
-                  Unlike generic AI tools, Vindexa understands your specific course content. Every quiz question, practice problem, and study note is generated directly from your uploaded materials — so you study what actually matters.
+                  Unlike generic AI tools, Vindexa understands your specific course content — and connects it all. Every wrong answer feeds your review queue, your weak topics reshape your practice, and your exam-readiness updates as you go. You always know exactly what to study next.
                 </p>
               </motion.div>
 
