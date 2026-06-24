@@ -5,7 +5,7 @@ from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re
 router = APIRouter()
 
 
-@router.post("/api/upload-past-paper")
+@router.post("/api/upload-past-paper", dependencies=[Depends(ai_rate_limit)])
 async def upload_past_paper(
     course_id: str = Form(...),
     file: UploadFile = File(...),
@@ -69,7 +69,7 @@ async def upload_past_paper(
         raise HTTPException(500, detail=f"Upload failed: {str(e)}")
 
 
-@router.post("/api/generate-practice-exam")
+@router.post("/api/generate-practice-exam", dependencies=[Depends(ai_rate_limit)])
 async def generate_practice_exam(
     course_id: str = Form(...),
     exam_type: str = Form("practice"),
@@ -380,7 +380,7 @@ async def get_past_papers(course_id: str):
         raise HTTPException(500, detail=f"Failed to get past papers: {str(e)}")
 
 
-@router.post("/api/solve-exam-question")
+@router.post("/api/solve-exam-question", dependencies=[Depends(ai_rate_limit)])
 async def solve_exam_question(
     course_id: str = Form(...),
     question_text: str = Form(...),

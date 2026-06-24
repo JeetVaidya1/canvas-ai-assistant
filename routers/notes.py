@@ -5,7 +5,7 @@ from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re
 router = APIRouter()
 
 
-@router.post("/generate-notes")
+@router.post("/generate-notes", dependencies=[Depends(ai_rate_limit)])
 async def generate_notes_endpoint(
     course_id: str = Form(...),
     file_names: str = Form(...),  # JSON string of file names list

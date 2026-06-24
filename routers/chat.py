@@ -5,7 +5,7 @@ from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re
 router = APIRouter()
 
 
-@router.post("/ask")
+@router.post("/ask", dependencies=[Depends(ai_rate_limit)])
 async def ask_endpoint(
     question: str = Form(...),
     course_id: str = Form(...),
@@ -70,7 +70,7 @@ async def ask_endpoint(
     }
 
 
-@router.post("/ask/stream")
+@router.post("/ask/stream", dependencies=[Depends(ai_rate_limit)])
 async def ask_stream_endpoint(
     question: str = Form(...),
     course_id: str = Form(...),

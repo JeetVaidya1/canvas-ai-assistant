@@ -31,6 +31,7 @@ from fastapi.responses import Response
 from fastapi import Depends
 import exports
 from auth import get_current_user, current_user_id, require_course_access
+from rate_limit import ai_rate_limit  # re-exported so routers can rate-limit AI endpoints
 
 
 # ---- shared state ----
