@@ -2,19 +2,16 @@ import { useState } from 'react'
 import { NavLink, useParams, useLocation } from 'react-router-dom'
 import {
   BookOpen,
+  Home,
   Settings,
   ChevronLeft,
   ChevronRight,
   GraduationCap,
   MessageCircle,
-  Brain,
   Target,
-  FileText,
   ClipboardList,
   BarChart3,
-  Calendar,
-  Headphones,
-  Lightbulb,
+  Layers,
   LogOut,
 } from 'lucide-react'
 import { useCourses } from '@/hooks/useCourses'
@@ -24,20 +21,18 @@ interface SubNavItem {
   label: string
   path: string
   icon: typeof BookOpen
-  group?: string
 }
 
+// Six intent-based destinations (was 10 overlapping tools). Learn = Chat+Tutor,
+// Practice = Quiz+Practice, Study Kit = Notes+Flashcards+Audio, Progress =
+// Analytics+Planner. See App.tsx for the old→new redirects.
 const courseSubNav: SubNavItem[] = [
-  { label: 'Overview', path: '', icon: BookOpen },
-  { label: 'Chat', path: '/chat', icon: MessageCircle, group: 'Study' },
-  { label: 'Tutor', path: '/tutor', icon: Lightbulb },
-  { label: 'Quiz', path: '/quiz', icon: Brain },
+  { label: 'Home', path: '', icon: Home },
+  { label: 'Learn', path: '/learn', icon: MessageCircle },
   { label: 'Practice', path: '/practice', icon: Target },
-  { label: 'Notes', path: '/notes', icon: FileText, group: 'Create' },
-  { label: 'Exams', path: '/exams', icon: ClipboardList },
-  { label: 'Analytics', path: '/analytics', icon: BarChart3, group: 'Insights' },
-  { label: 'Planner', path: '/planner', icon: Calendar },
-  { label: 'Audio', path: '/audio', icon: Headphones },
+  { label: 'Exam', path: '/exam', icon: ClipboardList },
+  { label: 'Study Kit', path: '/kit', icon: Layers },
+  { label: 'Progress', path: '/progress', icon: BarChart3 },
 ]
 
 export default function AppSidebar() {
@@ -92,7 +87,7 @@ export default function AppSidebar() {
                   )}
                 </NavLink>
 
-                {/* Course sub-navigation with group labels */}
+                {/* Course sub-navigation — six intent-based destinations */}
                 {isActiveCourse && !collapsed && (
                   <div className="ml-4 mt-1 space-y-0.5">
                     {courseSubNav.map((item) => {
@@ -102,11 +97,6 @@ export default function AppSidebar() {
                         : location.pathname.startsWith(fullPath)
                       return (
                         <div key={item.label}>
-                          {item.group && (
-                            <div className="text-[10px] font-medium text-zinc-600 uppercase tracking-wider pt-2 pb-0.5 pl-3">
-                              {item.group}
-                            </div>
-                          )}
                           <NavLink
                             to={fullPath}
                             end={item.path === ''}
