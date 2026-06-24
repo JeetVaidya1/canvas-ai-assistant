@@ -1,13 +1,5 @@
 import { useState, useEffect } from 'react'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts'
+import { AnimatePresence, motion } from 'motion/react'
 import {
   Play,
   CheckCircle,
@@ -22,6 +14,10 @@ import {
   ChevronDown,
   RefreshCw,
   FileText,
+  Sparkles,
+  Layers,
+  Globe,
+  Check,
 } from 'lucide-react'
 
 import { Markdown } from '@/components/ui/Markdown'
@@ -34,6 +30,7 @@ import {
   type QuizQuestion,
   type QuizAnswerResult,
   type QuizResult,
+  type QuizSource,
 } from '../lib/api'
 import { apiFetch } from '../lib/api/client'
 import { showError } from '../lib/toast'
@@ -51,18 +48,54 @@ interface QuizRun {
   selectedLetter: string
   feedback: QuizAnswerResult | null
   questionStart: number
+  correctCount: number
 }
+
+type Difficulty = 'easy' | 'medium' | 'hard'
 
 const LETTERS = ['A', 'B', 'C', 'D'] as const
 // Sentinel for "quiz the entire course" — sends a null topic so the backend does
 // broad whole-course retrieval (core concepts) instead of one narrow topic.
 const WHOLE_COURSE = 'Whole course'
 
+const DIFFICULTIES: { value: Difficulty; label: string; hint: string }[] = [
+  { value: 'easy', label: 'Easy', hint: 'Warm-up' },
+  { value: 'medium', label: 'Medium', hint: 'Balanced' },
+  { value: 'hard', label: 'Hard', hint: 'Exam-grade' },
+]
+const COUNTS = [5, 10, 15, 20] as const
+
+// ── Small presentational helpers ─────────────────────────────────────────────
+
+/** Pill that cites a source document + page from the user's own materials. */
+function SourceTag({ source, label }: { source: QuizSource; label?: string }) {
+  if (!source?.doc_name) return null
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400 bg-zinc-800/80 border border-zinc-700 rounded-full px-2.5 py-1">
+      <FileText className="w-3 h-3 text-cyan-400/80" />
+      {label && <span className="text-zinc-500">{label}</span>}
+      <span className="truncate max-w-[16rem]">{source.doc_name}</span>
+      {source.page ? <span className="text-zinc-500">p.{source.page}</span> : null}
+    </span>
+  )
+}
+
+/** Pill that surfaces the concept a grounded question is testing. */
+function ConceptTag({ concept }: { concept?: string }) {
+  if (!concept) return null
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-300 bg-gradient-brand-soft border border-cyan-500/20 rounded-full px-2.5 py-1">
+      <Sparkles className="w-3 h-3" />
+      <span className="truncate max-w-[14rem]">{concept}</span>
+    </span>
+  )
+}
+
 export default function QuizMode({ courseId, userId, onModeChange }: QuizModeProps) {
   const [run, setRun] = useState<QuizRun | null>(null)
   const [result, setResult] = useState<QuizResult | null>(null)
   const [selectedTopic, setSelectedTopic] = useState(WHOLE_COURSE)
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium')
   const [questionCount, setQuestionCount] = useState(10)
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -133,6 +166,7 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
         selectedLetter: '',
         feedback: null,
         questionStart: Date.now(),
+        correctCount: 0,
       })
       setResult(null)
       setTimeElapsed(0)
@@ -157,7 +191,11 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
         timeTaken,
         userId,
       )
-      setRun({ ...run, feedback })
+      setRun({
+        ...run,
+        feedback,
+        correctCount: run.correctCount + (feedback.is_correct ? 1 : 0),
+      })
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to submit answer'
       showError(msg)
@@ -210,19 +248,31 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
   // ── Setup screen ───────────────────────────────────────────────────────────
   if (!run) {
     return (
-      <div className="max-w-3xl mx-auto px-5 py-5">
-        <Card>
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
-              <Brain className="w-5 h-5 text-cyan-300" />
+      <div className="max-w-3xl mx-auto px-5 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
+          <Card accent>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-11 h-11 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0 glow-brand-sm">
+                <Brain className="w-5 h-5 text-cyan-300" />
+              </div>
+              <PageHeader
+                eyebrow="Quiz"
+                title="Build your quiz"
+                subtitle="Grounded questions drawn straight from your own course materials"
+              />
             </div>
-            <PageHeader eyebrow="Quiz" title="Start a quiz" subtitle="Pick a topic, difficulty, and length" />
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-zinc-400">Topic</label>
+            {/* Topic */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-cyan-400/70" />
+                  Topic
+                </label>
                 <button
                   onClick={() => void loadTopics()}
                   disabled={topicsLoading}
@@ -230,187 +280,309 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
                   aria-label="Refresh topics"
                 >
                   <RefreshCw className={`w-3 h-3 ${topicsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
                 </button>
               </div>
               <div className="relative">
                 <button
                   onClick={() => setTopicDropdownOpen(!topicDropdownOpen)}
                   disabled={topicsLoading || !courseId}
-                  className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-zinc-100 text-sm text-left flex items-center justify-between disabled:opacity-50 transition-colors"
+                  className="w-full px-3.5 py-2.5 bg-zinc-800/70 border border-zinc-700 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-zinc-100 text-sm text-left flex items-center justify-between disabled:opacity-50 transition-colors hover:border-zinc-600"
                 >
-                  <span className="truncate">
-                    {topicsLoading ? 'Loading...' : selectedTopic || 'Select topic'}
+                  <span className="flex items-center gap-2 truncate">
+                    {selectedTopic === WHOLE_COURSE ? (
+                      <Globe className="w-4 h-4 text-cyan-300 flex-shrink-0" />
+                    ) : (
+                      <Layers className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                    )}
+                    <span className="truncate">
+                      {topicsLoading ? 'Loading topics…' : selectedTopic || 'Select topic'}
+                    </span>
                   </span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${topicDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${topicDropdownOpen ? 'rotate-180' : ''}`}
+                  />
                 </button>
-                {topicDropdownOpen && !topicsLoading && (
-                  <div className="absolute z-10 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {availableTopics.map((topic, index) => (
-                      <button
-                        key={topic}
-                        onClick={() => {
-                          setSelectedTopic(topic)
-                          setTopicDropdownOpen(false)
-                        }}
-                        className={`w-full px-3 py-2 text-left text-sm transition-colors ${
-                          selectedTopic === topic
-                            ? 'bg-gradient-brand-soft text-cyan-300 font-medium'
-                            : 'text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-                        } ${index === 0 ? 'rounded-t-lg' : ''} ${index === availableTopics.length - 1 ? 'rounded-b-lg' : ''}`}
-                      >
-                        <div className="truncate">{topic}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <AnimatePresence>
+                  {topicDropdownOpen && !topicsLoading && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute z-20 w-full mt-1.5 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl max-h-56 overflow-y-auto"
+                    >
+                      {availableTopics.map((topic) => {
+                        const active = selectedTopic === topic
+                        const isWhole = topic === WHOLE_COURSE
+                        return (
+                          <button
+                            key={topic}
+                            onClick={() => {
+                              setSelectedTopic(topic)
+                              setTopicDropdownOpen(false)
+                            }}
+                            className={`w-full px-3.5 py-2.5 text-left text-sm transition-colors flex items-center gap-2 ${
+                              active
+                                ? 'bg-gradient-brand-soft text-cyan-300 font-medium'
+                                : 'text-zinc-400 hover:bg-zinc-700/70 hover:text-zinc-200'
+                            }`}
+                          >
+                            {isWhole ? (
+                              <Globe className="w-4 h-4 flex-shrink-0" />
+                            ) : (
+                              <Layers className="w-4 h-4 flex-shrink-0 opacity-60" />
+                            )}
+                            <span className="truncate flex-1">{topic}</span>
+                            {isWhole && !active && (
+                              <span className="text-[10px] uppercase tracking-wide text-zinc-500">
+                                broad
+                              </span>
+                            )}
+                            {active && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
+                          </button>
+                        )
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-              {topicsError && <p className="text-xs text-amber-500 mt-1">{topicsError}</p>}
+              {selectedTopic === WHOLE_COURSE && (
+                <p className="text-xs text-zinc-500 mt-1.5">
+                  Pulls core concepts broadly from across the entire course.
+                </p>
+              )}
+              {topicsError && <p className="text-xs text-amber-500 mt-1.5">{topicsError}</p>}
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Difficulty</label>
-              <select
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
-                className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-zinc-100 text-sm transition-colors"
-              >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
+            {/* Difficulty */}
+            <div className="mb-5">
+              <label className="block text-xs font-medium text-zinc-400 mb-2">Difficulty</label>
+              <div className="grid grid-cols-3 gap-2">
+                {DIFFICULTIES.map((d) => {
+                  const active = difficulty === d.value
+                  return (
+                    <button
+                      key={d.value}
+                      onClick={() => setDifficulty(d.value)}
+                      className={`rounded-lg border px-3 py-2.5 text-left transition-all ${
+                        active
+                          ? 'border-cyan-500/40 bg-gradient-brand-soft ring-2 ring-cyan-500/20'
+                          : 'border-zinc-700 bg-zinc-800/60 hover:border-zinc-600 hover:bg-zinc-800'
+                      }`}
+                    >
+                      <div className={`text-sm font-medium ${active ? 'text-cyan-300' : 'text-zinc-200'}`}>
+                        {d.label}
+                      </div>
+                      <div className="text-[11px] text-zinc-500">{d.hint}</div>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Questions</label>
-              <select
-                value={questionCount}
-                onChange={(e) => setQuestionCount(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-zinc-100 text-sm transition-colors"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={15}>15</option>
-                <option value={20}>20</option>
-              </select>
+            {/* Count */}
+            <div className="mb-6">
+              <label className="block text-xs font-medium text-zinc-400 mb-2">Questions</label>
+              <div className="grid grid-cols-4 gap-2">
+                {COUNTS.map((c) => {
+                  const active = questionCount === c
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => setQuestionCount(c)}
+                      className={`rounded-lg border py-2.5 text-sm font-medium transition-all ${
+                        active
+                          ? 'border-cyan-500/40 bg-gradient-brand-soft text-cyan-300 ring-2 ring-cyan-500/20'
+                          : 'border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800'
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </div>
 
-          <Button
-            onClick={() => void startQuiz()}
-            disabled={loading || topicsLoading || !selectedTopic || !courseId}
-            loading={loading}
-            leftIcon={<Play className="w-4 h-4" />}
-          >
-            {loading ? 'Generating quiz...' : 'Start Quiz'}
-          </Button>
-        </Card>
+            <Button
+              onClick={() => void startQuiz()}
+              disabled={loading || topicsLoading || !selectedTopic || !courseId}
+              loading={loading}
+              size="lg"
+              leftIcon={<Play className="w-4 h-4" />}
+              className="w-full"
+            >
+              {loading ? 'Generating your quiz…' : 'Start Quiz'}
+            </Button>
+            {loading && (
+              <p className="text-xs text-zinc-500 mt-2.5 text-center">
+                Retrieving from your materials, reranking, and writing questions — this can take a moment.
+              </p>
+            )}
+          </Card>
+        </motion.div>
       </div>
     )
   }
 
   // ── Results screen ───────────────────────────────────────────────────────────
   if (result) {
-    const chartData = result.by_topic.map((t) => ({ topic: t.topic, pct: t.pct }))
     const scorePct = result.score.pct
+    const sortedTopics = [...result.by_topic].sort((a, b) => a.pct - b.pct)
+    const headline =
+      scorePct >= 85 ? 'Outstanding work' : scorePct >= 60 ? 'Solid effort' : 'Good start — keep going'
+    const ringColor = scorePct >= 70 ? '#10b981' : scorePct >= 40 ? '#f59e0b' : '#ef4444'
+
     return (
-      <div className="max-w-3xl mx-auto px-5 py-5">
-        <Card>
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
-              <Trophy className="w-5 h-5 text-cyan-300" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gradient-brand mb-0.5">Quiz Complete</h2>
-              <p className="text-sm text-zinc-500">Here's how you did</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 mb-5">
-            <div className="bg-gradient-brand-soft border border-cyan-500/15 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold mb-0.5 text-gradient-brand">{scorePct}%</div>
-              <div className="text-xs text-zinc-500">Score</div>
-            </div>
-            <div className="bg-zinc-800/70 border border-zinc-700/50 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold mb-0.5 text-emerald-400">
-                {result.score.correct}/{result.score.total}
+      <div className="max-w-3xl mx-auto px-5 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+        >
+          <Card accent>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-11 h-11 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0 glow-brand-sm">
+                <Trophy className="w-5 h-5 text-cyan-300" />
               </div>
-              <div className="text-xs text-zinc-500">Correct</div>
-            </div>
-            <div className="bg-zinc-800/70 border border-zinc-700/50 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold mb-0.5 text-zinc-100">{formatTime(timeElapsed)}</div>
-              <div className="text-xs text-zinc-500">Time</div>
-            </div>
-          </div>
-
-          {chartData.length > 0 && (
-            <div className="mb-5">
-              <h3 className="text-sm font-medium text-zinc-300 mb-3">Performance by topic</h3>
-              <div className="bg-zinc-800/70 border border-zinc-700/50 rounded-lg p-4" style={{ height: Math.max(140, chartData.length * 44) }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }}>
-                    <XAxis type="number" domain={[0, 100]} tick={{ fill: '#a1a1aa', fontSize: 11 }} stroke="#3f3f46" />
-                    <YAxis
-                      type="category"
-                      dataKey="topic"
-                      width={120}
-                      tick={{ fill: '#a1a1aa', fontSize: 11 }}
-                      stroke="#3f3f46"
-                    />
-                    <Tooltip
-                      cursor={{ fill: '#27272a' }}
-                      contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
-                      formatter={(value) => [`${value ?? 0}%`, 'Score'] as [string, string]}
-                    />
-                    <Bar dataKey="pct" radius={[0, 4, 4, 0]}>
-                      {chartData.map((entry) => (
-                        <Cell
-                          key={entry.topic}
-                          fill={entry.pct >= 70 ? '#10b981' : entry.pct >= 40 ? '#f59e0b' : '#ef4444'}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <div>
+                <h2 className="text-xl font-semibold text-gradient-brand mb-0.5">{headline}</h2>
+                <p className="text-sm text-zinc-500">
+                  {selectedTopic} &middot; {difficulty}
+                </p>
               </div>
             </div>
-          )}
 
-          {result.weak_areas.length > 0 && (
-            <div className="mb-5 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
-              <div className="flex items-start gap-2">
-                <Target className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-medium text-amber-400 mb-1">Weak areas to review</h4>
-                  <p className="text-sm text-amber-400/80">{result.weak_areas.join(', ')}</p>
+            {/* Big score ring + stats */}
+            <div className="flex flex-col sm:flex-row items-center gap-6 mb-6">
+              <motion.div
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, type: 'spring', stiffness: 180, damping: 16 }}
+                className="relative flex-shrink-0"
+              >
+                <svg width="132" height="132" viewBox="0 0 132 132" className="-rotate-90">
+                  <circle cx="66" cy="66" r="58" fill="none" stroke="#27272a" strokeWidth="10" />
+                  <motion.circle
+                    cx="66"
+                    cy="66"
+                    r="58"
+                    fill="none"
+                    stroke={ringColor}
+                    strokeWidth="10"
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 58}
+                    initial={{ strokeDashoffset: 2 * Math.PI * 58 }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 58 * (1 - scorePct / 100) }}
+                    transition={{ delay: 0.25, duration: 0.9, ease: 'easeOut' }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-bold text-gradient-brand leading-none">{scorePct}%</span>
+                  <span className="text-xs text-zinc-500 mt-1">Score</span>
+                </div>
+              </motion.div>
+
+              <div className="grid grid-cols-2 gap-3 flex-1 w-full">
+                <div className="bg-zinc-800/70 border border-zinc-700/50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold mb-0.5 text-emerald-400">
+                    {result.score.correct}/{result.score.total}
+                  </div>
+                  <div className="text-xs text-zinc-500">Correct</div>
+                </div>
+                <div className="bg-zinc-800/70 border border-zinc-700/50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold mb-0.5 text-zinc-100 flex items-center justify-center gap-1.5">
+                    <Clock className="w-4 h-4 text-cyan-300" />
+                    {formatTime(timeElapsed)}
+                  </div>
+                  <div className="text-xs text-zinc-500">Time</div>
                 </div>
               </div>
             </div>
-          )}
 
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={resetQuiz} leftIcon={<RotateCcw className="w-4 h-4" />}>
-              New Quiz
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                onModeChange ? onModeChange('practice') : window.dispatchEvent(new CustomEvent('navigateToPractice'))
-              }
-              leftIcon={<BookOpen className="w-4 h-4" />}
-            >
-              Practice Weak Areas
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                onModeChange ? onModeChange('analytics') : window.dispatchEvent(new CustomEvent('navigateToAnalytics'))
-              }
-              leftIcon={<Brain className="w-4 h-4" />}
-            >
-              View Analytics
-            </Button>
-          </div>
-        </Card>
+            {/* By-topic breakdown */}
+            {sortedTopics.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-zinc-300 mb-3">Breakdown by topic</h3>
+                <div className="space-y-2.5">
+                  {sortedTopics.map((t, i) => {
+                    const barColor =
+                      t.pct >= 70 ? '#10b981' : t.pct >= 40 ? '#f59e0b' : '#ef4444'
+                    return (
+                      <div key={t.topic}>
+                        <div className="flex items-center justify-between mb-1 text-sm">
+                          <span className="text-zinc-300 truncate pr-3">{t.topic}</span>
+                          <span className="text-zinc-500 flex-shrink-0">
+                            {t.correct}/{t.total} &middot; {t.pct}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+                          <motion.div
+                            className="h-2 rounded-full"
+                            style={{ background: barColor }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${t.pct}%` }}
+                            transition={{ delay: 0.15 + i * 0.06, duration: 0.6, ease: 'easeOut' }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Weak areas */}
+            {result.weak_areas.length > 0 && (
+              <div className="mb-6 bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                <div className="flex items-start gap-2.5">
+                  <Target className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-amber-400 mb-1.5">Worth another look</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {result.weak_areas.map((area) => (
+                        <span
+                          key={area}
+                          className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-full px-2.5 py-1"
+                        >
+                          {area}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={resetQuiz} leftIcon={<RotateCcw className="w-4 h-4" />}>
+                New Quiz
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  onModeChange
+                    ? onModeChange('practice')
+                    : window.dispatchEvent(new CustomEvent('navigateToPractice'))
+                }
+                leftIcon={<BookOpen className="w-4 h-4" />}
+              >
+                Practice Weak Areas
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  onModeChange
+                    ? onModeChange('analytics')
+                    : window.dispatchEvent(new CustomEvent('navigateToAnalytics'))
+                }
+                leftIcon={<Brain className="w-4 h-4" />}
+              >
+                View Analytics
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
       </div>
     )
   }
@@ -418,163 +590,239 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
   // ── Active quiz ─────────────────────────────────────────────────────────────
   const question = run.questions[run.currentIndex]
   const feedback = run.feedback
-  const progress = ((run.currentIndex + 1) / run.questions.length) * 100
+  const progress = ((run.currentIndex + (feedback ? 1 : 0)) / run.questions.length) * 100
   const isLast = run.currentIndex === run.questions.length - 1
 
   return (
     <div className="max-w-3xl mx-auto p-5">
-      <Card className="mb-5">
+      {/* Sticky progress + meta header */}
+      <Card className="mb-5" padding="sm">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-brand-soft border border-cyan-500/15 flex items-center justify-center flex-shrink-0">
               <Brain className="w-5 h-5 text-cyan-300" />
             </div>
             <div>
-              <h2 className="text-base font-medium text-zinc-100">Quiz</h2>
-              <p className="text-xs text-zinc-500">{selectedTopic} &middot; {difficulty}</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand">
+                Question {run.currentIndex + 1} of {run.questions.length}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {selectedTopic} &middot; {difficulty}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 text-sm text-emerald-400/90">
+              <CheckCircle className="w-4 h-4" />
+              {run.correctCount}
+            </div>
             <div className="flex items-center gap-1.5 text-sm text-zinc-400">
               <Clock className="w-4 h-4 text-cyan-300" />
               {formatTime(timeElapsed)}
             </div>
-            <div className="text-sm text-zinc-400">
-              {run.currentIndex + 1}/{run.questions.length}
-            </div>
           </div>
         </div>
-        <div className="w-full bg-zinc-700/60 rounded-full h-1.5">
-          <div className="bg-gradient-brand h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
-        </div>
-      </Card>
-
-      <Card>
-        <div className="mb-5">
-          <span className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-2 block">Question {run.currentIndex + 1}</span>
-          <div className="text-base font-medium text-zinc-100">
-            <Markdown content={question.question} />
-          </div>
-        </div>
-
-        <div className="space-y-2 mb-5">
-          {question.options.map((option, index) => {
-            const letter = LETTERS[index] ?? String.fromCharCode(65 + index)
-            const isSelected = run.selectedLetter === letter
-            const isCorrectOption = feedback ? letter === feedback.correct_answer : false
-
-            let klass = 'w-full p-3 border rounded-lg text-left transition-all text-sm '
-            if (feedback) {
-              if (isCorrectOption) klass += 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-              else if (isSelected) klass += 'border-red-500 bg-red-500/10 text-red-400'
-              else klass += 'border-zinc-700 bg-zinc-800 text-zinc-400'
-            } else if (isSelected) {
-              klass += 'border-transparent bg-gradient-brand-soft text-cyan-300 ring-2 ring-cyan-500/30'
-            } else {
-              klass += 'border-zinc-700 hover:border-cyan-500/40 hover:bg-cyan-500/5'
-            }
-
+        {/* Segmented progress */}
+        <div className="flex gap-1">
+          {run.questions.map((_, i) => {
+            const done = i < run.currentIndex || (i === run.currentIndex && !!feedback)
+            const current = i === run.currentIndex && !feedback
             return (
-              <button
-                key={index}
-                onClick={() => !feedback && setRun({ ...run, selectedLetter: letter })}
-                disabled={!!feedback}
-                className={klass}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                      feedback && isCorrectOption
-                        ? 'bg-emerald-500 text-white'
-                        : feedback && isSelected && !isCorrectOption
-                        ? 'bg-red-500 text-white'
-                        : isSelected
-                        ? 'bg-gradient-brand text-white'
-                        : 'bg-zinc-700 text-zinc-400'
-                    }`}
-                  >
-                    {feedback && isCorrectOption ? (
-                      <CheckCircle className="w-3.5 h-3.5" />
-                    ) : feedback && isSelected && !isCorrectOption ? (
-                      <XCircle className="w-3.5 h-3.5" />
-                    ) : (
-                      letter
-                    )}
-                  </div>
-                  {/* Options already carry their "A) " prefix from the backend. */}
-                  <span className="flex-1">{option.replace(/^[A-D]\)\s*/, '')}</span>
-                </div>
-              </button>
+              <div
+                key={i}
+                className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${
+                  done ? 'bg-gradient-brand' : current ? 'bg-cyan-500/40' : 'bg-zinc-700/60'
+                }`}
+              />
             )
           })}
         </div>
-
-        {feedback && (
-          <div
-            className={`rounded-lg p-4 mb-5 ${
-              feedback.is_correct ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-red-500/10 border border-red-500/20'
-            }`}
-          >
-            <div className="flex items-start gap-2">
-              {feedback.is_correct ? (
-                <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-              ) : (
-                <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-              )}
-              <div className="min-w-0">
-                <h4 className={`text-sm font-medium mb-1 ${feedback.is_correct ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {feedback.is_correct ? 'Correct!' : 'Not quite right'}
-                </h4>
-                <div className={`text-sm ${feedback.is_correct ? 'text-emerald-400/80' : 'text-red-400/80'}`}>
-                  <Markdown content={feedback.explanation} />
-                </div>
-                {!feedback.is_correct && feedback.mistake_explanation && (
-                  <div className="mt-2 rounded-lg bg-zinc-800/70 border border-zinc-700 p-2.5">
-                    <div className="text-xs font-medium text-amber-400 mb-0.5">Why you missed this</div>
-                    <div className="text-sm text-zinc-300"><Markdown content={feedback.mistake_explanation} /></div>
-                    {feedback.mistake_source?.doc_name && (
-                      <div className="mt-1.5 inline-flex items-center gap-1 text-xs text-zinc-500">
-                        <FileText className="w-3 h-3" />
-                        {feedback.mistake_source.doc_name}
-                        {feedback.mistake_source.page ? `, p.${feedback.mistake_source.page}` : ''}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {feedback.source?.doc_name && (
-                  <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-zinc-400 bg-zinc-800 border border-zinc-700 rounded-full px-2.5 py-1">
-                    <FileText className="w-3 h-3" />
-                    {feedback.source.doc_name}
-                    {feedback.source.page ? `, p.${feedback.source.page}` : ''}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div>
-          {!feedback ? (
-            <Button
-              onClick={() => void submitAnswer()}
-              disabled={!run.selectedLetter || submitting}
-              loading={submitting}
-              leftIcon={<CheckCircle className="w-4 h-4" />}
-            >
-              {submitting ? 'Checking...' : 'Submit Answer'}
-            </Button>
-          ) : (
-            <Button
-              onClick={() => void nextQuestion()}
-              disabled={submitting}
-              loading={submitting}
-              rightIcon={isLast ? <Trophy className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
-            >
-              {submitting ? 'Scoring...' : isLast ? 'View Results' : 'Next Question'}
-            </Button>
-          )}
-        </div>
+        <div className="sr-only">{Math.round(progress)}% complete</div>
       </Card>
+
+      {/* Question card — animated per-question */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={run.currentIndex}
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -24 }}
+          transition={{ duration: 0.28, ease: 'easeOut' }}
+        >
+          <Card accent={!!feedback}>
+            {/* Concept + source tags */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <ConceptTag concept={question.concept} />
+              <SourceTag source={question.source} />
+            </div>
+
+            <div className="text-lg font-medium text-zinc-100 mb-5">
+              <Markdown content={question.question} />
+            </div>
+
+            <div className="space-y-2.5 mb-5">
+              {question.options.map((option, index) => {
+                const letter = LETTERS[index] ?? String.fromCharCode(65 + index)
+                const isSelected = run.selectedLetter === letter
+                const isCorrectOption = feedback ? letter === feedback.correct_answer : false
+
+                let klass =
+                  'w-full p-3.5 border rounded-xl text-left transition-all text-sm disabled:cursor-default '
+                if (feedback) {
+                  if (isCorrectOption)
+                    klass += 'border-emerald-500/70 bg-emerald-500/10 text-emerald-300'
+                  else if (isSelected) klass += 'border-red-500/70 bg-red-500/10 text-red-300'
+                  else klass += 'border-zinc-700/60 bg-zinc-800/40 text-zinc-500'
+                } else if (isSelected) {
+                  klass +=
+                    'border-transparent bg-gradient-brand-soft text-cyan-200 ring-2 ring-cyan-500/40'
+                } else {
+                  klass +=
+                    'border-zinc-700 text-zinc-200 hover:border-cyan-500/40 hover:bg-cyan-500/5'
+                }
+
+                return (
+                  <motion.button
+                    key={index}
+                    whileTap={!feedback ? { scale: 0.99 } : undefined}
+                    onClick={() => !feedback && setRun({ ...run, selectedLetter: letter })}
+                    disabled={!!feedback}
+                    className={klass}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                          feedback && isCorrectOption
+                            ? 'bg-emerald-500 text-white'
+                            : feedback && isSelected && !isCorrectOption
+                              ? 'bg-red-500 text-white'
+                              : isSelected
+                                ? 'bg-gradient-brand text-white'
+                                : 'bg-zinc-700 text-zinc-400'
+                        }`}
+                      >
+                        {feedback && isCorrectOption ? (
+                          <CheckCircle className="w-3.5 h-3.5" />
+                        ) : feedback && isSelected && !isCorrectOption ? (
+                          <XCircle className="w-3.5 h-3.5" />
+                        ) : (
+                          letter
+                        )}
+                      </div>
+                      {/* Options already carry their "A) " prefix from the backend. */}
+                      <span className="flex-1">{option.replace(/^[A-D]\)\s*/, '')}</span>
+                    </div>
+                  </motion.button>
+                )
+              })}
+            </div>
+
+            <AnimatePresence>
+              {feedback && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  className="overflow-hidden"
+                >
+                  <div
+                    className={`rounded-xl p-4 mb-5 ${
+                      feedback.is_correct
+                        ? 'bg-emerald-500/10 border border-emerald-500/25'
+                        : 'bg-red-500/10 border border-red-500/25'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <motion.div
+                        initial={{ scale: 0.6, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 220, damping: 14 }}
+                        className="flex-shrink-0 mt-0.5"
+                      >
+                        {feedback.is_correct ? (
+                          <CheckCircle className="w-5 h-5 text-emerald-400" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-400" />
+                        )}
+                      </motion.div>
+                      <div className="min-w-0 flex-1">
+                        <h4
+                          className={`text-sm font-semibold mb-1 ${
+                            feedback.is_correct ? 'text-emerald-400' : 'text-red-400'
+                          }`}
+                        >
+                          {feedback.is_correct ? 'Correct!' : 'Not quite right'}
+                        </h4>
+                        <div
+                          className={`text-sm ${
+                            feedback.is_correct ? 'text-emerald-300/90' : 'text-red-300/90'
+                          }`}
+                        >
+                          <Markdown content={feedback.explanation} />
+                        </div>
+
+                        {/* Cited mistake explanation — grounded in the user's own pages. */}
+                        {!feedback.is_correct && feedback.mistake_explanation && (
+                          <div className="mt-3 rounded-lg bg-zinc-900/70 border border-zinc-700 p-3">
+                            <div className="text-xs font-semibold text-amber-400 mb-1 flex items-center gap-1.5">
+                              <Target className="w-3.5 h-3.5" />
+                              Why you missed this
+                            </div>
+                            <div className="text-sm text-zinc-300">
+                              <Markdown content={feedback.mistake_explanation} />
+                            </div>
+                            {feedback.mistake_source?.doc_name && (
+                              <div className="mt-2">
+                                <SourceTag source={feedback.mistake_source} label="From" />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {feedback.source?.doc_name && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <ConceptTag concept={feedback.concept} />
+                            <SourceTag source={feedback.source} label="Source" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div>
+              {!feedback ? (
+                <Button
+                  onClick={() => void submitAnswer()}
+                  disabled={!run.selectedLetter || submitting}
+                  loading={submitting}
+                  size="lg"
+                  leftIcon={<CheckCircle className="w-4 h-4" />}
+                  className="w-full"
+                >
+                  {submitting ? 'Checking…' : 'Submit Answer'}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => void nextQuestion()}
+                  disabled={submitting}
+                  loading={submitting}
+                  size="lg"
+                  rightIcon={
+                    isLast ? <Trophy className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />
+                  }
+                  className="w-full"
+                >
+                  {submitting ? 'Scoring…' : isLast ? 'See Your Results' : 'Next Question'}
+                </Button>
+              )}
+            </div>
+          </Card>
+        </motion.div>
+      </AnimatePresence>
     </div>
   )
 }
