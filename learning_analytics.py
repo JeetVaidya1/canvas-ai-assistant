@@ -297,18 +297,20 @@ class LearningAnalyticsEngine:
             dates.add(date)
         
         sorted_dates = sorted(dates, reverse=True)
-        
-        # Count consecutive days
+
+        # Count consecutive days ending today. A streak requires studying today;
+        # step the expected day back by exactly one each time (the previous
+        # version subtracted the running streak count, under-counting 3+ day runs).
         streak = 0
-        current_date = datetime.now().date()
-        
-        for date in sorted_dates:
-            if date == current_date or date == current_date - timedelta(days=streak):
+        expected = datetime.now().date()
+        for day in sorted_dates:
+            if day == expected:
                 streak += 1
-                current_date = date
+                expected = expected - timedelta(days=1)
             else:
+                # First gap (or a future-dated day) ends the streak.
                 break
-                
+
         return streak
     
     def calculate_avg_confidence(self, interactions: List[Dict]) -> float:

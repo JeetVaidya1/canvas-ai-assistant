@@ -56,6 +56,7 @@ ENGINES = [
     "feynman_engine",
     "exports",
     "auth",
+    "errors",
     "rate_limit",
     "usage_tracker",
     "deps",

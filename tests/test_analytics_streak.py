@@ -45,12 +45,23 @@ def test_gap_breaks_the_streak():
 
 @pytest.mark.unit
 @freeze_time("2026-06-23")
-@pytest.mark.xfail(
-    reason="BUG (flagged for Phase 4): streak subtracts the running count instead "
-    "of 1, so 3+ consecutive days under-counts. Locking in the observed value so a "
-    "future fix is a deliberate, visible change.",
-    strict=True,
-)
-def test_three_consecutive_days_should_be_three():
+def test_three_consecutive_days_is_three():
+    # Phase 4 fix: previously under-counted to 2 (subtracted the running streak
+    # instead of stepping back one day).
     rows = [_ts("2026-06-23"), _ts("2026-06-22"), _ts("2026-06-21")]
     assert _engine().calculate_study_streak(rows) == 3
+
+
+@pytest.mark.unit
+@freeze_time("2026-06-23")
+def test_longer_run_counts_all_consecutive_days():
+    rows = [_ts(f"2026-06-{d:02d}") for d in (23, 22, 21, 20, 19)]
+    assert _engine().calculate_study_streak(rows) == 5
+
+
+@pytest.mark.unit
+@freeze_time("2026-06-23")
+def test_no_study_today_means_no_current_streak():
+    # Studied yesterday + before, but not today -> streak is 0 (must include today).
+    rows = [_ts("2026-06-22"), _ts("2026-06-21")]
+    assert _engine().calculate_study_streak(rows) == 0
