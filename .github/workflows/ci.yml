@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # System libraries the runtime deps need to import:
+      #  - libgl1 / libglib2.0-0: opencv-python
+      #  - tesseract-ocr / poppler-utils: pytesseract + pdf2image
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 libglib2.0-0 tesseract-ocr poppler-utils
+
+      # CPU-only torch first so sentence-transformers doesn't pull the CUDA build.
+      - name: Install CPU torch
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      # conftest.py injects dummy SUPABASE_/ANTHROPIC_ env vars, so no secrets needed:
+      # the suite is hermetic (no network/DB).
+      - name: Run tests
+        run: pytest -q
