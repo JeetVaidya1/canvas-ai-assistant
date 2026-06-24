@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
 import { Card, PageHeader } from '@/components/ui/Card'
+import { Select } from '@/components/ui/Select'
 import {
   Play,
   CheckCircle,
@@ -243,10 +244,6 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
   const getCurrentProblem = () => session?.problems[session.currentProblemIndex]
   const getAnswerLabel = (i: number) => String.fromCharCode(65 + i)
 
-  const selectClass =
-    'w-full px-3 py-2.5 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 ' +
-    'focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 outline-none text-sm transition-colors'
-
   // ===== Setup screen =====
   if (!session) {
     return (
@@ -328,31 +325,33 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
             {/* Difficulty */}
             <div>
               <label className="block text-xs font-medium text-zinc-400 mb-1.5">Difficulty</label>
-              <select
+              <Select
                 value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as DifficultyLevel)}
-                className={selectClass}
-              >
-                <option value="adaptive">Adaptive</option>
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
+                onChange={(v) => setDifficulty(v as DifficultyLevel)}
+                ariaLabel="Difficulty"
+                options={[
+                  { value: 'adaptive', label: 'Adaptive', hint: 'Matches your mastery' },
+                  { value: 'easy', label: 'Easy' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'hard', label: 'Hard' },
+                ]}
+              />
             </div>
 
             {/* Problem count */}
             <div>
               <label className="block text-xs font-medium text-zinc-400 mb-1.5">Problems</label>
-              <select
-                value={problemCount}
-                onChange={(e) => setProblemCount(Number(e.target.value))}
-                className={selectClass}
-              >
-                <option value={3}>3</option>
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={15}>15</option>
-              </select>
+              <Select
+                value={String(problemCount)}
+                onChange={(v) => setProblemCount(Number(v))}
+                ariaLabel="Number of problems"
+                options={[
+                  { value: '3', label: '3 problems' },
+                  { value: '5', label: '5 problems' },
+                  { value: '10', label: '10 problems' },
+                  { value: '15', label: '15 problems' },
+                ]}
+              />
             </div>
           </div>
 
