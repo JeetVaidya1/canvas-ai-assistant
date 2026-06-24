@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
 import { Card, PageHeader } from '@/components/ui/Card'
@@ -92,6 +92,56 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
   const [hints, setHints] = useState<Record<string, SolveJSON>>({})
   const [solutions, setSolutions] = useState<Record<string, SolveJSON>>({})
 
+  // ---- Resume support -------------------------------------------------------
+  // An in-progress exam survives a refresh / closed tab: we persist the client
+  // view + a timestamp, and re-derive the remaining time from elapsed wall-clock
+  // on restore. The server still holds the authoritative saved answers.
+  const STORAGE_KEY = `vindexa_exam_active_${courseId}`
+  const timeRemainingRef = useRef(timeRemaining)
+  useEffect(() => { timeRemainingRef.current = timeRemaining }, [timeRemaining])
+
+  const clearPersistedExam = () => {
+    try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+  }
+
+  // Restore an in-progress exam on mount.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (!raw) return
+      const saved = JSON.parse(raw)
+      if (!saved?.session?.isActive) return
+      const elapsed = Math.floor((Date.now() - (saved.savedAt ?? Date.now())) / 1000)
+      const remaining = Math.max(0, (saved.timeRemaining ?? 0) - elapsed)
+      const revived: ExamSession = {
+        ...saved.session,
+        startTime: saved.session.startTime ? new Date(saved.session.startTime) : undefined,
+      }
+      setExamSession(revived)
+      setSessionId(saved.sessionId ?? null)
+      setTimeRemaining(remaining)
+      const cq = revived.questions?.[revived.currentQuestion]
+      setCurrentAnswer(cq ? (revived.userAnswers?.[cq.id] ?? '') : '')
+    } catch { /* ignore corrupt storage */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persist on meaningful state changes (answers / navigation / start / pause).
+  // Keyed on examSession (not the per-second tick) to avoid hammering storage;
+  // the clock is reconstructed from savedAt on restore.
+  useEffect(() => {
+    if (!examSession?.isActive || showResults) return
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        sessionId,
+        session: examSession,
+        timeRemaining: timeRemainingRef.current,
+        savedAt: Date.now(),
+      }))
+    } catch { /* storage full / disabled */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [examSession, sessionId, showResults])
+
   useEffect(() => {
     let interval: number | undefined
     if (examSession?.isActive && !examSession.isPaused && timeRemaining > 0) {
@@ -120,6 +170,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
 
   const generateExamFromPastPaper = async () => {
     if (!courseId) return
+    clearPersistedExam()  // starting a new exam abandons any prior in-progress one
     setLoading(true)
     try {
       const result = await generatePracticeExam({
@@ -244,6 +295,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
     await saveAnswer()
     const finalSession = { ...examSession, isActive: false, endTime: new Date() }
     setExamSession(finalSession)
+    clearPersistedExam()
 
     if (sessionId) {
       try {
@@ -255,6 +307,9 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
           totalPoints: results.total_points ?? finalSession.questions.reduce((a: number, q: ExamQuestion) => a + (q.points ?? 0), 0),
           earnedPoints: results.earned_points ?? 0,
           percentage: results.percentage ?? 0,
+          letterGrade: results.letter_grade ?? null,
+          topicPerformance: results.topic_performance ?? null,
+          timeEfficiency: results.time_efficiency ?? null,
           timeSpent: results.time_metrics?.time_used_minutes ?? (finalSession.timeLimit - Math.floor(timeRemaining / 60)),
           breakdown: results.question_results?.map((r: any) => ({
             question: r.question,
@@ -411,9 +466,17 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
         {/* Readiness / score — gradient emphasis */}
         <Card accent padding="lg" className="text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-3">Readiness score</p>
-          <div className="text-6xl font-bold tracking-tight text-gradient-brand mb-1">{examResults.percentage}%</div>
+          <div className="flex items-end justify-center gap-3 mb-1">
+            <div className="text-6xl font-bold tracking-tight text-gradient-brand">{examResults.percentage}%</div>
+            {examResults.letterGrade && (
+              <div className="text-2xl font-bold text-zinc-200 pb-2 px-3 py-1 rounded-lg bg-gradient-brand-soft border border-cyan-500/15">
+                {examResults.letterGrade}
+              </div>
+            )}
+          </div>
           <p className="text-sm text-zinc-500">
             {examResults.correctAnswers} of {examResults.totalQuestions} correct &middot; {examResults.earnedPoints}/{examResults.totalPoints} points
+            {typeof examResults.timeEfficiency === 'string' ? <> &middot; {examResults.timeEfficiency}</> : null}
           </p>
         </Card>
 
