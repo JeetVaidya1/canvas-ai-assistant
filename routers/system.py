@@ -1,9 +1,15 @@
 import logging
 import os
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import Response, StreamingResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, HTTPException, Depends
+from deps import (
+    CONVERSATIONAL_MODE,
+    ENHANCED_MODE,
+    analyze_course_content_diversity,
+    extract_topic_from_filename_debug,
+    practice_generator,
+    supabase,
+)
 
 logger = logging.getLogger(__name__)
 

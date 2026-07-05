@@ -11,21 +11,21 @@ a user may touch a course only if they own it or have joined it.
 from __future__ import annotations
 
 import logging
-import os
 import time
 from collections import OrderedDict
 from typing import Any, Dict, Optional
 
-from dotenv import load_dotenv
 from fastapi import Header, HTTPException
 from supabase import create_client
 
+from core.config import get_settings
+
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-_URL = os.getenv("SUPABASE_URL")
-_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
-_SERVICE_KEY = os.getenv("SUPABASE_KEY")
+_settings = get_settings()
+_URL = _settings.supabase_url or None
+_ANON_KEY = _settings.supabase_anon_key or None
+_SERVICE_KEY = _settings.supabase_key or None
 
 # Anon-key client is enough to validate a user token via GoTrue.
 _auth_client = create_client(_URL, _ANON_KEY) if (_URL and _ANON_KEY) else None

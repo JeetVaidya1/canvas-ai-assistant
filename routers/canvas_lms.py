@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Form, HTTPException
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
 import logging
 

@@ -1,6 +1,11 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import Response, StreamingResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, Form, Depends
+from auth import current_user_id
+from deps import (
+    get_intelligent_fallback_topics,
+    practice_generator,
+    validate_course_for_practice,
+)
+from rate_limit import ai_rate_limit
 
 router = APIRouter()
 

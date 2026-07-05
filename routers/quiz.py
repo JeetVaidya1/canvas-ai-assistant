@@ -1,6 +1,10 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import Response, StreamingResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, Form, HTTPException, Depends
+from datetime import datetime
+
+from auth import current_user_id
+from deps import supabase, validate_course_for_practice
+from quiz_assistant_engine import assist_with_quiz_question
+from rate_limit import ai_rate_limit
 
 import logging
 

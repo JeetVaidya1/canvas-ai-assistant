@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from auth import current_user_id
 
 import logging
 

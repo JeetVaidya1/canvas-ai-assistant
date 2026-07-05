@@ -1,8 +1,18 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import Response, StreamingResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
-
+import json
 import logging
+import os
+import shutil
+from datetime import datetime
+from typing import List
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+
+from auth import current_user_id, get_current_user, require_course_access
+from core import courses_store
+from core.courses_store import CourseStoreError
+from deps import ENHANCED_MODE, enhanced_delete_file, process_file_enhanced, supabase
+from ingest import delete_course, delete_file_from_course, process_file
+from storage import upload_file
 
 logger = logging.getLogger(__name__)
 
@@ -62,36 +72,19 @@ def health_check():
 @router.post("/create-course")
 def create_course(course_id: str = Form(...), title: str = Form(...),
                   user_id: str = Depends(current_user_id)):
-    # Check if course already exists in Supabase
+    # Supabase is the single source of truth for course records (the legacy
+    # local courses.json fallback is gone — it was lost on every redeploy).
     try:
-        existing = supabase.table("courses").select("*").eq("course_id", course_id).execute()
-        if existing.data:
+        if courses_store.course_exists(course_id):
             raise HTTPException(400, detail="Course already exists")
-    except Exception as e:
-        if "Course already exists" in str(e):
-            raise e
-        # If it's just a DB connection issue, continue with local storage
-        pass
+        courses_store.create_course(course_id, title, owner_id=user_id)
+    except CourseStoreError:
+        logger.exception("Course creation failed for %s", course_id)
+        raise HTTPException(500, detail="Failed to create course")
 
-    # Create local directories
+    # Local scratch directories for uploads / vector artifacts.
     os.makedirs(f"data/{course_id}", exist_ok=True)
     os.makedirs(f"vectorstores/{course_id}", exist_ok=True)
-
-    # Save to local JSON file (for backward compatibility)
-    courses = load_courses()
-    courses[course_id] = {"title": title, "files": []}
-    save_courses(courses)
-
-    # **NEW: Also save to Supabase**
-    try:
-        supabase.table("courses").insert({
-            "course_id": course_id,
-            "title": title,
-            "owner_id": user_id
-        }).execute()
-    except Exception as e:
-        # If Supabase fails, at least we have local storage
-        print(f"Warning: Failed to save to Supabase: {e}")
 
     return {"status": "ok", "message": f"Created course {title}"}
 
@@ -212,23 +205,15 @@ async def upload_files(
                     print(f"❌ All processing failed: {e2}")
                     chunks_preview.append({"chunk": f"Processing failed for {file.filename}: {e2}"})
 
-            # 6) Also save to local storage for backward compatibility
+            # 6) Keep a local scratch copy of the raw file. The file list itself
+            # lives in the Supabase `files` table (already written above); the
+            # legacy courses.json bookkeeping is gone.
             print("💿 Saving to local storage...")
             try:
-                courses = load_courses()
-                if course_id not in courses:
-                    courses[course_id] = {"title": "Unknown", "files": []}
-                
-                if file.filename not in courses[course_id]["files"]:
-                    courses[course_id]["files"].append(file.filename)
-                
-                # Save actual file locally
                 file_path = f"data/{course_id}/{file.filename}"
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 with open(file_path, "wb") as f:
                     f.write(content)
-                
-                save_courses(courses)
                 print("✅ Local storage successful")
             except Exception as e:
                 print(f"⚠️ Local storage warning: {e}")
@@ -268,25 +253,10 @@ async def upload_files(
 @router.get("/list-courses")
 def list_courses():
     try:
-        # Fetch from Supabase first
-        resp = supabase.table("courses").select("*").order("created_at", desc=True).execute()
-        courses_data = resp.data
-        
-        # Convert to the format expected by frontend
-        courses = [{"course_id": c["course_id"], "title": c["title"]} for c in courses_data]
-        return {"courses": courses}
-    
-    except Exception as e:
-        print(f"Supabase error: {e}")
-        # Fallback to local JSON file
-        courses_file = "courses.json"
-        if not os.path.exists(courses_file):
-            return {"courses": []}
-        
-        with open(courses_file, "r") as f:
-            courses = json.load(f)
-        
-        return {"courses": [{"course_id": cid, "title": data["title"]} for cid, data in courses.items()]}
+        return {"courses": courses_store.list_courses()}
+    except CourseStoreError:
+        logger.exception("Failed to list courses")
+        raise HTTPException(500, detail="Failed to list courses")
 
 
 @router.get("/list-files")
@@ -333,13 +303,7 @@ async def delete_file(course_id: str = Form(...), filename: str = Form(...), use
         except Exception as e:
             print(f"Vector store deletion failed: {e}")
             deleted = False
-        
-        # Clean up local files if they exist
-        courses = load_courses()
-        if course_id in courses and filename in courses[course_id]["files"]:
-            courses[course_id]["files"].remove(filename)
-            save_courses(courses)
-        
+
         return {"status": "ok", "message": f"Deleted {filename} from {course_id}"}
         
     except Exception as e:
@@ -366,27 +330,21 @@ async def delete_entire_course(course_id: str = Form(...), user=Depends(get_curr
         # Delete files metadata from database
         supabase.table("files").delete().eq("course_id", course_id).execute()
         
-        # Delete course from courses table
-        supabase.table("courses").delete().eq("course_id", course_id).execute()
-        
+        # Delete course record (files/embeddings cascade via FK)
+        courses_store.delete_course(course_id)
+
         # Delete from vector store
         success = delete_course(course_id)
-        
-        # Clean up local files
-        courses = load_courses()
-        if course_id in courses:
-            del courses[course_id]
-            save_courses(courses)
-            
-            # Clean up local directories
-            data_path = f"data/{course_id}"
-            if os.path.exists(data_path):
-                shutil.rmtree(data_path)
-                
-            vectorstore_path = f"vectorstores/{course_id}"
-            if os.path.exists(vectorstore_path):
-                shutil.rmtree(vectorstore_path)
-        
+
+        # Clean up local scratch directories
+        data_path = f"data/{course_id}"
+        if os.path.exists(data_path):
+            shutil.rmtree(data_path)
+
+        vectorstore_path = f"vectorstores/{course_id}"
+        if os.path.exists(vectorstore_path):
+            shutil.rmtree(vectorstore_path)
+
         return {"status": "ok", "message": f"Deleted course {course_id}"}
         
     except Exception as e:

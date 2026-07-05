@@ -1,6 +1,17 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import Response, StreamingResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, Form, HTTPException, Depends
+import json
+from datetime import datetime
+
+from auth import current_user_id
+from deps import (
+    CONVERSATIONAL_MODE,
+    ENHANCED_MODE,
+    conversational_ask_question,
+    enhanced_ask_question,
+    supabase,
+)
+from query_engine import ask_question
+from rate_limit import ai_rate_limit
 
 import logging
 

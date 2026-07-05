@@ -1,7 +1,7 @@
 import logging
 
-from fastapi import APIRouter, Depends
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, Depends, HTTPException
+from deps import supabase
 
 from auth import get_current_user
 

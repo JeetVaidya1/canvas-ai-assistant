@@ -1,46 +1,62 @@
-# deps.py — shared app state, engines, and helper functions.
-# Auto-extracted from the original main.py.
+"""deps.py — composition root for shared engine singletons and cross-router helpers.
 
+Extracted from the original main.py. Routers import exactly what they use
+(``from deps import supabase, ENHANCED_MODE``); the public surface is
+documented in ``__all__`` below. Engine internals are intentionally left
+untouched — this module only owns their singletons and a handful of helpers
+shared by more than one router.
+
+Course records live in Supabase (core/courses_store.py). The legacy local
+``courses.json`` store is gone: it was per-instance mutable state, lost on
+every redeploy and wrong with more than one instance.
+"""
 import logging
+import re
+from typing import Any, Dict, List
 
-from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.middleware.cors import CORSMiddleware
-from typing import List
-from query_engine import ask_question
-import os
-import json
-import shutil
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from storage import upload_file
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Query
-from supabase import create_client
-from datetime import datetime
-from dotenv import load_dotenv
-from ingest import process_file
-from quiz_assistant_engine import assist_with_quiz_question
-from notes_engine import generate_notes_from_files, save_notes_to_db, get_notes_from_db, delete_note_from_db
-from learning_analytics import LearningAnalyticsEngine
-from practice_generator import PracticeGenerator
-from typing import Dict, List, Any, Optional
-import asyncio
-from fastapi import Form, UploadFile, File
 from fastapi import HTTPException
+from supabase import create_client
+
+from core.config import get_settings
 from exam_generator import ExamGenerator
 from exam_session_manager import ExamSessionManager
-from typing import Optional
-from ingest import delete_file_from_course, delete_course
-from fastapi.responses import Response
-from fastapi import Depends
-import exports
-from auth import get_current_user, current_user_id, require_course_access
-from rate_limit import ai_rate_limit  # re-exported so routers can rate-limit AI endpoints
+from learning_analytics import LearningAnalyticsEngine
+from practice_generator import PracticeGenerator
 
 logger = logging.getLogger(__name__)
+
+__all__ = [
+    # shared engine singletons
+    "analytics_engine",
+    "practice_generator",
+    "exam_generator",
+    "exam_session_manager",
+    # optional-capability flags and their implementations (None when unavailable)
+    "ENHANCED_MODE",
+    "CONVERSATIONAL_MODE",
+    "process_file_enhanced",
+    "enhanced_delete_file",
+    "enhanced_ask_question",
+    "conversational_ask_question",
+    # shared Supabase client (service role)
+    "supabase",
+    # cross-router helpers
+    "validate_course_for_practice",
+    "get_intelligent_fallback_topics",
+    "generate_subject_fallback_topics",
+    "analyze_course_content_diversity",
+    "extract_topic_from_filename_debug",
+    "download_file",
+    "calculate_exam_analytics",
+]
 
 
 # ---- shared state ----
 analytics_engine = LearningAnalyticsEngine()
 practice_generator = PracticeGenerator()
+exam_generator = ExamGenerator()
+exam_session_manager = ExamSessionManager()
+
 try:
     from enhanced_ingest import process_file_enhanced, delete_file_from_course as enhanced_delete_file
     from enhanced_query_engine import enhanced_ask_question
@@ -49,6 +65,10 @@ try:
 except ImportError as e:
     logger.warning("Enhanced system not available: %s", e)
     ENHANCED_MODE = False
+    process_file_enhanced = None
+    enhanced_delete_file = None
+    enhanced_ask_question = None
+
 try:
     from conversational_rag_engine import conversational_ask_question
     CONVERSATIONAL_MODE = True
@@ -56,27 +76,13 @@ try:
 except ImportError as e:
     logger.warning("Conversational RAG not available: %s", e)
     CONVERSATIONAL_MODE = False
-load_dotenv()
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-COURSE_DB_PATH = "courses.json"
-if not os.path.exists(COURSE_DB_PATH):
-    with open(COURSE_DB_PATH, "w") as f:
-        json.dump({}, f)
-exam_generator = ExamGenerator()
-exam_session_manager = ExamSessionManager()
+    conversational_ask_question = None
+
+_settings = get_settings()
+supabase = create_client(_settings.supabase_url, _settings.supabase_key)
 
 
 # ---- helpers ----
-def load_courses():
-    with open(COURSE_DB_PATH) as f:
-        return json.load(f)
-
-def save_courses(courses):
-    with open(COURSE_DB_PATH, "w") as f:
-        json.dump(courses, f, indent=2)
-
 async def validate_course_for_practice(course_id: str) -> dict:
     """Validate that a course exists and has content for practice generation"""
     try:

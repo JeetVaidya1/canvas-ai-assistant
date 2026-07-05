@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Form, HTTPException
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, Depends, Form, HTTPException
+from auth import current_user_id
+from rate_limit import ai_rate_limit
 
 import logging
 

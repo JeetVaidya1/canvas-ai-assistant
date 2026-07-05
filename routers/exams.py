@@ -1,6 +1,18 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import Response, StreamingResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+import json
+from datetime import datetime
+from typing import Optional
+
+from auth import current_user_id
+from deps import (
+    calculate_exam_analytics,
+    download_file,
+    exam_generator,
+    exam_session_manager,
+    supabase,
+)
+from rate_limit import ai_rate_limit
+from storage import upload_file
 
 import logging
 

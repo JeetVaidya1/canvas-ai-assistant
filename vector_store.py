@@ -1,15 +1,15 @@
 import logging
-import os
 from typing import List, Dict, Any, Optional, Iterable
-from dotenv import load_dotenv
+
 from supabase import create_client
+
+from core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# Load Supabase credentials
-load_dotenv()
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+_settings = get_settings()
+SUPABASE_URL = _settings.supabase_url
+SUPABASE_KEY = _settings.supabase_key
 
 db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
