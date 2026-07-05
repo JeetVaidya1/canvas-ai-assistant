@@ -12,9 +12,9 @@ export function readinessOptions(courseId: string, userId: string) {
   })
 }
 
-export function useReadiness(courseId: string | undefined, userId: string) {
+export function useReadiness(courseId: string | undefined, userId: string, opts?: { enabled?: boolean }) {
   return useQuery({
     ...readinessOptions(courseId ?? '', userId),
-    enabled: !!courseId && !!userId,
+    enabled: !!courseId && !!userId && (opts?.enabled ?? true),
   })
 }
