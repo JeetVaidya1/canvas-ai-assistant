@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   CheckCircle,
@@ -30,8 +30,9 @@ import {
   type QuizResult,
   type QuizSource,
 } from '../lib/api'
-import { apiFetch } from '../lib/api/client'
 import { showError } from '../lib/toast'
+import { usePracticeTopics } from '@/hooks/useTopics'
+import { useInvalidateProgress } from '@/hooks/useInvalidateProgress'
 
 interface QuizModeProps {
   courseId: string
@@ -98,9 +99,26 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [timeElapsed, setTimeElapsed] = useState(0)
-  const [availableTopics, setAvailableTopics] = useState<string[]>([])
-  const [topicsLoading, setTopicsLoading] = useState(false)
-  const [topicsError, setTopicsError] = useState<string | null>(null)
+
+  // "Whole course" is always available and the default — specific topics just
+  // let the user narrow the focus. The shared hook attaches the auth token.
+  const topicsQuery = usePracticeTopics(courseId)
+  const invalidateProgress = useInvalidateProgress(courseId)
+
+  const availableTopics = useMemo(
+    () => [WHOLE_COURSE, ...(topicsQuery.data?.topics?.filter(Boolean) ?? [])],
+    [topicsQuery.data],
+  )
+  // isFetching (not isPending) so the Refresh action also shows as loading.
+  const topicsLoading = !!courseId && topicsQuery.isFetching
+  const topicsError = topicsQuery.isError
+    ? 'Could not load specific topics — you can still quiz the whole course.'
+    : topicsQuery.data?.error ?? null
+
+  // Keep the selected topic valid as the list loads/refreshes.
+  useEffect(() => {
+    if (!availableTopics.includes(selectedTopic)) setSelectedTopic(WHOLE_COURSE)
+  }, [availableTopics, selectedTopic])
 
   // Whole-quiz timer (for the summary screen).
   useEffect(() => {
@@ -112,38 +130,6 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
       if (interval) window.clearInterval(interval)
     }
   }, [run, result])
-
-  useEffect(() => {
-    void loadTopics()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseId])
-
-  const loadTopics = async () => {
-    // "Whole course" is always available and the default — specific topics just
-    // let the user narrow the focus. Routed through apiFetch so the auth token
-    // is attached (the endpoint is auth-scoped).
-    if (!courseId) {
-      setAvailableTopics([WHOLE_COURSE])
-      setSelectedTopic(WHOLE_COURSE)
-      return
-    }
-    setTopicsLoading(true)
-    setTopicsError(null)
-    try {
-      const data = (await apiFetch(`/practice-topics/${encodeURIComponent(courseId)}`)) as {
-        topics?: string[]
-        error?: string
-      }
-      const topics = data.topics?.filter(Boolean) ?? []
-      setAvailableTopics([WHOLE_COURSE, ...topics])
-      if (data.error) setTopicsError(data.error)
-    } catch {
-      setAvailableTopics([WHOLE_COURSE])
-      setTopicsError('Could not load specific topics — you can still quiz the whole course.')
-    } finally {
-      setTopicsLoading(false)
-    }
-  }
 
   const startQuiz = async () => {
     if (!courseId) return
@@ -222,6 +208,8 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
     try {
       const finalResult = await submitQuiz(run.quizId, userId)
       setResult(finalResult)
+      // Scoring the quiz changed mastery server-side — refresh progress views.
+      invalidateProgress()
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to score quiz'
       showError(msg)
@@ -327,7 +315,7 @@ export default function QuizMode({ courseId, userId, onModeChange }: QuizModePro
             <div className="mb-2.5 flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Topic</span>
               <button
-                onClick={() => void loadTopics()}
+                onClick={() => void topicsQuery.refetch()}
                 disabled={topicsLoading}
                 className="inline-flex items-center gap-1 text-xs text-cyan-300 transition-colors hover:text-cyan-200 disabled:opacity-50"
                 aria-label="Refresh topics"

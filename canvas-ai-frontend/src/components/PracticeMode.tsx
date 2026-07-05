@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
@@ -29,6 +29,8 @@ import {
   type PracticeProblem
 } from '../lib/api'
 import { showError } from '../lib/toast'
+import { usePracticeTopics } from '@/hooks/useTopics'
+import { useInvalidateProgress } from '@/hooks/useInvalidateProgress'
 
 interface PracticeSession {
   problems: PracticeProblem[]
@@ -43,15 +45,6 @@ interface PracticeModeProps {
   courseId: string
   userId: string
   onModeChange?: (mode: 'chat' | 'quiz' | 'notes' | 'practice' | 'analytics') => void
-}
-
-interface TopicsResponse {
-  topics?: string[]
-  error?: string
-  status?: string
-  course_files_count?: number
-  extraction_method?: string
-  fallback?: boolean
 }
 
 type DifficultyLevel = 'adaptive' | 'easy' | 'medium' | 'hard'
@@ -102,9 +95,30 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
   const [selectedAnswer, setSelectedAnswer] = useState('')
   const [showExplanation, setShowExplanation] = useState(false)
   const [timeElapsed, setTimeElapsed] = useState(0)
-  const [availableTopics, setAvailableTopics] = useState<string[]>([])
-  const [topicsLoading, setTopicsLoading] = useState(false)
-  const [topicsError, setTopicsError] = useState<string | null>(null)
+
+  const topicsQuery = usePracticeTopics(courseId)
+  const invalidateProgress = useInvalidateProgress(courseId)
+
+  const availableTopics = useMemo(() => {
+    if (!courseId) return ['General Topics']
+    const topics = topicsQuery.data?.topics
+    return topics && topics.length > 0 ? topics : ['Course Content', 'General Review']
+  }, [courseId, topicsQuery.data])
+
+  // isFetching (not isPending) so the Refresh action also shows as loading.
+  const topicsLoading = !!courseId && topicsQuery.isFetching
+  const topicsError = !courseId
+    ? 'Please select a course first'
+    : topicsQuery.isError
+      ? 'Failed to load topics. Please try again.'
+      : topicsQuery.data?.error ?? null
+
+  // Keep the selected topic valid as the list loads/refreshes.
+  useEffect(() => {
+    setSelectedTopic((prev) =>
+      prev && availableTopics.includes(prev) ? prev : availableTopics[0] ?? '',
+    )
+  }, [availableTopics])
 
   useEffect(() => {
     let interval: number | undefined
@@ -115,56 +129,6 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
       if (interval) window.clearInterval(interval)
     }
   }, [session])
-
-  useEffect(() => {
-    loadTopics()
-  }, [courseId])
-
-  const getPracticeTopics = async (cId: string): Promise<TopicsResponse> => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'}/practice-topics/${cId}`)
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      const data = await response.json()
-      return data as TopicsResponse
-    } catch (error) {
-      console.error('Failed to fetch practice topics:', error)
-      throw error
-    }
-  }
-
-  const loadTopics = async () => {
-    if (!courseId) {
-      setAvailableTopics(['General Topics'])
-      setSelectedTopic('General Topics')
-      setTopicsError('Please select a course first')
-      return
-    }
-
-    setTopicsLoading(true)
-    setTopicsError(null)
-
-    try {
-      const response: TopicsResponse = await getPracticeTopics(courseId)
-
-      if (response.topics && Array.isArray(response.topics)) {
-        setAvailableTopics(response.topics)
-        setSelectedTopic(response.topics[0] || 'Course Content')
-        if (response.error) setTopicsError(response.error)
-      } else {
-        setAvailableTopics(['Course Content', 'General Review'])
-        setSelectedTopic('Course Content')
-        setTopicsError(response.error || 'No topics found in response')
-      }
-    } catch {
-      setAvailableTopics(['Course Content', 'General Review'])
-      setSelectedTopic('Course Content')
-      setTopicsError('Failed to load topics. Please try again.')
-    } finally {
-      setTopicsLoading(false)
-    }
-  }
 
   const startPracticeSession = async () => {
     if (!courseId || !selectedTopic) return
@@ -228,6 +192,8 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
         Math.max(1, Math.round(timeElapsed / 60)),
         difficulty
       )
+      // The session changed mastery server-side — refresh progress views.
+      invalidateProgress()
     } catch (e) {
       console.warn('Practice tracking failed (non-blocking):', e)
     }
@@ -330,7 +296,7 @@ export default function PracticeMode({ courseId, userId, onModeChange }: Practic
             <div className="mb-2.5 flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Topic</span>
               <button
-                onClick={() => loadTopics()}
+                onClick={() => void topicsQuery.refetch()}
                 disabled={topicsLoading}
                 className="inline-flex items-center gap-1 text-xs text-cyan-300 transition-colors hover:text-cyan-200 disabled:opacity-50"
                 aria-label="Reload topics"

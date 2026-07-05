@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Shuffle, RotateCcw, Download, Save, Brain, CheckCircle } from 'lucide-react'
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import {
-  saveFlashcards,
-  getFlashcardDeck,
-  reviewFlashcard,
   exportFlashcardsAnki,
   type DeckCard,
 } from '@/lib/api'
+import { flashcardDeckOptions, useSaveFlashcards, useReviewFlashcard } from '@/hooks/useFlashcards'
 import { showError, showSuccess } from '@/lib/toast'
 
 export type Flashcard = { q: string; a: string }
+
+type StudyMode = 'all' | 'hide-answers' | 'typing' | 'sr'
 
 type GradeVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
@@ -47,11 +48,17 @@ export default function Flashcards({
 }: { cards: Flashcard[]; title?: string; courseId?: string; userId?: string }) {
   const [order, setOrder] = useState<number[]>(() => cards.map((_, i) => i))
   const [showBack, setShowBack] = useState<Record<number, boolean>>({})
-  const [studyMode, setStudyMode] = useState<'all'|'hide-answers'|'typing'|'sr'>('all')
+  const [studyMode, setStudyMode] = useState<StudyMode>('all')
   const [typingAnswers, setTypingAnswers] = useState<Record<number,string>>({})
 
   // Spaced-repetition review state (only used when courseId is provided).
-  const [saving, setSaving] = useState(false)
+  // The deck is loaded through the query cache but reviewed off a local
+  // snapshot so grading (which invalidates the cache) can't reshuffle cards
+  // mid-session.
+  const qc = useQueryClient()
+  const saveCardsMutation = useSaveFlashcards(courseId ?? '')
+  const reviewCardMutation = useReviewFlashcard(courseId, userId)
+  const saving = saveCardsMutation.isPending
   const [deck, setDeck] = useState<DeckCard[] | null>(null)
   const [deckLoading, setDeckLoading] = useState(false)
   const [srIndex, setSrIndex] = useState(0)
@@ -59,14 +66,11 @@ export default function Flashcards({
 
   const handleSaveToDeck = async () => {
     if (!courseId) return
-    setSaving(true)
     try {
-      const res = await saveFlashcards(courseId, cards)
+      const res = await saveCardsMutation.mutateAsync(cards)
       showSuccess(`Saved ${res.saved} card${res.saved === 1 ? '' : 's'} to your deck${res.skipped ? ` (${res.skipped} already there)` : ''}`)
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to save cards')
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -74,7 +78,8 @@ export default function Flashcards({
     if (!courseId) return
     setDeckLoading(true)
     try {
-      const d = await getFlashcardDeck(courseId, userId)
+      // staleTime 0: entering review must always see the freshest due list.
+      const d = await qc.fetchQuery({ ...flashcardDeckOptions(courseId, userId), staleTime: 0 })
       // Due cards first (backend already sorts); review only the due ones.
       setDeck(d.cards.filter((c) => c.due))
       setSrIndex(0)
@@ -91,7 +96,7 @@ export default function Flashcards({
     if (!deck || !deck[srIndex]) return
     const card = deck[srIndex]
     try {
-      await reviewFlashcard(card.id, grade, userId)
+      await reviewCardMutation.mutateAsync({ cardId: card.id, grade })
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to record review')
     }
@@ -149,7 +154,7 @@ export default function Flashcards({
         <div className="flex items-center gap-2 flex-wrap">
           <select
             value={studyMode}
-            onChange={e => { setStudyMode(e.target.value as any); setShowBack({}); setTypingAnswers({}) }}
+            onChange={e => { setStudyMode(e.target.value as StudyMode); setShowBack({}); setTypingAnswers({}) }}
             className="bg-white/[0.04] border border-white/10 text-zinc-100 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25 transition-colors"
             title="Study mode"
           >

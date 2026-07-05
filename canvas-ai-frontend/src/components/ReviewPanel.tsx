@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Brain, CheckCircle, Zap } from 'lucide-react'
 import { Markdown } from '@/components/ui/Markdown'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { getReviewQueue, gradeReview, type ReviewItem } from '@/lib/api'
+import ErrorInline from './shared/ErrorInline'
+import { type ReviewItem } from '@/lib/api'
+import { useReviewQueue, useGradeReview } from '@/hooks/useReviews'
 import { showError } from '@/lib/toast'
 
 const GRADES: { label: string; grade: number; tone: string }[] = [
@@ -19,35 +21,35 @@ interface ReviewPanelProps {
 }
 
 export default function ReviewPanel({ courseId, userId }: ReviewPanelProps) {
-  const [items, setItems] = useState<ReviewItem[] | null>(null)
-  const [active, setActive] = useState(false)
+  const queueQuery = useReviewQueue(courseId, userId)
+  const gradeMutation = useGradeReview(courseId, userId)
+
+  // Active review sessions run off a local snapshot so background refetches
+  // (grading invalidates the queue) never reshuffle the cards mid-session.
+  const [sessionItems, setSessionItems] = useState<ReviewItem[] | null>(null)
   const [index, setIndex] = useState(0)
   const [revealed, setRevealed] = useState(false)
 
-  const load = async () => {
-    try {
-      const q = await getReviewQueue(courseId, userId)
-      setItems(q.items.filter((i) => i.due))
-    } catch {
-      setItems([])
-    }
-  }
-
-  useEffect(() => {
-    void load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseId, userId])
+  const dueItems = useMemo(
+    () => (queueQuery.data?.items ?? []).filter((i) => i.due),
+    [queueQuery.data],
+  )
 
   const start = () => {
-    setActive(true)
+    setSessionItems(dueItems)
     setIndex(0)
     setRevealed(false)
   }
 
+  const finish = () => {
+    setSessionItems(null)
+    void queueQuery.refetch()
+  }
+
   const grade = async (g: number) => {
-    if (!items || !items[index]) return
+    if (!sessionItems || !sessionItems[index]) return
     try {
-      await gradeReview(items[index].id, g, userId)
+      await gradeMutation.mutateAsync({ itemId: sessionItems[index].id, grade: g })
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to record review')
     }
@@ -55,12 +57,20 @@ export default function ReviewPanel({ courseId, userId }: ReviewPanelProps) {
     setIndex((i) => i + 1)
   }
 
-  if (!items || items.length === 0) return null // nothing due — stay out of the way
+  // ── Collapsed states (no active session) ─────────────────────────────
+  if (!sessionItems) {
+    if (queueQuery.isError) {
+      return (
+        <ErrorInline
+          message="Couldn't load your review queue."
+          onRetry={() => void queueQuery.refetch()}
+        />
+      )
+    }
+    if (queueQuery.isPending) return null // stays out of the way while loading
+    if (dueItems.length === 0) return null // nothing due — stay out of the way
 
-  const dueCount = items.length
-
-  // Collapsed prompt
-  if (!active) {
+    const dueCount = dueItems.length
     return (
       <Card accent padding="md" className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -81,27 +91,27 @@ export default function ReviewPanel({ courseId, userId }: ReviewPanelProps) {
     )
   }
 
-  // Finished
-  if (index >= items.length) {
+  // ── Finished ──────────────────────────────────────────────────────────
+  if (index >= sessionItems.length) {
     return (
       <Card padding="lg" className="text-center">
         <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="w-7 h-7 text-emerald-400" />
         </div>
         <p className="text-emerald-400 font-semibold">Review cleared</p>
-        <p className="text-zinc-500 text-sm mb-5">You worked through {items.length} item{items.length === 1 ? '' : 's'}.</p>
-        <Button variant="secondary" onClick={() => { setActive(false); void load() }}>
+        <p className="text-zinc-500 text-sm mb-5">You worked through {sessionItems.length} item{sessionItems.length === 1 ? '' : 's'}.</p>
+        <Button variant="secondary" onClick={finish}>
           Done
         </Button>
       </Card>
     )
   }
 
-  const item = items[index]
+  const item = sessionItems[index]
   return (
     <Card padding="lg">
       <div className="flex items-center justify-between mb-4 text-xs">
-        <span className="font-medium text-zinc-500">Review {index + 1} of {items.length}</span>
+        <span className="font-medium text-zinc-500">Review {index + 1} of {sessionItems.length}</span>
         <span className="text-cyan-300 font-medium bg-gradient-brand-soft border border-cyan-400/15 rounded-full px-2.5 py-0.5">{item.concept}</span>
       </div>
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">

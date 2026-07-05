@@ -42,11 +42,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context provider + hook in one module is the idiomatic pattern; HMR granularity is not worth splitting the auth API across files
 export function useAuth(): AuthState {
   return useContext(AuthContext)
 }
 
 /** Current access token for backend Authorization headers (null if signed out). */
+// eslint-disable-next-line react-refresh/only-export-components -- see useAuth note above
 export async function getAccessToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
   return data.session?.access_token ?? null

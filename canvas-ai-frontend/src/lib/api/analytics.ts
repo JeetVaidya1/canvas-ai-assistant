@@ -52,6 +52,8 @@ export interface LearningAnalytics {
   study_time_trend: Array<{
     date: string
     questions: number
+    duration_minutes?: number
+    avg_confidence?: number
   }>
 }
 

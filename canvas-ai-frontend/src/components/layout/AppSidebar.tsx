@@ -15,6 +15,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import { useCourses } from '@/hooks/useCourses'
+import { usePrefetch } from '@/hooks/usePrefetch'
 import { useAuth } from '@/lib/auth'
 
 interface SubNavItem {
@@ -43,6 +44,17 @@ export default function AppSidebar() {
   const location = useLocation()
   const { data: courses } = useCourses()
   const { signOut } = useAuth()
+  const { prefetchCourse, prefetchLearn, prefetchPractice, prefetchStudyKit, prefetchProgress } =
+    usePrefetch()
+
+  // Warm the destination's primary data while the cursor hovers a nav link.
+  const prefetchSubNav = (targetCourseId: string, path: string) => {
+    if (path === '') prefetchCourse(targetCourseId)
+    else if (path === '/learn') prefetchLearn()
+    else if (path === '/practice') prefetchPractice(targetCourseId)
+    else if (path === '/kit') prefetchStudyKit(targetCourseId)
+    else if (path === '/progress') prefetchProgress(targetCourseId)
+  }
 
   return (
     <aside
@@ -73,6 +85,7 @@ export default function AppSidebar() {
                 <NavLink
                   to={`/course/${course.course_id}`}
                   end
+                  onMouseEnter={() => prefetchCourse(course.course_id)}
                   className={({ isActive }) =>
                     `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                       isActive || isActiveCourse
@@ -100,6 +113,7 @@ export default function AppSidebar() {
                           key={item.label}
                           to={fullPath}
                           end={item.path === ''}
+                          onMouseEnter={() => prefetchSubNav(course.course_id, item.path)}
                           className={`relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] font-medium transition-all ${
                             isItemActive
                               ? 'text-cyan-100 bg-cyan-500/10'

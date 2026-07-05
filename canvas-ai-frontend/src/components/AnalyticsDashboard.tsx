@@ -1,5 +1,5 @@
 // src/components/AnalyticsDashboard.tsx
-import { useState, useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { motion } from 'motion/react'
 import {
   LineChart,
@@ -25,36 +25,19 @@ import {
 } from 'lucide-react'
 import { BrandMark } from '@/components/ui/BrandMark'
 import {
-  getReadiness,
-  getConceptGraph,
-  getLearningAnalytics,
   type Readiness,
   type ConceptGraph,
+  type LearningAnalytics,
 } from '@/lib/api'
+import { useLearningAnalytics, useConceptGraph } from '@/hooks/useAnalytics'
+import { useReadiness } from '@/hooks/useReadiness'
 import { Card, PageHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import CountUp from '@/components/ui/CountUp'
 import ReviewPanel from './ReviewPanel'
+import ErrorInline from './shared/ErrorInline'
 
-interface AnalyticsData {
-  topics_progress: Array<{
-    topic: string
-    mastery_level: number
-    review_count: number
-    last_reviewed: string
-  }>
-  study_streak: number
-  weak_areas: string[]
-  study_recommendations: string[]
-  total_questions: number
-  avg_confidence: number
-  study_time_trend: Array<{
-    date: string
-    questions: number
-    duration_minutes?: number
-    avg_confidence?: number
-  }>
-}
+type AnalyticsData = LearningAnalytics
 
 // rose · amber · indigo · emerald — semantic mastery ramp on the dark canvas
 const MASTERY_COLORS = ['#fb7185', '#fbbf24', '#818cf8', '#34d399']
@@ -572,40 +555,21 @@ function TrendTile({
 }
 
 export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashboardProps) {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
-  const [readiness, setReadiness] = useState<Readiness | null>(null)
-  const [graph, setGraph] = useState<ConceptGraph | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Analytics + readiness gate the page; the concept graph loads separately
+  // (its first call builds the graph server-side and is slow — non-blocking).
+  const analyticsQuery = useLearningAnalytics(courseId, userId)
+  const readinessQuery = useReadiness(courseId, userId)
+  const graphQuery = useConceptGraph(courseId, userId)
 
-  useEffect(() => {
-    loadAnalytics()
-  }, [courseId, userId])
+  const analytics = analyticsQuery.data ?? null
+  const readiness = readinessQuery.data ?? null
+  const graph = graphQuery.data ?? null
+  const loading = analyticsQuery.isPending || readinessQuery.isPending
 
-  // Concept-graph loads separately (first call builds the graph; slow).
-  useEffect(() => {
-    if (!courseId) return
-    let cancelled = false
-    getConceptGraph(courseId, userId)
-      .then((g) => { if (!cancelled) setGraph(g) })
-      .catch(() => { /* non-blocking */ })
-    return () => { cancelled = true }
-  }, [courseId, userId])
-
-  const loadAnalytics = async () => {
-    try {
-      // Use the authed wrapper (was a token-less raw fetch → wrong-user/401 data
-      // now that the endpoint derives identity from the bearer token).
-      const [a, r] = await Promise.all([
-        getLearningAnalytics(courseId, userId).catch(() => null),
-        getReadiness(courseId, userId).catch(() => null),
-      ])
-      setAnalytics(a)
-      setReadiness(r)
-    } catch (error) {
-      console.error('Failed to load analytics:', error)
-    } finally {
-      setLoading(false)
-    }
+  const refreshAll = () => {
+    void analyticsQuery.refetch()
+    void readinessQuery.refetch()
+    void graphQuery.refetch()
   }
 
   if (loading) {
@@ -619,6 +583,17 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
             ))}
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (analyticsQuery.isError) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <ErrorInline
+          message="Couldn't load your analytics."
+          onRetry={refreshAll}
+        />
       </div>
     )
   }
@@ -652,14 +627,21 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
         title="Learning Analytics"
         subtitle="Track your progress and identify areas for improvement"
         actions={
-          <Button variant="secondary" onClick={loadAnalytics} leftIcon={<TrendingUp className="w-4 h-4" />}>
+          <Button variant="secondary" onClick={refreshAll} leftIcon={<TrendingUp className="w-4 h-4" />}>
             Refresh
           </Button>
         }
       />
 
       {/* ── HERO: exam readiness, full-width ─────────────────────────── */}
-      {readiness && <ReadinessHero readiness={readiness} />}
+      {readinessQuery.isError ? (
+        <ErrorInline
+          message="Couldn't load your exam readiness."
+          onRetry={() => void readinessQuery.refetch()}
+        />
+      ) : (
+        readiness && <ReadinessHero readiness={readiness} />
+      )}
 
       {/* ── Stat strip ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -702,7 +684,21 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
       <ReviewPanel courseId={courseId} userId={userId} />
 
       {/* ── Concept prerequisite graph — wide, prominent differentiator ─ */}
-      <ConceptGraphTile graph={graph} />
+      {graphQuery.isError ? (
+        <Card padding="lg">
+          <SectionHead
+            icon={Network}
+            title="Concept map"
+            hint="How concepts build on each other — fix the upstream gaps first"
+          />
+          <ErrorInline
+            message="Couldn't load your concept map."
+            onRetry={() => void graphQuery.refetch()}
+          />
+        </Card>
+      ) : (
+        <ConceptGraphTile graph={graph} />
+      )}
 
       {/* ── BENTO: Topic mastery (tall) + Focus rail (weak / recs) ────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">

@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   ArrowUp,
@@ -24,11 +25,11 @@ import { useUser } from '@/hooks/useUser'
 import { useCourses } from '@/hooks/useCourses'
 import { useCourseFiles } from '@/hooks/useCourseFiles'
 import { trackVisit } from '@/hooks/useRecentActivity'
+import { useSessions, useSessionMessages, useDeleteSession } from '@/hooks/useChatSessions'
+import ErrorInline from '@/components/shared/ErrorInline'
+import { showError } from '@/lib/toast'
 import {
   askQuestionStream,
-  getChatSessions,
-  getSessionMessages,
-  deleteSession,
   type ChatSession,
   type Message,
   type Source,
@@ -130,7 +131,10 @@ export default function ChatPage() {
 
   const course = courses?.find((c) => c.course_id === courseId)
 
-  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const qc = useQueryClient()
+  const sessionsQuery = useSessions(userId)
+  const sessions = sessionsQuery.data ?? []
+
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [question, setQuestion] = useState('')
@@ -139,40 +143,21 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // Tracks an in-flight SSE stream so cached history never clobbers it.
+  const streamingRef = useRef(false)
 
-  const loadSessions = useCallback(async () => {
-    try {
-      const data = await getChatSessions(userId)
-      setSessions(data || [])
-    } catch (e) {
-      console.error('Failed to load sessions:', e)
-    }
-  }, [userId])
+  const messagesQuery = useSessionMessages(activeSession?.id)
+  const deleteSessionMutation = useDeleteSession(userId)
 
   useEffect(() => {
     if (courseId) trackVisit(courseId, 'chat')
   }, [courseId])
 
+  // Sync cached/fetched history into the local, streaming-aware message list.
   useEffect(() => {
-    loadSessions()
-  }, [loadSessions])
-
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      if (!activeSession) return
-      try {
-        const data = await getSessionMessages(activeSession.id)
-        if (!cancelled) setMessages(data || [])
-      } catch (e) {
-        console.error('Failed to load messages:', e)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [activeSession])
+    if (!activeSession || streamingRef.current) return
+    if (messagesQuery.data) setMessages(messagesQuery.data)
+  }, [activeSession, messagesQuery.data])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -193,6 +178,7 @@ export default function ChatPage() {
 
     setQuestion('')
     setIsTyping(true)
+    streamingRef.current = true
 
     const userMessage: Message = {
       id: `local-${Date.now()}`,
@@ -201,13 +187,17 @@ export default function ChatPage() {
       content: trimmed,
       timestamp: new Date().toISOString(),
     }
-    setMessages((prev) => [...prev, userMessage])
+    // `messages` is current for this render — the base of the new exchange.
+    const baseMessages = [...messages, userMessage]
+    setMessages(baseMessages)
 
     try {
       const assistantId = `assistant-${Date.now()}`
       let started = false
       let newSessionId = activeSession?.id
       let pendingSources: Source[] = []
+      let assistantContent = ''
+      let assistantTimestamp = ''
 
       await askQuestionStream(trimmed, courseId, activeSession?.id, userId, {
         onSession: (id) => {
@@ -217,8 +207,10 @@ export default function ChatPage() {
           pendingSources = s
         },
         onToken: (delta) => {
+          assistantContent += delta
           if (!started) {
             started = true
+            assistantTimestamp = new Date().toISOString()
             setIsTyping(false)
             setMessages((prev) => [
               ...prev,
@@ -228,7 +220,7 @@ export default function ChatPage() {
                 role: 'assistant',
                 content: delta,
                 sources: pendingSources,
-                timestamp: new Date().toISOString(),
+                timestamp: assistantTimestamp,
               },
             ])
           } else {
@@ -242,10 +234,30 @@ export default function ChatPage() {
         },
       })
 
+      if (newSessionId) {
+        // Seed the messages cache with the completed exchange so selecting
+        // this session doesn't refetch (or momentarily blank) the transcript.
+        const finalMessages: Message[] = started
+          ? [
+              ...baseMessages,
+              {
+                id: assistantId,
+                session_id: newSessionId,
+                role: 'assistant',
+                content: assistantContent,
+                sources: pendingSources,
+                timestamp: assistantTimestamp,
+              },
+            ]
+          : baseMessages
+        qc.setQueryData<Message[]>(['messages', newSessionId], finalMessages)
+      }
       if (!activeSession && newSessionId) {
-        await loadSessions()
-        const refreshed = await getChatSessions(userId)
-        const newSess = refreshed.find((s) => s.id === newSessionId)
+        // Single refresh of the session list (was two sequential fetches),
+        // then adopt the new session straight from the cache.
+        await qc.invalidateQueries({ queryKey: ['sessions', userId] })
+        const refreshed = qc.getQueryData<ChatSession[]>(['sessions', userId])
+        const newSess = refreshed?.find((s) => s.id === newSessionId)
         if (newSess) setActiveSession(newSess)
       }
     } catch {
@@ -261,6 +273,7 @@ export default function ChatPage() {
       ])
     } finally {
       setIsTyping(false)
+      streamingRef.current = false
     }
   }
 
@@ -273,14 +286,13 @@ export default function ChatPage() {
 
   const handleDeleteSession = async (session: ChatSession) => {
     try {
-      await deleteSession(session.id)
+      await deleteSessionMutation.mutateAsync(session.id)
       if (activeSession?.id === session.id) {
         setActiveSession(null)
         setMessages([])
       }
-      await loadSessions()
     } catch (e) {
-      console.error('Failed to delete session:', e)
+      showError(e instanceof Error ? e.message : 'Failed to delete chat')
     }
   }
 
@@ -352,7 +364,16 @@ export default function ChatPage() {
         )}
       </div>
 
-      {isEmpty ? (
+      {isEmpty && activeSession && messagesQuery.isError ? (
+        /* ── Conversation failed to load ─────────────────────────── */
+        <div className="flex flex-1 items-center justify-center px-4">
+          <ErrorInline
+            message="Couldn't load this conversation."
+            onRetry={() => void messagesQuery.refetch()}
+            className="w-full max-w-md"
+          />
+        </div>
+      ) : isEmpty ? (
         /* ── Center-first new-chat state ─────────────────────────── */
         <div className="flex flex-1 flex-col items-center justify-center px-4 pb-10">
           <motion.div
@@ -514,7 +535,13 @@ export default function ChatPage() {
                 </Button>
               </div>
               <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
-                {sessions.length === 0 ? (
+                {sessionsQuery.isError ? (
+                  <ErrorInline
+                    message="Couldn't load your chat history."
+                    onRetry={() => void sessionsQuery.refetch()}
+                    className="mx-1 mt-2"
+                  />
+                ) : sessions.length === 0 ? (
                   <p className="px-2 py-6 text-center text-xs text-zinc-600">No conversations yet.</p>
                 ) : (
                   sessions.map((session) => {

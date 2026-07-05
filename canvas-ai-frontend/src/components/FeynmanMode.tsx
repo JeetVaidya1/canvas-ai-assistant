@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { CheckCircle, AlertTriangle, XCircle, Sparkles, RotateCcw, BookOpen } from 'lucide-react'
 import { feynmanEvaluate, type FeynmanResult } from '@/lib/api'
 import { showError } from '@/lib/toast'
+import { useInvalidateProgress } from '@/hooks/useInvalidateProgress'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
@@ -27,12 +28,15 @@ export default function FeynmanMode({ courseId, userId }: FeynmanModeProps) {
   const [explanation, setExplanation] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<FeynmanResult | null>(null)
+  const invalidateProgress = useInvalidateProgress(courseId)
 
   const submit = async () => {
     if (!concept.trim() || !explanation.trim() || !courseId) return
     setLoading(true)
     try {
       setResult(await feynmanEvaluate(courseId, concept.trim(), explanation.trim(), userId))
+      // Grading seeds review items + mastery data — refresh progress views.
+      invalidateProgress()
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to grade explanation')
     } finally {

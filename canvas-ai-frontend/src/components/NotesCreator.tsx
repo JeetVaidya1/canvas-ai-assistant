@@ -30,33 +30,21 @@ import {
 import { BrandMark } from '@/components/ui/BrandMark'
 import {
   generateNotes,
-  saveNotes as apiSaveNotes,
-  updateNote as apiUpdateNote,
-  getNotes as apiGetNotes,
-  deleteNotes as apiDeleteNotes,
-  listFiles,
   type NotesResponse,
+  type SavedNote,
 } from '../lib/api'
+import { showError } from '../lib/toast'
 
 import Flashcards from './FlashCards'
 import ConfirmDialog from './shared/ConfirmDialog'
+import ErrorInline from './shared/ErrorInline'
 import { useUser } from '@/hooks/useUser'
+import { useCourseFiles } from '@/hooks/useCourseFiles'
+import { useNotesLibrary, useSaveNote, useDeleteNote } from '@/hooks/useNotesLibrary'
 
 interface NotesCreatorProps {
   courseId: string
   courseName: string
-}
-
-interface SavedNote {
-  id: string
-  title: string
-  content: string
-  source_files: string[]
-  created_at: string
-  updated_at: string
-  word_count: string | number
-  reading_time: string
-  topics: string[]
 }
 
 type Flashcard = { q: string; a: string }
@@ -267,17 +255,23 @@ function FlashcardDeck({ cards }: { cards: Flashcard[] }) {
 
 export default function NotesCreator({ courseId }: NotesCreatorProps) {
   const userId = useUser()
+  const filesQuery = useCourseFiles(courseId)
+  const notesQuery = useNotesLibrary(courseId)
+  const saveNoteMutation = useSaveNote(courseId)
+  const deleteNoteMutation = useDeleteNote(courseId)
+
+  const availableFiles = useMemo(() => filesQuery.data ?? [], [filesQuery.data])
+  const savedNotes = useMemo(() => notesQuery.data ?? [], [notesQuery.data])
+  const saving = saveNoteMutation.isPending
+
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
-  const [availableFiles, setAvailableFiles] = useState<string[]>([])
   const [topic, setTopic] = useState('')
   const [noteStyle, setNoteStyle] = useState<NoteStyle>('detailed')
   const [generatedNotes, setGeneratedNotes] = useState<string>('')
-  const [savedNotes, setSavedNotes] = useState<SavedNote[]>([])
   const [currentNoteId, setCurrentNoteId] = useState<string | undefined>(undefined)
   const [noteTitle, setNoteTitle] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadStage, setLoadStage] = useState(0)
-  const [saving, setSaving] = useState(false)
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [sourcesOpen, setSourcesOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -304,11 +298,13 @@ export default function NotesCreator({ courseId }: NotesCreatorProps) {
     setLibraryOpen(false)
   }, [courseId])
 
+  // Default to ALL files selected so the common path needs zero file-clicks.
+  // Only auto-fill when nothing is selected yet (don't clobber a viewed note's set).
   useEffect(() => {
-    if (!courseId) return
-    loadAvailableFiles()
-    loadSavedNotes()
-  }, [courseId])
+    const list = filesQuery.data
+    if (!list || list.length === 0) return
+    setSelectedFiles((prev) => (prev.length === 0 ? [...list] : prev))
+  }, [filesQuery.data])
 
   // Advance the loading narrative while generating.
   useEffect(() => {
@@ -321,30 +317,6 @@ export default function NotesCreator({ courseId }: NotesCreatorProps) {
     }, 2200)
     return () => clearInterval(id)
   }, [loading])
-
-  const loadAvailableFiles = async () => {
-    try {
-      const files = await listFiles(courseId)
-      const list = files || []
-      setAvailableFiles(list)
-      // Default to ALL files selected so the common path needs zero file-clicks.
-      // Only auto-fill when nothing is selected yet (don't clobber a viewed note's set).
-      setSelectedFiles((prev) => (prev.length === 0 ? [...list] : prev))
-    } catch (error) {
-      console.error('Failed to load files:', error)
-      setAvailableFiles([])
-    }
-  }
-
-  const loadSavedNotes = async () => {
-    try {
-      const notes = await apiGetNotes(courseId)
-      setSavedNotes(notes || [])
-    } catch (error) {
-      console.error('Failed to load saved notes:', error)
-      setSavedNotes([])
-    }
-  }
 
   const handleGenerateNotes = async () => {
     if (!courseId || availableFiles.length === 0) return
@@ -385,20 +357,21 @@ export default function NotesCreator({ courseId }: NotesCreatorProps) {
   const handleSaveNotes = async () => {
     if (!courseId || !generatedNotes.trim() || !noteTitle.trim()) return
 
-    setSaving(true)
     setErrMsg(null)
     try {
-      // Editing an existing note -> update in place (PUT); otherwise create (POST).
-      const savedNote = currentNoteId
-        ? await apiUpdateNote(currentNoteId, courseId, noteTitle.trim(), generatedNotes, selectedFiles, topic)
-        : await apiSaveNotes(courseId, noteTitle.trim(), generatedNotes, selectedFiles, topic)
-      await loadSavedNotes()
+      // Editing an existing note -> update in place (PUT); otherwise create
+      // (POST). The mutation invalidates the notes library on success.
+      const savedNote = await saveNoteMutation.mutateAsync({
+        title: noteTitle.trim(),
+        content: generatedNotes,
+        sourceFiles: selectedFiles,
+        topic,
+        noteId: currentNoteId,
+      })
       setCurrentNoteId(savedNote.id)
     } catch (error: unknown) {
       console.error('Failed to save notes:', error)
       setErrMsg(error instanceof Error ? error.message : 'Failed to save notes.')
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -413,8 +386,7 @@ export default function NotesCreator({ courseId }: NotesCreatorProps) {
     const noteId = deleteConfirmId
     setDeleteConfirmId(null)
     try {
-      await apiDeleteNotes(noteId)
-      await loadSavedNotes()
+      await deleteNoteMutation.mutateAsync(noteId)
       if (currentNoteId === noteId) {
         setCurrentNoteId(undefined)
         setGeneratedNotes('')
@@ -422,7 +394,7 @@ export default function NotesCreator({ courseId }: NotesCreatorProps) {
         setFlashcards([])
       }
     } catch (error) {
-      console.error('Failed to delete note:', error)
+      showError(error instanceof Error ? error.message : 'Failed to delete note.')
     }
   }
 
@@ -642,7 +614,14 @@ export default function NotesCreator({ courseId }: NotesCreatorProps) {
           {loading ? 'Generating…' : 'Generate notes'}
         </Button>
 
-        {noFiles && courseId && (
+        {filesQuery.isError && (
+          <ErrorInline
+            message="Couldn't load your course files."
+            onRetry={() => void filesQuery.refetch()}
+            className="mt-3"
+          />
+        )}
+        {noFiles && courseId && !filesQuery.isError && (
           <p className="mt-2.5 text-center text-xs text-zinc-500">
             Upload course files from Materials to generate notes.
           </p>
@@ -871,7 +850,13 @@ export default function NotesCreator({ courseId }: NotesCreatorProps) {
             </div>
 
             <div className="flex-1 space-y-2 overflow-y-auto px-3 pb-4">
-              {filteredNotes.length === 0 ? (
+              {notesQuery.isError ? (
+                <ErrorInline
+                  message="Couldn't load your saved notes."
+                  onRetry={() => void notesQuery.refetch()}
+                  className="mt-2"
+                />
+              ) : filteredNotes.length === 0 ? (
                 <div className="px-2 py-12 text-center">
                   <BrandMark className="mx-auto mb-4 h-12 w-12" />
                   <p className="text-sm font-medium text-zinc-200">

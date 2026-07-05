@@ -52,6 +52,19 @@ export async function trackPracticeSession(
 }
 
 /** ===== Topics from content ===== */
+export interface PracticeTopicsResponse {
+  topics?: string[]
+  error?: string
+}
+
+/**
+ * Raw topics fetch (auth token attached via apiFetch). Errors propagate so
+ * callers/React Query can surface them; consumers choose their own fallbacks.
+ */
+export async function fetchPracticeTopics(courseId: string): Promise<PracticeTopicsResponse> {
+  return apiFetch(`/practice-topics/${encodeURIComponent(courseId)}`)
+}
+
 export async function getPracticeTopics(courseId: string): Promise<string[]> {
   try {
     const data = await apiFetch(`/practice-topics/${encodeURIComponent(courseId)}`)

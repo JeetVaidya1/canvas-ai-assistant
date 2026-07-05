@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'motion/react'
 import {
@@ -11,7 +10,9 @@ import { useCourses } from '@/hooks/useCourses'
 import { useCourseFiles } from '@/hooks/useCourseFiles'
 import { useRecentActivity } from '@/hooks/useRecentActivity'
 import { useUser } from '@/hooks/useUser'
-import { getReadiness, type Readiness } from '@/lib/api'
+import { useReadiness } from '@/hooks/useReadiness'
+import { usePrefetch } from '@/hooks/usePrefetch'
+import ErrorInline from '@/components/shared/ErrorInline'
 
 type Tint = { icon: string; chip: string }
 
@@ -39,21 +40,21 @@ export default function CourseHome() {
   const { data: files, isLoading: filesLoading } = useCourseFiles(courseId)
   const recent = useRecentActivity().filter((e) => e.courseId === courseId).slice(0, 4)
   const course = courses?.find((c) => c.course_id === courseId)
-  const [readiness, setReadiness] = useState<Readiness | null>(null)
-  const [readinessLoading, setReadinessLoading] = useState(true)
-
-  useEffect(() => {
-    if (!courseId) return
-    let cancelled = false
-    setReadinessLoading(true)
-    getReadiness(courseId, userId)
-      .then((r) => { if (!cancelled) setReadiness(r) })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setReadinessLoading(false) })
-    return () => { cancelled = true }
-  }, [courseId, userId])
+  const readinessQuery = useReadiness(courseId, userId)
+  const readiness = readinessQuery.data ?? null
+  const readinessLoading = readinessQuery.isPending
+  const { prefetchLearn, prefetchPractice, prefetchStudyKit, prefetchProgress } = usePrefetch()
 
   const go = (path: string) => navigate(`/course/${courseId}${path ? `/${path}` : ''}`)
+
+  // Warm the destination's primary data while the cursor hovers its card.
+  const prefetchFor = (key: string) => {
+    if (!courseId) return
+    if (key === 'learn') prefetchLearn()
+    else if (key === 'practice') prefetchPractice(courseId)
+    else if (key === 'kit') prefetchStudyKit(courseId)
+    else if (key === 'progress') prefetchProgress(courseId)
+  }
   const fileCount = files?.length ?? 0
   const hasFiles = fileCount > 0
   const score = readiness ? Math.round(readiness.score_pct) : null
@@ -104,7 +105,14 @@ export default function CourseHome() {
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
       >
-        {readinessLoading && !readiness ? (
+        {readinessQuery.isError ? (
+          <Card padding="lg" elevation={2}>
+            <ErrorInline
+              message="Couldn't load your readiness score."
+              onRetry={() => void readinessQuery.refetch()}
+            />
+          </Card>
+        ) : readinessLoading && !readiness ? (
           <Card padding="lg" elevation={2} className="flex items-center gap-5">
             <div className="w-[104px] h-[104px] rounded-full bg-zinc-800/60 animate-pulse flex-shrink-0" />
             <div className="flex-1 space-y-3">
@@ -196,7 +204,14 @@ export default function CourseHome() {
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.1 + i * 0.04, ease: [0.22, 1, 0.36, 1] }}
             >
-              <Card interactive accent onClick={() => go(a.key)} padding="lg" className="group h-full">
+              <Card
+                interactive
+                accent
+                onClick={() => go(a.key)}
+                onMouseEnter={() => prefetchFor(a.key)}
+                padding="lg"
+                className="group h-full"
+              >
                 <div className="flex items-start justify-between">
                   <div className={`w-11 h-11 rounded-xl border flex items-center justify-center mb-4 ${a.tint.chip}`}>
                     <a.icon className={`w-5 h-5 ${a.tint.icon}`} />

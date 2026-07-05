@@ -38,6 +38,12 @@ import {
   uploadPastPaper
 } from '../lib/api'
 import { showError } from '../lib/toast'
+import { useInvalidateProgress } from '@/hooks/useInvalidateProgress'
+
+/** Human-readable message from an unknown thrown value. */
+function errText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
 
 type QType = 'multiple_choice' | 'calculation' | 'short_answer' | 'essay' | 'diagram' | 'proof'
 type Diff = 'easy' | 'medium' | 'hard'
@@ -108,6 +114,41 @@ interface ExamResults {
   breakdown: BreakdownItem[]
 }
 
+/** Shape of a generated exam question as returned by the backend. */
+interface RawExamQuestion {
+  id: string
+  type: QType
+  question: string
+  options?: string[]
+  points?: number
+  topic?: string
+  difficulty?: Diff
+  correct_answer?: string
+  explanation?: string
+  time_estimate?: number
+}
+
+/** Shape of a graded question result as returned by the backend. */
+interface RawQuestionResult {
+  question: string
+  user_answer?: string
+  correct_answer?: string
+  points_possible?: number
+  points_earned?: number
+  verdict?: string
+  grade_reason?: string
+  mistake_explanation?: string
+  time_spent?: number
+  topic?: string
+}
+
+/** Past-paper upload analysis summary from the backend. */
+interface PastPaperAnalysis {
+  status?: string
+  questions_found?: number
+  message?: string
+}
+
 // Centered setup choices — tactile, mirrors QuizMode's center-first flow.
 const DIFFICULTIES: { value: 'easy' | 'medium' | 'hard' | 'mixed'; label: string; hint: string }[] = [
   { value: 'easy', label: 'Easy', hint: 'Warm-up' },
@@ -123,12 +164,14 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
   const [examQuestionCount, setExamQuestionCount] = useState(12)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [analysisSummary, setAnalysisSummary] = useState<any>(null)
+  const [analysisSummary, setAnalysisSummary] = useState<PastPaperAnalysis | null>(null)
 
   const [timeRemaining, setTimeRemaining] = useState(0)
   const [currentAnswer, setCurrentAnswer] = useState('')
   const [showResults, setShowResults] = useState(false)
-  const [examResults, setExamResults] = useState<any>(null)
+  const [examResults, setExamResults] = useState<ExamResults | null>(null)
+
+  const invalidateProgress = useInvalidateProgress(courseId)
 
   const [sessionId, setSessionId] = useState<string | null>(null)
 
@@ -212,6 +255,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
     return () => {
       if (interval) window.clearInterval(interval)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- submitExam is intentionally omitted: including it would recreate the countdown interval on every answer change and reset the timer mid-exam
   }, [examSession?.isActive, examSession?.isPaused, timeRemaining])
 
   const formatTime = (seconds: number) => {
@@ -230,7 +274,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
       const result = await generatePracticeExam({
         courseId,
         examType: 'practice',
-        difficulty: examDifficulty as any,
+        difficulty: examDifficulty,
         questionCount: examQuestionCount,
         timeLimit: 120,
         userId: userId || 'anonymous',
@@ -238,14 +282,15 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
       })
 
       const examData = result.exam
-      const mapped: ExamQuestion[] = (examData.questions || []).map((q: any) => ({
+      const rawQuestions = (examData.questions ?? []) as RawExamQuestion[]
+      const mapped: ExamQuestion[] = rawQuestions.map((q) => ({
         id: q.id,
         type: q.type,
         question: q.question,
         options: q.options ?? undefined,
         points: q.points ?? 2,
         topic: q.topic ?? 'General',
-        difficulty: (q.difficulty ?? 'medium') as Diff,
+        difficulty: q.difficulty ?? 'medium',
         answer: q.correct_answer ?? '',
         solution: q.explanation ?? '',
         timeEstimate: q.time_estimate ?? 3
@@ -269,9 +314,9 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
       } catch (e) {
         console.warn('create session failed (non-fatal):', e)
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to generate exam:', error)
-      showError(`Could not generate exam: ${error.message || error}`)
+      showError(`Could not generate exam: ${errText(error)}`)
     } finally {
       setLoading(false)
     }
@@ -368,7 +413,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
           topicPerformance: results.topic_performance ?? null,
           timeEfficiency: results.time_efficiency ?? null,
           timeSpent: results.time_metrics?.time_used_minutes ?? (finalSession.timeLimit - Math.floor(timeRemaining / 60)),
-          breakdown: results.question_results?.map((r: any) => ({
+          breakdown: (results.question_results as RawQuestionResult[] | undefined)?.map((r) => ({
             question: r.question,
             userAnswer: r.user_answer,
             correctAnswer: r.correct_answer,
@@ -382,6 +427,8 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
           })) ?? []
         })
         setShowResults(true)
+        // Grading changed mastery server-side — refresh progress views.
+        invalidateProgress()
         return
       } catch (e) {
         console.warn('Server submit failed; using local scoring.', e)
@@ -391,6 +438,8 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
     const results = calculateResults(finalSession)
     setExamResults(results)
     setShowResults(true)
+    // Saved answers may still have tracked activity server-side.
+    invalidateProgress()
   }
 
   const calculateResults = (session: ExamSession) => {
@@ -432,10 +481,10 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
     setUploading(true)
     try {
       const data = await uploadPastPaper(courseId, file, userId || 'anonymous')
-      setAnalysisSummary(data)
-    } catch (e: any) {
+      setAnalysisSummary(data as PastPaperAnalysis)
+    } catch (e) {
       console.error(e)
-      showError(`Upload failed: ${e.message || e}`)
+      showError(`Upload failed: ${errText(e)}`)
     } finally {
       setUploading(false)
     }
@@ -453,9 +502,9 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
       })
       const s: SolveJSON = res.solution
       setHints(prev => ({ ...prev, [q.id]: s }))
-    } catch (e: any) {
+    } catch (e) {
       console.error(e)
-      showError(`Hint failed: ${e.message || e}`)
+      showError(`Hint failed: ${errText(e)}`)
     } finally {
       setHinting(false)
     }
@@ -470,12 +519,12 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
         courseId,
         questionText: q.question,
         wantHint: false
-      } as any)
+      })
       const s: SolveJSON = res.solution
       setSolutions(prev => ({ ...prev, [q.id]: s }))
-    } catch (e: any) {
+    } catch (e) {
       console.error(e)
-      showError(`Solve failed: ${e.message || e}`)
+      showError(`Solve failed: ${errText(e)}`)
     } finally {
       setSolving(false)
     }
@@ -550,7 +599,7 @@ export default function ExamMode({ courseId, userId }: ExamModeProps) {
 
   // ---- Results screen -------------------------------------------------------
   if (showResults && examResults) {
-    const r = examResults as ExamResults
+    const r = examResults
     const breakdown: BreakdownItem[] = Array.isArray(r.breakdown) ? r.breakdown : []
     const verdictOf = (b: BreakdownItem): Verdict =>
       (b.verdict as Verdict) ??
