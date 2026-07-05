@@ -2,6 +2,10 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Q
 from fastapi.responses import Response, StreamingResponse
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -66,7 +70,8 @@ async def upload_past_paper(
         raise
     except Exception as e:
         print(f"❌ Past paper upload failed: {e}")
-        raise HTTPException(500, detail=f"Upload failed: {str(e)}")
+        logger.exception("Upload failed")
+        raise HTTPException(500, detail="Upload failed")
 
 
 @router.post("/api/generate-practice-exam", dependencies=[Depends(ai_rate_limit)])
@@ -166,7 +171,8 @@ async def generate_practice_exam(
         print(f"   ❌ Exam generation failed: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(500, detail=f"Generation failed: {str(e)}")
+        logger.exception("Generation failed")
+        raise HTTPException(500, detail="Generation failed")
 
 
 @router.post("/api/create-exam-session")
@@ -197,7 +203,8 @@ async def create_exam_session(
         raise
     except Exception as e:
         print(f"❌ Session creation failed: {e}")
-        raise HTTPException(500, detail=f"Session creation failed: {str(e)}")
+        logger.exception("Session creation failed")
+        raise HTTPException(500, detail="Session creation failed")
 
 
 @router.post("/api/start-exam-session/{session_id}")
@@ -215,7 +222,8 @@ async def start_exam_session(session_id: str):
         raise
     except Exception as e:
         print(f"❌ Session start failed: {e}")
-        raise HTTPException(500, detail=f"Failed to start session: {str(e)}")
+        logger.exception("Failed to start session")
+        raise HTTPException(500, detail="Failed to start session")
 
 
 @router.post("/api/pause-exam-session/{session_id}")
@@ -233,7 +241,8 @@ async def pause_exam_session(session_id: str):
         raise
     except Exception as e:
         print(f"❌ Session pause failed: {e}")
-        raise HTTPException(500, detail=f"Failed to pause session: {str(e)}")
+        logger.exception("Failed to pause session")
+        raise HTTPException(500, detail="Failed to pause session")
 
 
 @router.post("/api/save-exam-answer")
@@ -255,7 +264,8 @@ async def save_exam_answer(
         raise
     except Exception as e:
         print(f"❌ Answer save failed: {e}")
-        raise HTTPException(500, detail=f"Failed to save answer: {str(e)}")
+        logger.exception("Failed to save answer")
+        raise HTTPException(500, detail="Failed to save answer")
 
 
 @router.post("/api/navigate-exam-question")
@@ -276,7 +286,8 @@ async def navigate_exam_question(
         raise
     except Exception as e:
         print(f"❌ Navigation failed: {e}")
-        raise HTTPException(500, detail=f"Navigation failed: {str(e)}")
+        logger.exception("Navigation failed")
+        raise HTTPException(500, detail="Navigation failed")
 
 
 @router.post("/api/submit-exam/{session_id}")
@@ -294,7 +305,8 @@ async def submit_exam(session_id: str):
         raise
     except Exception as e:
         print(f"❌ Exam submission failed: {e}")
-        raise HTTPException(500, detail=f"Submission failed: {str(e)}")
+        logger.exception("Submission failed")
+        raise HTTPException(500, detail="Submission failed")
 
 
 @router.get("/api/exam-session/{session_id}")
@@ -312,7 +324,8 @@ async def get_exam_session(session_id: str):
         raise
     except Exception as e:
         print(f"❌ Get session failed: {e}")
-        raise HTTPException(500, detail=f"Failed to get session: {str(e)}")
+        logger.exception("Failed to get session")
+        raise HTTPException(500, detail="Failed to get session")
 
 
 @router.get("/api/exam-history/{user_id}")
@@ -329,7 +342,8 @@ async def get_exam_history(user_id: str, course_id: Optional[str] = None):
         
     except Exception as e:
         print(f"❌ Get exam history failed: {e}")
-        raise HTTPException(500, detail=f"Failed to get exam history: {str(e)}")
+        logger.exception("Failed to get exam history")
+        raise HTTPException(500, detail="Failed to get exam history")
 
 
 @router.delete("/api/exam-session/{session_id}")
@@ -347,7 +361,8 @@ async def delete_exam_session(session_id: str):
         raise
     except Exception as e:
         print(f"❌ Delete session failed: {e}")
-        raise HTTPException(500, detail=f"Deletion failed: {str(e)}")
+        logger.exception("Deletion failed")
+        raise HTTPException(500, detail="Deletion failed")
 
 
 @router.get("/api/past-papers/{course_id}")
@@ -377,7 +392,8 @@ async def get_past_papers(course_id: str):
         
     except Exception as e:
         print(f"❌ Get past papers failed: {e}")
-        raise HTTPException(500, detail=f"Failed to get past papers: {str(e)}")
+        logger.exception("Failed to get past papers")
+        raise HTTPException(500, detail="Failed to get past papers")
 
 
 @router.post("/api/solve-exam-question", dependencies=[Depends(ai_rate_limit)])
@@ -435,7 +451,8 @@ async def solve_exam_question(
         raise
     except Exception as e:
         print(f"❌ solve_exam_question failed: {e}")
-        raise HTTPException(500, f"Solve failed: {str(e)}")
+        logger.exception("Solve failed")
+        raise HTTPException(500, detail="Solve failed")
 
 
 @router.get("/api/exam-analytics/{course_id}/{user_id}")
@@ -456,7 +473,8 @@ async def get_exam_analytics(course_id: str, user_id: str):
         
     except Exception as e:
         print(f"❌ Exam analytics failed: {e}")
-        raise HTTPException(500, detail=f"Analytics failed: {str(e)}")
+        logger.exception("Analytics failed")
+        raise HTTPException(500, detail="Analytics failed")
 
 
 @router.get("/api/admin/auto-submit-expired-exams")
@@ -470,7 +488,8 @@ async def auto_submit_expired_exams():
         }
     except Exception as e:
         print(f"❌ Auto-submit failed: {e}")
-        raise HTTPException(500, detail=f"Auto-submit failed: {str(e)}")
+        logger.exception("Auto-submit failed")
+        raise HTTPException(500, detail="Auto-submit failed")
 
 
 @router.get("/api/exam-status")

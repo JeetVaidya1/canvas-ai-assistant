@@ -1,6 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import concept_graph
 
 router = APIRouter()
@@ -13,7 +17,8 @@ async def build_concept_graph_endpoint(course_id: str):
         return concept_graph.build_graph(course_id)
     except Exception as e:
         print(f"Concept graph build failed: {e}")
-        raise HTTPException(500, detail=f"Concept graph build failed: {e}")
+        logger.exception("Concept graph build failed")
+        raise HTTPException(500, detail="Concept graph build failed")
 
 
 @router.get("/api/concept-graph/{course_id}/{user_id}")
@@ -24,4 +29,5 @@ async def get_concept_graph_endpoint(course_id: str, user_id: str, _auth: str = 
         return concept_graph.graph_with_mastery(course_id, user_id)
     except Exception as e:
         print(f"Concept graph fetch failed: {e}")
-        raise HTTPException(500, detail=f"Concept graph fetch failed: {e}")
+        logger.exception("Concept graph fetch failed")
+        raise HTTPException(500, detail="Concept graph fetch failed")

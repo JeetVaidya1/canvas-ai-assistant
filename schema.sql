@@ -7,8 +7,10 @@
 --
 -- How to apply:
 --   1. Supabase dashboard -> SQL Editor -> paste this whole file -> Run.
---   2. Use the project's *service_role* key as SUPABASE_KEY in .env
---      (RLS is left disabled below; this is a single-user personal app).
+--   2. Use the project's *service_role* key as SUPABASE_KEY in .env.
+--      This is a multi-user app: RLS is enabled by migrations/0010_rls.sql
+--      (apply it after this file). The backend uses the service_role key and
+--      enforces per-user authorization in auth.py (require_course_access).
 
 create extension if not exists vector;
 create extension if not exists pgcrypto;

@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Form, HTTPException
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import json
 import socratic_engine
 import feynman_engine
@@ -27,7 +31,8 @@ async def socratic_endpoint(
         return socratic_engine.respond(course_id, message.strip(), hist)
     except Exception as e:
         print(f"Socratic turn failed: {e}")
-        raise HTTPException(500, detail=f"Socratic turn failed: {e}")
+        logger.exception("Socratic turn failed")
+        raise HTTPException(500, detail="Socratic turn failed")
 
 
 @router.post("/api/feynman", dependencies=[Depends(ai_rate_limit)])
@@ -45,4 +50,5 @@ async def feynman_endpoint(
         return feynman_engine.evaluate(course_id, concept.strip(), explanation.strip(), user_id)
     except Exception as e:
         print(f"Feynman grading failed: {e}")
-        raise HTTPException(500, detail=f"Feynman grading failed: {e}")
+        logger.exception("Feynman grading failed")
+        raise HTTPException(500, detail="Feynman grading failed")

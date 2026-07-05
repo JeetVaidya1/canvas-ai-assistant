@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Form, HTTPException
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import sharing_engine
 
 router = APIRouter()
@@ -22,7 +26,8 @@ async def publish_course_endpoint(
         return sharing_engine.publish(course_id, user_id, subject, school, term, description)
     except Exception as e:
         print(f"Publish failed: {e}")
-        raise HTTPException(500, detail=f"Publish failed: {e}")
+        logger.exception("Publish failed")
+        raise HTTPException(500, detail="Publish failed")
 
 
 @router.get("/api/shared-courses")
@@ -32,7 +37,8 @@ async def catalog_endpoint(q: str = ""):
         return {"courses": sharing_engine.catalog(q)}
     except Exception as e:
         print(f"Catalog fetch failed: {e}")
-        raise HTTPException(500, detail=f"Catalog fetch failed: {e}")
+        logger.exception("Catalog fetch failed")
+        raise HTTPException(500, detail="Catalog fetch failed")
 
 
 @router.get("/api/courses/{course_id}/share")
@@ -42,7 +48,8 @@ async def share_info_endpoint(course_id: str):
         return sharing_engine.get_share_info(course_id)
     except Exception as e:
         print(f"Share info fetch failed: {e}")
-        raise HTTPException(500, detail=f"Share info fetch failed: {e}")
+        logger.exception("Share info fetch failed")
+        raise HTTPException(500, detail="Share info fetch failed")
 
 
 @router.post("/api/courses/join")
@@ -57,4 +64,5 @@ async def join_course_endpoint(
         raise HTTPException(404, detail=str(e))
     except Exception as e:
         print(f"Join failed: {e}")
-        raise HTTPException(500, detail=f"Join failed: {e}")
+        logger.exception("Join failed")
+        raise HTTPException(500, detail="Join failed")

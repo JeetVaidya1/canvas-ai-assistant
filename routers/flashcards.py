@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Form, HTTPException
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import json
 import flashcard_engine
 
@@ -27,7 +31,8 @@ async def save_flashcards_endpoint(
         return flashcard_engine.save_cards(course_id, parsed, note_id)
     except Exception as e:
         print(f"Flashcard save failed: {e}")
-        raise HTTPException(500, detail=f"Flashcard save failed: {e}")
+        logger.exception("Flashcard save failed")
+        raise HTTPException(500, detail="Flashcard save failed")
 
 
 @router.get("/flashcards/{course_id}")
@@ -37,7 +42,8 @@ async def get_flashcards_endpoint(course_id: str, user_id: str = Depends(current
         return flashcard_engine.get_deck(course_id, user_id)
     except Exception as e:
         print(f"Flashcard deck fetch failed: {e}")
-        raise HTTPException(500, detail=f"Flashcard deck fetch failed: {e}")
+        logger.exception("Flashcard deck fetch failed")
+        raise HTTPException(500, detail="Flashcard deck fetch failed")
 
 
 @router.post("/flashcards/review")
@@ -53,4 +59,5 @@ async def review_flashcard_endpoint(
         return flashcard_engine.review_card(card_id, user_id, grade)
     except Exception as e:
         print(f"Flashcard review failed: {e}")
-        raise HTTPException(500, detail=f"Flashcard review failed: {e}")
+        logger.exception("Flashcard review failed")
+        raise HTTPException(500, detail="Flashcard review failed")

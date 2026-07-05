@@ -1,7 +1,10 @@
+import logging
 import os
 from typing import List, Dict, Any, Optional, Iterable
 from dotenv import load_dotenv
 from supabase import create_client
+
+logger = logging.getLogger(__name__)
 
 # Load Supabase credentials
 load_dotenv()
@@ -13,7 +16,8 @@ db = create_client(SUPABASE_URL, SUPABASE_KEY)
 class VectorStore:
     """
     Vector store with metadata-aware inserts and enhanced querying for RAG.
-    Compatible with text-embedding-3-large (3072-dim) and pgvector.
+    Embeddings are 1024-dim from the local BGE-large model
+    (providers/local_embeddings.py), stored in pgvector (vector(1024)).
     """
 
     # ---------- INSERTS ----------
@@ -90,7 +94,7 @@ class VectorStore:
                 })
             return results
         except Exception as e:
-            print(f"Vector query error (enhanced): {e}")
+            logger.warning("Vector query error (enhanced): %s", e)
             return self._basic_query(course_id, query_embedding, top_k)
 
     def _basic_query(self, course_id: str, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
@@ -122,7 +126,7 @@ class VectorStore:
                 })
             return results
         except Exception as e:
-            print(f"Basic query error: {e}")
+            logger.warning("Basic query error: %s", e)
             return []
 
     def query_by_metadata(
@@ -150,7 +154,7 @@ class VectorStore:
             resp = q.limit(top_k).execute()
             return resp.data or []
         except Exception as e:
-            print(f"query_by_metadata error: {e}")
+            logger.warning("query_by_metadata error: %s", e)
             return []
 
     # ---------- UTIL / ADMIN ----------
@@ -167,7 +171,7 @@ class VectorStore:
                 "document_chunks": counts,
             }
         except Exception as e:
-            print(f"Stats error: {e}")
+            logger.warning("Stats error: %s", e)
             return {"total_chunks": 0, "total_documents": 0, "document_chunks": {}}
 
     def search_by_document(
@@ -205,7 +209,7 @@ class VectorStore:
                 })
             return results
         except Exception as e:
-            print(f"Document search error: {e}")
+            logger.warning("Document search error: %s", e)
             return []
 
     def delete_by_course(self, course_id: str) -> bool:
@@ -214,7 +218,7 @@ class VectorStore:
             db.table("embeddings").delete().eq("course_id", course_id).execute()
             return True
         except Exception as e:
-            print(f"Delete course error: {e}")
+            logger.warning("Delete course error: %s", e)
             return False
 
     def delete_by_document(self, course_id: str, doc_name: str) -> bool:
@@ -223,5 +227,5 @@ class VectorStore:
             db.table("embeddings").delete().eq("course_id", course_id).eq("doc_name", doc_name).execute()
             return True
         except Exception as e:
-            print(f"Delete document error: {e}")
+            logger.warning("Delete document error: %s", e)
             return False

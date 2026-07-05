@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Form, HTTPException
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import planner_engine
 
 router = APIRouter()
@@ -29,7 +33,8 @@ async def generate_study_plan_endpoint(
         )
     except Exception as e:
         print(f"Study plan generation failed: {e}")
-        raise HTTPException(500, detail=f"Study plan generation failed: {e}")
+        logger.exception("Study plan generation failed")
+        raise HTTPException(500, detail="Study plan generation failed")
 
 
 @router.post("/api/replan")
@@ -50,7 +55,8 @@ async def replan_endpoint(
         )
     except Exception as e:
         print(f"Replan failed: {e}")
-        raise HTTPException(500, detail=f"Replan failed: {e}")
+        logger.exception("Replan failed")
+        raise HTTPException(500, detail="Replan failed")
 
 
 @router.get("/api/study-plan/{course_id}")
@@ -60,4 +66,5 @@ async def get_study_plan_endpoint(course_id: str):
         return planner_engine.get_latest_plan(course_id)
     except Exception as e:
         print(f"Study plan fetch failed: {e}")
-        raise HTTPException(500, detail=f"Study plan fetch failed: {e}")
+        logger.exception("Study plan fetch failed")
+        raise HTTPException(500, detail="Study plan fetch failed")

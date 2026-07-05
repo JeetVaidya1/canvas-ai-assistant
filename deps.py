@@ -1,6 +1,8 @@
 # deps.py — shared app state, engines, and helper functions.
 # Auto-extracted from the original main.py.
 
+import logging
+
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
@@ -33,6 +35,8 @@ import exports
 from auth import get_current_user, current_user_id, require_course_access
 from rate_limit import ai_rate_limit  # re-exported so routers can rate-limit AI endpoints
 
+logger = logging.getLogger(__name__)
+
 
 # ---- shared state ----
 analytics_engine = LearningAnalyticsEngine()
@@ -41,16 +45,16 @@ try:
     from enhanced_ingest import process_file_enhanced, delete_file_from_course as enhanced_delete_file
     from enhanced_query_engine import enhanced_ask_question
     ENHANCED_MODE = True
-    print("✅ Enhanced multimodal system loaded!")
+    logger.info("Enhanced multimodal system loaded")
 except ImportError as e:
-    print(f"⚠️ Enhanced system not available: {e}")
+    logger.warning("Enhanced system not available: %s", e)
     ENHANCED_MODE = False
 try:
     from conversational_rag_engine import conversational_ask_question
     CONVERSATIONAL_MODE = True
-    print("✅ Conversational RAG system loaded!")
+    logger.info("Conversational RAG system loaded")
 except ImportError as e:
-    print(f"⚠️ Conversational RAG not available: {e}")
+    logger.warning("Conversational RAG not available: %s", e)
     CONVERSATIONAL_MODE = False
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -79,7 +83,7 @@ async def validate_course_for_practice(course_id: str) -> dict:
         # Check if course exists
         course_check = supabase.table("courses").select("*").eq("course_id", course_id).execute()
         if not course_check.data:
-            print(f"❌ Course {course_id} not found")
+            logger.info("Course %s not found", course_id)
             return {
                 "error": "Course not found",
                 "topics": ["Course Not Found"],
@@ -89,7 +93,7 @@ async def validate_course_for_practice(course_id: str) -> dict:
         # Check if course has uploaded files
         files_check = supabase.table("files").select("filename").eq("course_id", course_id).execute()
         if not files_check.data:
-            print(f"❌ No files found for course {course_id}")
+            logger.info("No files found for course %s", course_id)
             return {
                 "error": "No files uploaded. Please upload course materials first.",
                 "topics": ["No Files Uploaded"],
@@ -99,14 +103,14 @@ async def validate_course_for_practice(course_id: str) -> dict:
         # Check if files have been processed (have embeddings)
         embeddings_check = supabase.table("embeddings").select("id").eq("course_id", course_id).limit(1).execute()
         if not embeddings_check.data:
-            print(f"⚠️ Course {course_id} files not yet processed for AI analysis")
+            logger.info("Course %s files not yet processed for AI analysis", course_id)
             return {
                 "error": "Course files are still being processed. Please try again in a moment.",
                 "topics": ["Processing Files"],
                 "status": "processing"
             }
         
-        print(f"✅ Course {course_id} validation passed - {len(files_check.data)} files found")
+        logger.info("Course %s validation passed - %d files found", course_id, len(files_check.data))
         return {
             "error": None,
             "files_count": len(files_check.data),
@@ -114,7 +118,7 @@ async def validate_course_for_practice(course_id: str) -> dict:
         }
         
     except Exception as e:
-        print(f"❌ Course validation error: {e}")
+        logger.exception("Course validation error for %s", course_id)
         return {
             "error": f"Validation error: {str(e)}",
             "topics": ["Validation Error"],
@@ -139,11 +143,11 @@ async def get_intelligent_fallback_topics(course_id: str) -> list:
         # Generate subject-appropriate fallback topics
         fallback_topics = generate_subject_fallback_topics(course_title, filenames)
         
-        print(f"📋 Generated intelligent fallback topics: {fallback_topics}")
+        logger.debug("Generated intelligent fallback topics: %s", fallback_topics)
         return fallback_topics
         
     except Exception as e:
-        print(f"❌ Fallback topic generation failed: {e}")
+        logger.exception("Fallback topic generation failed for %s", course_id)
         return [
             "Course Fundamentals",
             "Key Concepts",
@@ -279,26 +283,26 @@ def analyze_course_content_diversity(embeddings_info: list) -> dict:
 
 def extract_topic_from_filename_debug(filename: str) -> str:
     """Debug version of filename topic extraction with detailed logging"""
-    print(f"  🔍 Processing filename: {filename}")
+    logger.debug("Processing filename: %s", filename)
     
     # Remove file extension
     clean_name = re.sub(r'\.(pdf|docx|pptx|txt|md)$', '', filename, flags=re.IGNORECASE)
-    print(f"    After extension removal: {clean_name}")
+    logger.debug("After extension removal: %s", clean_name)
     
     # Remove common academic prefixes
     clean_name = re.sub(r'^(lecture|chapter|week|unit|lesson|section|module|assignment|homework|hw|lab|tutorial)\s*\d*\s*[-_:]?\s*', '', clean_name, flags=re.IGNORECASE)
-    print(f"    After prefix removal: {clean_name}")
+    logger.debug("After prefix removal: %s", clean_name)
     
     # Remove common suffixes
     clean_name = re.sub(r'\s*(part|section|chapter)\s*\d+$', '', clean_name, flags=re.IGNORECASE)
     clean_name = re.sub(r'\s*(in_class_activity|activity|exercise|solutions?|notes?)$', '', clean_name, flags=re.IGNORECASE)
-    print(f"    After suffix removal: {clean_name}")
+    logger.debug("After suffix removal: %s", clean_name)
     
     # Clean up separators and formatting
     clean_name = re.sub(r'[-_]+', ' ', clean_name)
     clean_name = re.sub(r'\s+', ' ', clean_name)
     clean_name = clean_name.strip()
-    print(f"    After separator cleanup: {clean_name}")
+    logger.debug("After separator cleanup: %s", clean_name)
     
     # Capitalize properly
     if len(clean_name) > 2:
@@ -312,10 +316,10 @@ def extract_topic_from_filename_debug(filename: str) -> str:
                 formatted_words.append(word.capitalize())
         
         result = ' '.join(formatted_words)
-        print(f"    Final result: {result}")
+        logger.debug("Final result: %s", result)
         return result
     
-    print(f"    Final result: (empty - too short)")
+    logger.debug("Final result: (empty - too short)")
     return ""
 
 def download_file(bucket_name: str, file_path: str) -> bytes:
@@ -324,7 +328,7 @@ def download_file(bucket_name: str, file_path: str) -> bytes:
         result = supabase.storage.from_(bucket_name).download(file_path)
         return result
     except Exception as e:
-        print(f"Download failed: {e}")
+        logger.exception("Download failed for %s/%s", bucket_name, file_path)
         raise HTTPException(404, detail=f"File not found: {file_path}")
 
 def calculate_exam_analytics(exam_history: List[Dict[str, Any]]) -> Dict[str, Any]:

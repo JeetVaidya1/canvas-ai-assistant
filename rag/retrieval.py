@@ -4,8 +4,11 @@ Retrieval for the RAG rebuild: vector search (BGE query prefix), keyword
 """
 from __future__ import annotations
 
+import logging
 import os
 from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 RRF_K = 60
 
@@ -38,7 +41,7 @@ def keyword_search(question: str, course_id: str, top_k: int) -> List[Dict]:
         }).execute()
         return resp.data or []
     except Exception as e:  # noqa: BLE001
-        print(f"keyword search failed: {e}")
+        logger.warning("keyword search failed: %s", e)
         return []
 
 

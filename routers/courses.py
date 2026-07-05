@@ -2,6 +2,10 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Q
 from fastapi.responses import Response, StreamingResponse
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -25,7 +29,8 @@ async def upload(course_id: str, file: UploadFile = File(...)):
         }).execute()
         metadata = result.data
     except Exception as e:
-        raise HTTPException(500, detail=f"DB insert failed: {e}")
+        logger.exception("DB insert failed")
+        raise HTTPException(500, detail="DB insert failed")
 
     # 4) **Enhanced processing with fallback**
     try:
@@ -338,7 +343,8 @@ async def delete_file(course_id: str = Form(...), filename: str = Form(...), use
         return {"status": "ok", "message": f"Deleted {filename} from {course_id}"}
         
     except Exception as e:
-        raise HTTPException(500, detail=f"Failed to delete file: {e}")
+        logger.exception("Failed to delete file")
+        raise HTTPException(500, detail="Failed to delete file")
 
 
 @router.post("/delete-course")
@@ -384,5 +390,6 @@ async def delete_entire_course(course_id: str = Form(...), user=Depends(get_curr
         return {"status": "ok", "message": f"Deleted course {course_id}"}
         
     except Exception as e:
-        raise HTTPException(500, detail=f"Failed to delete course: {e}")
+        logger.exception("Failed to delete course")
+        raise HTTPException(500, detail="Failed to delete course")
 

@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Form, HTTPException
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import canvas_engine
 
 router = APIRouter()
@@ -24,4 +28,5 @@ async def import_canvas_endpoint(
         )
     except Exception as e:
         print(f"Canvas import failed: {e}")
-        raise HTTPException(502, detail=f"Canvas import failed: {e}")
+        logger.exception("Canvas import failed")
+        raise HTTPException(502, detail="Canvas import failed")

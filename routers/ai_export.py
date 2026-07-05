@@ -2,6 +2,10 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import context_pack
 
 router = APIRouter()
@@ -15,7 +19,8 @@ async def context_pack_endpoint(course_id: str, user_id: str, _auth: str = Depen
         return {"markdown": context_pack.build_context_pack(course_id, user_id)}
     except Exception as e:
         print(f"Context pack build failed: {e}")
-        raise HTTPException(500, detail=f"Context pack build failed: {e}")
+        logger.exception("Context pack build failed")
+        raise HTTPException(500, detail="Context pack build failed")
 
 
 @router.get("/api/context-pack/{course_id}/{user_id}/download", response_class=PlainTextResponse)
@@ -29,4 +34,5 @@ async def context_pack_download(course_id: str, user_id: str, _auth: str = Depen
             headers={"Content-Disposition": f'attachment; filename="{course_id}_context.md"'},
         )
     except Exception as e:
-        raise HTTPException(500, detail=f"Context pack build failed: {e}")
+        logger.exception("Context pack build failed")
+        raise HTTPException(500, detail="Context pack build failed")

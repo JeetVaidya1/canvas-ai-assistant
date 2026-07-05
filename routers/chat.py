@@ -2,6 +2,10 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Q
 from fastapi.responses import Response, StreamingResponse
 from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -23,7 +27,8 @@ async def ask_endpoint(
             }).execute()
             session_id = resp.data[0]["id"]
         except Exception as e:
-            raise HTTPException(500, detail=f"Couldn't create session: {e}")
+            logger.exception("Couldn't create session")
+            raise HTTPException(500, detail="Couldn't create session")
 
     # 2) Record the user's question
     try:
@@ -34,22 +39,23 @@ async def ask_endpoint(
             "timestamp": datetime.utcnow().isoformat()
         }).execute()
     except Exception as e:
-        raise HTTPException(500, detail=f"Couldn't save question: {e}")
+        logger.exception("Couldn't save question")
+        raise HTTPException(500, detail="Couldn't save question")
 
     # 3) **NEW: Generate conversational answer with context awareness**
     try:
         if CONVERSATIONAL_MODE:
-            print("🧠 Using conversational RAG with context awareness...")
+            logger.info("Using conversational RAG with context awareness")
             answer = conversational_ask_question(question, course_id, session_id)
-            print("✅ Conversational answer generated!")
+            logger.info("Conversational answer generated")
         elif ENHANCED_MODE:
-            print("🤖 Using enhanced question answering...")
+            logger.info("Using enhanced question answering")
             answer = enhanced_ask_question(question, course_id)
         else:
-            print("📝 Using basic question answering...")
+            logger.info("Using basic question answering")
             answer = ask_question(question, course_id)
     except Exception as e:
-        print(f"❌ All QA methods failed, using fallback: {e}")
+        logger.exception("All QA methods failed; using fallback answer")
         answer = "I'm having trouble processing your question. Could you please rephrase it or try asking in a different way?"
 
     # 4) Record the assistant's answer
@@ -61,7 +67,8 @@ async def ask_endpoint(
             "timestamp": datetime.utcnow().isoformat()
         }).execute()
     except Exception as e:
-        raise HTTPException(500, detail=f"Couldn't save answer: {e}")
+        logger.exception("Couldn't save answer")
+        raise HTTPException(500, detail="Couldn't save answer")
 
     return {
         "session_id": session_id,
@@ -92,7 +99,8 @@ async def ask_stream_endpoint(
             }).execute()
             session_id = resp.data[0]["id"]
         except Exception as e:
-            raise HTTPException(500, detail=f"Couldn't create session: {e}")
+            logger.exception("Couldn't create session")
+            raise HTTPException(500, detail="Couldn't create session")
     try:
         supabase.table("messages").insert({
             "session_id": session_id,
@@ -101,7 +109,8 @@ async def ask_stream_endpoint(
             "timestamp": datetime.utcnow().isoformat(),
         }).execute()
     except Exception as e:
-        raise HTTPException(500, detail=f"Couldn't save question: {e}")
+        logger.exception("Couldn't save question")
+        raise HTTPException(500, detail="Couldn't save question")
 
     def event_stream():
         # First event carries the session id so the client can track it.
@@ -116,7 +125,7 @@ async def ask_stream_endpoint(
                     collected.append(evt["delta"])
                 yield f"data: {json.dumps(evt)}\n\n"
         except Exception as e:
-            print(f"❌ Stream failed: {e}")
+            logger.exception("Chat stream failed mid-flight")
             yield f"data: {json.dumps({'delta': ' (stream interrupted)'})}\n\n"
         answer = "".join(collected).strip()
         # Persist the assistant message (with its sources) once the stream completes.
@@ -129,7 +138,7 @@ async def ask_stream_endpoint(
                 "timestamp": datetime.utcnow().isoformat(),
             }).execute()
         except Exception as e:
-            print(f"Couldn't save streamed answer: {e}")
+            logger.exception("Couldn't save streamed answer for session %s", session_id)
         yield f"data: {json.dumps({'done': True, 'session_id': session_id})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
@@ -148,7 +157,8 @@ def list_sessions(user_id: str = Depends(current_user_id)):
             .execute()
         sessions = resp.data
     except Exception as e:
-        raise HTTPException(500, detail=f"Couldn't fetch sessions: {e}")
+        logger.exception("Couldn't fetch sessions")
+        raise HTTPException(500, detail="Couldn't fetch sessions")
     return {"sessions": sessions}
 
 
@@ -165,7 +175,8 @@ def get_messages(session_id: str):
             .execute()
         messages = resp.data
     except Exception as e:
-        raise HTTPException(500, detail=f"Couldn't fetch messages: {e}")
+        logger.exception("Couldn't fetch messages")
+        raise HTTPException(500, detail="Couldn't fetch messages")
     return {"messages": messages}
 
 
@@ -183,5 +194,6 @@ def delete_session(session_id: str):
         
         return {"status": "ok", "message": "Session deleted successfully"}
     except Exception as e:
-        raise HTTPException(500, detail=f"Couldn't delete session: {e}")
+        logger.exception("Couldn't delete session")
+        raise HTTPException(500, detail="Couldn't delete session")
 
