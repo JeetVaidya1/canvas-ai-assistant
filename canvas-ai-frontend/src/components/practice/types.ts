@@ -36,6 +36,9 @@ export interface PracticeSessionState {
   score: number
 }
 
+/** Visual state of one answer row (caller derives it from selection + reveal). */
+export type OptionRowState = 'idle' | 'selected' | 'correct' | 'incorrect' | 'dimmed'
+
 /** Normalized view of the topics query each setup screen consumes. */
 export interface TopicListState {
   options: SelectOption[]

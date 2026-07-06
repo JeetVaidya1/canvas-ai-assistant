@@ -1,7 +1,15 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Settings } from 'lucide-react'
+import { ChevronRight, Settings } from 'lucide-react'
 import { useCourses } from '@/hooks/useCourses'
 import { useProfile } from '@/hooks/useProfile'
+
+const COURSE_PAGE_LABELS: Record<string, string> = {
+  learn: 'Learn',
+  practice: 'Practice',
+  exam: 'Exam',
+  kit: 'Study Kit',
+  progress: 'Progress',
+}
 
 export default function TopBar() {
   const location = useLocation()
@@ -12,12 +20,19 @@ export default function TopBar() {
   const segments = location.pathname.split('/').filter(Boolean)
 
   let pageTitle = 'Dashboard'
-  if (segments[0] === 'course' && segments[2]) {
-    pageTitle = segments[2].charAt(0).toUpperCase() + segments[2].slice(1)
-  } else if (segments[0] === 'course' && segments[1]) {
+  let courseCrumb: { title: string; path: string } | null = null
+
+  if (segments[0] === 'course' && segments[1]) {
     const courseId = segments[1]
     const course = courses?.find((c) => c.course_id === courseId)
-    pageTitle = course?.title ?? courseId
+    const courseTitle = course?.title ?? courseId
+    if (segments[2]) {
+      // Course sub-destination — show the course name as a secondary crumb.
+      pageTitle = COURSE_PAGE_LABELS[segments[2]] ?? segments[2].charAt(0).toUpperCase() + segments[2].slice(1)
+      courseCrumb = { title: courseTitle, path: `/course/${courseId}` }
+    } else {
+      pageTitle = courseTitle
+    }
   } else if (segments[0] === 'settings') {
     pageTitle = 'Settings'
   }
@@ -25,8 +40,21 @@ export default function TopBar() {
   const initial = (displayName || 'U').charAt(0).toUpperCase()
 
   return (
-    <div className="h-14 flex items-center justify-between px-6 glass-bar sticky top-0 z-20">
-      <span className="text-sm font-semibold text-zinc-100 tracking-tight">{pageTitle}</span>
+    <div className="h-14 flex items-center justify-between px-6 glass-bar">
+      <div className="flex items-center gap-1.5 min-w-0">
+        {courseCrumb && (
+          <>
+            <button
+              onClick={() => navigate(courseCrumb!.path)}
+              className="max-w-[220px] truncate text-sm text-zinc-400 transition-colors hover:text-zinc-100"
+            >
+              {courseCrumb.title}
+            </button>
+            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-zinc-500" />
+          </>
+        )}
+        <span className="truncate text-sm font-semibold text-zinc-100 tracking-tight">{pageTitle}</span>
+      </div>
       <div className="flex items-center gap-2.5">
         <button
           onClick={() => navigate('/settings')}

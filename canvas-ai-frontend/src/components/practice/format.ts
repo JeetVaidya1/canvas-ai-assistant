@@ -1,4 +1,5 @@
 import type { PracticeProblem } from '@/lib/api'
+import type { OptionRowState } from './types'
 
 /** Backend may attach a grounding hint; read it defensively without altering the data layer. */
 export type ProblemSource = 'materials' | 'general'
@@ -27,6 +28,19 @@ export function resolveDifficultyBadge(raw: string): { label: string; tone: Diff
   if (key === 'medium') return { label: 'Medium', tone: 'warning' }
   if (key === 'hard') return { label: 'Hard', tone: 'danger' }
   return { label: raw || 'Adaptive', tone: 'accent' }
+}
+
+/** Derives the visual state of one answer row from selection + reveal. */
+export function resolveOptionState(
+  letter: string,
+  selectedLetter: string,
+  revealed: boolean,
+  correctLetter: string | null,
+): OptionRowState {
+  if (!revealed) return letter === selectedLetter ? 'selected' : 'idle'
+  if (letter === correctLetter) return 'correct'
+  if (letter === selectedLetter) return 'incorrect'
+  return 'dimmed'
 }
 
 /** Infer whether a problem is grounded in course materials vs. general knowledge. */

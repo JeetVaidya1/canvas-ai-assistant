@@ -1,7 +1,10 @@
-// src/components/QuizAssistant.tsx - IMPROVED VERSION
+// src/components/QuizAsisstant.tsx (filename typo is intentional — do not rename)
 import React, { useState, useRef, useEffect } from 'react'
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
+import { Textarea } from '@/components/ui/Input'
+import { ErrorState } from '@/components/ui/States'
 import {
   Brain,
   Copy,
@@ -32,6 +35,8 @@ interface QuizConversation {
   response: QuizResponse
   timestamp: string
 }
+
+type BadgeTone = 'success' | 'warning' | 'danger'
 
 export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: QuizAssistantProps) {
   const [question, setQuestion] = useState('')
@@ -104,13 +109,13 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
   }
 
   const copyAnswer = (answer: string) => {
-    navigator.clipboard.writeText(answer)
+    void navigator.clipboard.writeText(answer)
   }
 
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return 'text-emerald-400 bg-emerald-500/10'
-    if (confidence >= 0.6) return 'text-yellow-400 bg-yellow-500/10'
-    return 'text-red-400 bg-red-500/10'
+  const getConfidenceTone = (confidence: number): BadgeTone => {
+    if (confidence >= 0.8) return 'success'
+    if (confidence >= 0.6) return 'warning'
+    return 'danger'
   }
 
   const getConfidenceText = (confidence: number) => {
@@ -145,7 +150,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-0.5">Answer Helper</p>
               <h2 className="text-lg font-semibold text-zinc-100">Quiz Assistant</h2>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-zinc-400">
                 Paste any quiz question and get intelligent help with explanations
               </p>
             </div>
@@ -201,12 +206,12 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                         <div className="flex items-center gap-3">
                           <Target className="w-5 h-5 text-cyan-300" />
                           <span className="font-semibold text-zinc-50">Answer</span>
-                          <div className={`px-3 py-1 rounded-full text-xs font-medium ${getConfidenceColor(conv.response.confidence)}`}>
+                          <Badge tone={getConfidenceTone(conv.response.confidence)}>
                             {getConfidenceText(conv.response.confidence)}
-                          </div>
-                          <div className="px-3 py-1 bg-gradient-brand-soft border border-cyan-400/15 text-cyan-300 text-xs font-medium rounded-full">
+                          </Badge>
+                          <Badge tone="accent">
                             {formatQuestionType(conv.response.question_type)}
-                          </div>
+                          </Badge>
                         </div>
 
                         {/* Main Answer */}
@@ -231,17 +236,17 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                         {/* Explanation */}
                         <div>
                           <div className="flex items-center gap-2 mb-3">
-                            <Lightbulb className="w-5 h-5 text-amber-500" />
+                            <Lightbulb className="w-5 h-5 text-amber-400" />
                             <span className="font-semibold text-zinc-50">Explanation</span>
                           </div>
-                          <div className="bg-zinc-800 rounded-lg p-4">
-                            <Markdown content={conv.response.explanation} className="text-zinc-400" />
+                          <div className="bg-white/[0.04] border border-white/10 rounded-lg p-4">
+                            <Markdown content={conv.response.explanation} className="text-zinc-300" />
                           </div>
                         </div>
 
                         {/* Quick Stats */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="bg-zinc-800 rounded-lg p-3">
+                          <div className="bg-white/[0.04] border border-white/10 rounded-lg p-3">
                             <div className="flex items-center gap-2">
                               <Clock className="w-4 h-4 text-zinc-400" />
                               <div>
@@ -251,7 +256,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                             </div>
                           </div>
 
-                          <div className="bg-zinc-800 rounded-lg p-3">
+                          <div className="bg-white/[0.04] border border-white/10 rounded-lg p-3">
                             <div className="flex items-center gap-2">
                               <FileText className="w-4 h-4 text-zinc-400" />
                               <div>
@@ -261,7 +266,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                             </div>
                           </div>
 
-                          <div className="bg-zinc-800 rounded-lg p-3">
+                          <div className="bg-white/[0.04] border border-white/10 rounded-lg p-3">
                             <div className="flex items-center gap-2">
                               <TrendingUp className="w-4 h-4 text-zinc-400" />
                               <div>
@@ -278,13 +283,13 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                         {conv.response.study_tips.length > 0 && (
                           <div>
                             <div className="flex items-center gap-2 mb-3">
-                              <Lightbulb className="w-4 h-4 text-yellow-500" />
+                              <Lightbulb className="w-4 h-4 text-amber-400" />
                               <span className="font-semibold text-zinc-50">Study Tips</span>
                             </div>
                             <div className="space-y-2">
                               {conv.response.study_tips.map((tip, index) => (
-                                <div key={index} className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                                  <p className="text-sm text-yellow-300">{tip}</p>
+                                <div key={index} className="bg-amber-500/10 border border-amber-400/25 rounded-lg p-3">
+                                  <p className="text-sm text-amber-300">{tip}</p>
                                 </div>
                               ))}
                             </div>
@@ -300,13 +305,9 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {conv.response.relevant_sources.map((source, index) => (
-                                <span
-                                  key={index}
-                                  className="flex items-center gap-1 px-3 py-1 bg-zinc-800 text-zinc-400 text-sm rounded-full"
-                                >
-                                  {getSourceIcon(source)}
+                                <Badge key={index} tone="neutral" icon={getSourceIcon(source)}>
                                   {source}
-                                </span>
+                                </Badge>
                               ))}
                             </div>
                           </div>
@@ -314,15 +315,10 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                       </div>
                     ) : (
                       /* Error State */
-                      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <h3 className="font-semibold text-red-400 mb-1">Unable to Process Question</h3>
-                            <p className="text-red-400 text-sm">{conv.response.explanation}</p>
-                          </div>
-                        </div>
-                      </div>
+                      <ErrorState
+                        compact
+                        title={conv.response.explanation || 'Unable to process this question — try rephrasing it.'}
+                      />
                     )}
                   </div>
                 </div>
@@ -335,19 +331,15 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
       {/* Input Form */}
       <div className={`card-surface border-t-0 p-6 ${conversations.length === 0 ? 'rounded-none' : ''}`}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-zinc-400 mb-2">
-              {conversations.length > 0 ? 'Ask another question:' : 'Paste your quiz question here:'}
-            </label>
-            <textarea
-              ref={textareaRef}
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Example:&#10;&#10;Which of the following best describes photosynthesis?&#10;A) The process by which plants break down glucose&#10;B) The process by which plants convert light energy into chemical energy&#10;C) The process by which plants absorb water&#10;D) The process by which plants release oxygen"
-              className="w-full min-h-[120px] p-4 bg-zinc-800/70 border border-zinc-700 text-zinc-50 rounded-lg focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 outline-none resize-none transition-colors text-sm placeholder-zinc-500"
-              disabled={loading}
-            />
-          </div>
+          <Textarea
+            ref={textareaRef}
+            label={conversations.length > 0 ? 'Ask another question:' : 'Paste your quiz question here:'}
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Example:&#10;&#10;Which of the following best describes photosynthesis?&#10;A) The process by which plants break down glucose&#10;B) The process by which plants convert light energy into chemical energy&#10;C) The process by which plants absorb water&#10;D) The process by which plants release oxygen"
+            className="min-h-[120px] p-4 resize-none"
+            disabled={loading}
+          />
 
           <div className="flex items-center gap-3">
             <Button
@@ -373,7 +365,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
             )}
 
             {!courseId && (
-              <div className="flex items-center gap-2 text-amber-500 text-sm">
+              <div className="flex items-center gap-2 text-amber-400 text-sm">
                 <AlertCircle className="w-4 h-4" />
                 Select a course first
               </div>

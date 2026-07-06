@@ -22,3 +22,6 @@ export const PRACTICE_DIFFICULTIES: readonly DifficultyOption<PracticeDifficulty
 ]
 
 export const PRACTICE_COUNTS: readonly number[] = [3, 5, 10, 15]
+
+/** Cyan accent for "how far through the session" progress (not a score). */
+export const PROGRESS_ACCENT = '#22d3ee'

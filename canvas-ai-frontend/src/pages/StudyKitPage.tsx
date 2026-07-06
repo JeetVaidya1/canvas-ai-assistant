@@ -1,16 +1,15 @@
 import { useParams } from 'react-router-dom'
 import NotesCreator from '@/components/NotesCreator'
-import { useUser } from '@/hooks/useUser'
 import { useCourses } from '@/hooks/useCourses'
 
 /**
  * "Study Kit" destination — grounded notes plus the flashcards generated from
- * them (flashcards render inside NotesCreator). Audio overviews were removed
- * until the feature actually exists; no "coming soon" dead ends.
+ * them (flashcards render inside NotesCreator, decomposed under
+ * components/studykit/). Audio overviews were removed until the feature
+ * actually exists; no "coming soon" dead ends.
  */
 export default function StudyKitPage() {
   const { courseId } = useParams<{ courseId: string }>()
-  const userId = useUser()
   const { data: courses } = useCourses()
 
   const course = courses?.find((c) => c.course_id === courseId)
@@ -24,7 +23,7 @@ export default function StudyKitPage() {
         </span>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="h-full px-5 py-4 max-w-4xl mx-auto" data-user-id={userId}>
+        <div className="h-full px-5 py-4 max-w-4xl mx-auto">
           <NotesCreator courseId={courseId || ''} courseName={title} />
         </div>
       </div>

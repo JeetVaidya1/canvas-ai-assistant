@@ -1,19 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { motion } from 'motion/react'
-import {
-  Calendar,
-  Download,
-  Sparkles,
-  BookOpen,
-  RefreshCw,
-  Dumbbell,
-  Clock,
-  CheckCircle2,
-  Circle,
-  ChevronDown,
-} from 'lucide-react'
-import { BrandMark } from '@/components/ui/BrandMark'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Calendar, Download, Sparkles, ChevronDown } from 'lucide-react'
 import {
   generateStudyPlan,
   getStudyPlan,
@@ -24,225 +12,140 @@ import {
 import { useUser } from '@/hooks/useUser'
 import { showError, showSuccess } from '@/lib/toast'
 import { Button } from '@/components/ui/Button'
-import { Card, PageHeader } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { EmptyState, ErrorState } from '@/components/ui/States'
+import { PlanTimeline } from '@/components/progress/PlanTimeline'
 
-const inputClass =
-  'w-full px-3 py-2 bg-white/[0.04] border border-white/10 rounded-lg text-zinc-100 placeholder-zinc-500 ' +
-  'focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-400/20 outline-none text-sm transition-colors'
+const MIN_DAYS = 1
+const MAX_DAYS = 60
+const MIN_HOURS = 0.5
+const MAX_HOURS = 12
 
-type DayType = 'review' | 'new' | 'practice'
-
-const TYPE_META: Record<DayType, { label: string; tone: string; dot: string; icon: typeof BookOpen }> = {
-  new: { label: 'New', tone: 'text-cyan-300 bg-cyan-500/12 border-cyan-400/20', dot: 'bg-cyan-400', icon: Sparkles },
-  review: { label: 'Review', tone: 'text-amber-300 bg-amber-500/10 border-amber-500/20', dot: 'bg-amber-400', icon: RefreshCw },
-  practice: { label: 'Practice', tone: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20', dot: 'bg-emerald-400', icon: Dumbbell },
+/** Clamp numeric input safely (empty/garbage input falls back to the min). */
+function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min
+  return Math.max(min, Math.min(max, value))
 }
 
-function formatDate(iso: string): { weekday: string; date: string } {
+function doneTasksStorageKey(courseId: string): string {
+  return `vindexa_plan_done_${courseId}`
+}
+
+function loadDoneTasks(courseId: string | undefined): ReadonlySet<string> {
+  if (!courseId) return new Set()
   try {
-    const d = new Date(iso + 'T00:00:00')
-    return {
-      weekday: d.toLocaleDateString(undefined, { weekday: 'short' }),
-      date: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-    }
+    const raw = localStorage.getItem(doneTasksStorageKey(courseId))
+    const parsed: unknown = raw ? JSON.parse(raw) : []
+    return new Set(Array.isArray(parsed) ? parsed.filter((k): k is string => typeof k === 'string') : [])
   } catch {
-    return { weekday: '', date: iso }
+    return new Set()
   }
 }
 
-function isToday(iso: string): boolean {
+function persistDoneTasks(courseId: string, tasks: ReadonlySet<string>): void {
   try {
-    return new Date(iso + 'T00:00:00').toDateString() === new Date().toDateString()
+    localStorage.setItem(doneTasksStorageKey(courseId), JSON.stringify([...tasks]))
   } catch {
-    return false
+    // Storage full/blocked — ticks just won't persist; never break the UI.
   }
 }
 
-function isPast(iso: string): boolean {
-  try {
-    const d = new Date(iso + 'T00:00:00')
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    return d < today
-  } catch {
-    return false
-  }
-}
-
-/** A single day in the agenda timeline. Today is highlighted; past days dim. */
-function TimelineDay({
-  day,
-  index,
-  total,
-}: {
-  day: StudyPlan['days'][number]
-  index: number
-  total: number
-}) {
-  const meta = TYPE_META[(day.type as DayType)] ?? TYPE_META.review
-  const Icon = meta.icon
-  const today = isToday(day.date)
-  const past = isPast(day.date) && !today
-  const { weekday, date } = formatDate(day.date)
-
+function PlannerSkeleton() {
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.3, delay: Math.min(index * 0.04, 0.4), ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex gap-4 pl-1"
-    >
-      {/* Rail + node */}
-      <div className="relative flex flex-col items-center flex-shrink-0 w-9">
-        {/* connector line (skip after last) */}
-        {index < total - 1 && (
-          <span className="absolute top-9 bottom-[-1.25rem] w-px bg-white/[0.08]" />
-        )}
-        <div
-          className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border ${
-            today
-              ? 'border-cyan-400/50 bg-cyan-500/15 ring-2 ring-cyan-400/25'
-              : past
-                ? 'border-white/10 bg-white/[0.03]'
-                : 'border-white/10 bg-[#19202f]'
-          }`}
-        >
-          {today ? (
-            <Circle className="h-3.5 w-3.5 text-cyan-300 fill-cyan-300" />
-          ) : past ? (
-            <CheckCircle2 className="h-4 w-4 text-zinc-500" />
-          ) : (
-            <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
-          )}
-        </div>
-      </div>
-
-      {/* Day card */}
-      <Card
-        padding="md"
-        accent={today}
-        className={`mb-5 flex-1 transition-colors ${
-          today ? 'ring-1 ring-cyan-400/30 border-cyan-400/30' : past ? 'opacity-70' : ''
-        }`}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              {today && (
-                <span className="rounded-full bg-cyan-500/15 border border-cyan-400/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-200">
-                  Today
-                </span>
-              )}
-              <span className={`text-sm font-semibold ${today ? 'text-cyan-200' : 'text-zinc-100'}`}>
-                {weekday} · {date}
-              </span>
-              <span className="text-[11px] text-zinc-500">Day {index + 1}</span>
-            </div>
-          </div>
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium flex-shrink-0 ${meta.tone}`}>
-            <Icon className="w-3 h-3" />
-            {meta.label}
-          </span>
-        </div>
-
-        <div className="mt-2.5 flex items-center gap-1.5 text-xs text-zinc-400">
-          <Clock className="w-3.5 h-3.5 text-zinc-500" />
-          {day.duration_minutes} min focused study
-        </div>
-
-        {/* Checkable task affordance per topic */}
-        <ul className="mt-3 space-y-1.5">
-          {day.topics.map((t, j) => (
-            <li
-              key={j}
-              className="flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5"
-            >
-              <Circle className="h-3.5 w-3.5 text-zinc-600 flex-shrink-0" />
-              <span className="text-sm text-zinc-200 truncate">{t}</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
-    </motion.div>
+    <div className="max-w-4xl mx-auto px-6 py-8 space-y-6 animate-pulse" aria-hidden>
+      <div className="h-20 rounded-xl bg-white/[0.04] border border-white/[0.06]" />
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="h-32 rounded-xl bg-white/[0.04] border border-white/[0.06]" />
+      ))}
+    </div>
   )
 }
 
 export default function PlannerPage() {
   const { courseId } = useParams<{ courseId: string }>()
   const userId = useUser()
+  const queryClient = useQueryClient()
 
-  const [plan, setPlan] = useState<StudyPlan | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [replanning, setReplanning] = useState(false)
-  const [exporting, setExporting] = useState(false)
   const [daysAvailable, setDaysAvailable] = useState(10)
   const [hoursPerDay, setHoursPerDay] = useState(2)
   const [examDate, setExamDate] = useState('')
   const [setupOpen, setSetupOpen] = useState(false)
+  const [doneTasks, setDoneTasks] = useState<ReadonlySet<string>>(() => loadDoneTasks(courseId))
 
+  // Re-sync per-course state: detected exam date (Canvas import) + task ticks.
   useEffect(() => {
     if (!courseId) return
-    void getStudyPlan(courseId).then((p) => {
-      if (p) setPlan(p)
-    })
-    // Prefill the exam date if a Canvas import detected one.
     const detected = localStorage.getItem(`vindexa_exam_date_${courseId}`)
     if (detected) setExamDate(detected)
+    setDoneTasks(loadDoneTasks(courseId))
   }, [courseId])
 
-  const handleGenerate = async () => {
-    if (!courseId) return
-    setLoading(true)
-    try {
-      const result = await generateStudyPlan(courseId, {
-        daysAvailable,
-        hoursPerDay,
-        examDate: examDate || undefined,
-      })
-      setPlan(result)
+  const planQuery = useQuery({
+    queryKey: ['studyPlan', courseId],
+    queryFn: () => getStudyPlan(courseId ?? ''),
+    enabled: !!courseId,
+  })
+  const plan = planQuery.data ?? null
+
+  const planParams = { daysAvailable, hoursPerDay, examDate: examDate || undefined }
+
+  const generateMutation = useMutation({
+    mutationFn: () => generateStudyPlan(courseId ?? '', planParams),
+    onSuccess: (result: StudyPlan) => {
+      queryClient.setQueryData(['studyPlan', courseId], result)
       setSetupOpen(false)
       showSuccess('Study plan generated')
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Failed to generate study plan')
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    onError: (e: unknown) => showError(e instanceof Error ? e.message : 'Failed to generate study plan'),
+  })
 
-  const handleReplan = async () => {
-    if (!courseId) return
-    setReplanning(true)
-    try {
-      const result = await replanStudyPlan(courseId, userId, {
-        daysAvailable,
-        hoursPerDay,
-        examDate: examDate || undefined,
-      })
-      setPlan(result)
+  const replanMutation = useMutation({
+    mutationFn: () => replanStudyPlan(courseId ?? '', userId, planParams),
+    onSuccess: (result: StudyPlan) => {
+      queryClient.setQueryData(['studyPlan', courseId], result)
       showSuccess('Replanned around your weak areas')
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Failed to replan')
-    } finally {
-      setReplanning(false)
-    }
-  }
+    },
+    onError: (e: unknown) => showError(e instanceof Error ? e.message : 'Failed to replan'),
+  })
 
-  const handleExport = async () => {
-    if (!courseId) return
-    setExporting(true)
-    try {
-      const blob = await exportPlannerIcal(courseId)
+  const exportMutation = useMutation({
+    mutationFn: () => exportPlannerIcal(courseId ?? ''),
+    onSuccess: (blob: Blob) => {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = `${courseId}_study_plan.ics`
       a.click()
       URL.revokeObjectURL(url)
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Failed to export calendar')
-    } finally {
-      setExporting(false)
-    }
+    },
+    onError: (e: unknown) => showError(e instanceof Error ? e.message : 'Failed to export calendar'),
+  })
+
+  const toggleTask = (key: string) => {
+    if (!courseId) return
+    setDoneTasks((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      persistDoneTasks(courseId, next)
+      return next
+    })
+  }
+
+  if (planQuery.isPending && !!courseId) return <PlannerSkeleton />
+
+  if (planQuery.isError) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <ErrorState
+          title="Couldn't load your study plan"
+          description="Check your connection and try again."
+          onRetry={() => void planQuery.refetch()}
+          retrying={planQuery.isRefetching}
+        />
+      </div>
+    )
   }
 
   const totalMinutes = plan ? plan.days.reduce((s, d) => s + d.duration_minutes, 0) : 0
@@ -253,36 +156,32 @@ export default function PlannerPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-      <PageHeader
-        eyebrow="Planner"
-        title="Study Planner"
-        subtitle="AI-powered study schedules with spaced repetition"
-        actions={
-          plan ? (
-            <>
-              <Button
-                variant="secondary"
-                onClick={() => void handleReplan()}
-                loading={replanning}
-                leftIcon={<Sparkles className="w-4 h-4" />}
-                title="Rebuild the plan around your current weak areas and due reviews"
-              >
-                {replanning ? 'Replanning...' : 'Focus on weak areas'}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => void handleExport()}
-                loading={exporting}
-                leftIcon={<Download className="w-4 h-4" />}
-              >
-                {exporting ? 'Exporting...' : 'Export to iCal'}
-              </Button>
-            </>
-          ) : undefined
-        }
-      />
+      {/* Slim toolbar — the Progress wrapper bar already names the page. */}
+      {plan && (
+        <div className="flex items-center justify-end gap-2 -mb-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => replanMutation.mutate()}
+            loading={replanMutation.isPending}
+            leftIcon={<Sparkles className="w-4 h-4" />}
+            title="Rebuild the plan around your current weak areas and due reviews"
+          >
+            {replanMutation.isPending ? 'Replanning...' : 'Focus on weak areas'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => exportMutation.mutate()}
+            loading={exportMutation.isPending}
+            leftIcon={<Download className="w-4 h-4" />}
+          >
+            {exportMutation.isPending ? 'Exporting...' : 'Export to iCal'}
+          </Button>
+        </div>
+      )}
 
-      {/* ── Plan summary + collapsible setup ─────────────────────────── */}
+      {/* Plan summary + collapsible setup */}
       {plan && (
         <Card accent padding="md" className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-5">
@@ -311,81 +210,56 @@ export default function PlannerPage() {
         </Card>
       )}
 
-      {/* ── Setup form ───────────────────────────────────────────────── */}
+      {/* Setup form */}
       {showSetup && (
         <Card accent padding="md">
           <h2 className="text-sm font-semibold text-zinc-100 mb-4">Plan your revision</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Days available</label>
-              <input
-                type="number"
-                min={1}
-                max={60}
-                value={daysAvailable}
-                onChange={(e) => setDaysAvailable(Math.max(1, Math.min(60, Number(e.target.value))))}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Hours per day</label>
-              <input
-                type="number"
-                min={0.5}
-                max={12}
-                step={0.5}
-                value={hoursPerDay}
-                onChange={(e) => setHoursPerDay(Math.max(0.5, Math.min(12, Number(e.target.value))))}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Exam date (optional)</label>
-              <input
-                type="date"
-                value={examDate}
-                onChange={(e) => setExamDate(e.target.value)}
-                className={inputClass}
-              />
-            </div>
+            <Input
+              label="Days available"
+              type="number"
+              min={MIN_DAYS}
+              max={MAX_DAYS}
+              value={daysAvailable}
+              onChange={(e) => setDaysAvailable(clamp(Number(e.target.value), MIN_DAYS, MAX_DAYS))}
+            />
+            <Input
+              label="Hours per day"
+              type="number"
+              min={MIN_HOURS}
+              max={MAX_HOURS}
+              step={0.5}
+              value={hoursPerDay}
+              onChange={(e) => setHoursPerDay(clamp(Number(e.target.value), MIN_HOURS, MAX_HOURS))}
+            />
+            <Input
+              label="Exam date (optional)"
+              type="date"
+              value={examDate}
+              onChange={(e) => setExamDate(e.target.value)}
+            />
           </div>
           <Button
-            onClick={() => void handleGenerate()}
-            loading={loading}
+            onClick={() => generateMutation.mutate()}
+            loading={generateMutation.isPending}
             disabled={!courseId}
             leftIcon={<Sparkles className="w-4 h-4" />}
           >
-            {loading ? 'Generating...' : plan ? 'Regenerate Plan' : 'Generate Plan'}
+            {generateMutation.isPending ? 'Generating...' : plan ? 'Regenerate Plan' : 'Generate Plan'}
           </Button>
         </Card>
       )}
 
-      {/* ── Agenda timeline ──────────────────────────────────────────── */}
+      {/* Agenda timeline */}
       {plan ? (
-        <div>
-          {/* type legend */}
-          <div className="flex flex-wrap items-center gap-3 mb-5 px-1">
-            {(Object.keys(TYPE_META) as DayType[]).map((k) => (
-              <span key={k} className="inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
-                <span className={`w-2 h-2 rounded-full ${TYPE_META[k].dot}`} />
-                {TYPE_META[k].label}
-              </span>
-            ))}
-          </div>
-          <div>
-            {plan.days.map((day, i) => (
-              <TimelineDay key={i} day={day} index={i} total={plan.days.length} />
-            ))}
-          </div>
-        </div>
+        <PlanTimeline plan={plan} doneTasks={doneTasks} onToggleTask={toggleTask} />
       ) : (
-        <Card accent padding="none" elevation={2} className="py-12 px-8 text-center">
-          <BrandMark className="mx-auto mb-4 h-14 w-14" />
-          <h3 className="text-lg font-semibold text-zinc-100 mb-2">No plan yet</h3>
-          <p className="text-sm text-zinc-400 max-w-md mx-auto">
-            Set your available days and hours above, then generate a personalized study schedule
-            with spaced-repetition reviews.
-          </p>
+        <Card accent padding="lg" elevation={2}>
+          <EmptyState
+            icon={<Calendar />}
+            title="Generate a study plan from your exam date"
+            description="Set your available days and hours above — we’ll schedule new material, spaced-repetition reviews and practice blocks up to exam day."
+          />
         </Card>
       )}
     </div>

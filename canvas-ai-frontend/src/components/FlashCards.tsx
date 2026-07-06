@@ -4,6 +4,9 @@ import { Shuffle, RotateCcw, Download, Save, Brain, CheckCircle } from 'lucide-r
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Select } from '@/components/ui/Select'
+import { ProgressBar } from '@/components/ui/Progress'
 import {
   exportFlashcardsAnki,
   type DeckCard,
@@ -14,6 +17,12 @@ import { showError, showSuccess } from '@/lib/toast'
 export type Flashcard = { q: string; a: string }
 
 type StudyMode = 'all' | 'hide-answers' | 'typing' | 'sr'
+
+const STUDY_MODE_OPTIONS = [
+  { value: 'all', label: 'Flip to reveal' },
+  { value: 'hide-answers', label: 'Prompt only' },
+  { value: 'typing', label: 'Typing practice' },
+]
 
 type GradeVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
@@ -148,20 +157,19 @@ export default function Flashcards({
   return (
     <Card accent padding="lg">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h3 className="text-lg font-semibold text-zinc-50">
-          {title} <span className="text-zinc-400 font-normal">({cards.length})</span>
-        </h3>
+        <div className="flex items-center gap-2.5">
+          <h3 className="text-lg font-semibold text-zinc-50">{title}</h3>
+          <Badge tone="neutral">{cards.length} card{cards.length === 1 ? '' : 's'}</Badge>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <select
-            value={studyMode}
-            onChange={e => { setStudyMode(e.target.value as StudyMode); setShowBack({}); setTypingAnswers({}) }}
-            className="bg-white/[0.04] border border-white/10 text-zinc-100 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25 transition-colors"
-            title="Study mode"
-          >
-            <option value="all">Flip to reveal</option>
-            <option value="hide-answers">Prompt only</option>
-            <option value="typing">Typing practice</option>
-          </select>
+          <Select
+            value={studyMode === 'sr' ? '' : studyMode}
+            options={STUDY_MODE_OPTIONS}
+            onChange={(v) => { setStudyMode(v as StudyMode); setShowBack({}); setTypingAnswers({}) }}
+            placeholder="Study mode"
+            ariaLabel="Study mode"
+            className="w-44"
+          />
 
           <Button variant="ghost" size="sm" onClick={shuffled} leftIcon={<Shuffle className="w-4 h-4" />}>
             Shuffle
@@ -234,7 +242,7 @@ export default function Flashcards({
               >
                 {/* Front */}
                 <div className="absolute inset-0 p-4 backface-hidden">
-                  <div className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Question</div>
+                  <div className="text-xs font-semibold tracking-wide text-gradient-brand mb-1.5">Question</div>
                   <div className="text-zinc-50 font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
                   {studyMode==='all' && (
                     <div className="absolute bottom-3 right-3 text-xs text-zinc-500">Click to flip</div>
@@ -243,7 +251,7 @@ export default function Flashcards({
 
                 {/* Back (answer) */}
                 <div className="absolute inset-0 p-4 rotate-y-180 backface-hidden">
-                  <div className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Answer</div>
+                  <div className="text-xs font-semibold tracking-wide text-gradient-brand mb-1.5">Answer</div>
                   <div className="text-zinc-50 leading-snug overflow-hidden max-h-32"><Markdown content={a} /></div>
                 </div>
               </div>
@@ -251,7 +259,7 @@ export default function Flashcards({
               {/* Hide-answers mode: show only prompts */}
               {studyMode==='hide-answers' && (
                 <div className="absolute inset-0 rounded-xl border border-dashed border-white/15 bg-white/[0.04] p-4">
-                  <div className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-1.5">Prompt</div>
+                  <div className="text-xs font-semibold tracking-wide text-zinc-400 mb-1.5">Prompt</div>
                   <div className="text-zinc-200 font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
                 </div>
               )}
@@ -259,7 +267,7 @@ export default function Flashcards({
               {/* Typing practice mode */}
               {studyMode==='typing' && (
                 <div className="absolute inset-0 rounded-xl border border-cyan-400/30 bg-gradient-brand-soft p-4 flex flex-col">
-                  <div className="text-xs font-semibold uppercase tracking-widest text-cyan-300 mb-1.5">Type your answer</div>
+                  <div className="text-xs font-semibold tracking-wide text-cyan-300 mb-1.5">Type your answer</div>
                   <textarea
                     className="flex-1 resize-none rounded-lg bg-white/[0.04] border border-cyan-400/30 px-3 py-2 text-sm text-zinc-50 outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25 transition-colors"
                     value={typingAnswers[idx] || ''}
@@ -332,16 +340,24 @@ function SrReview({
   const card = deck[index]
   return (
     <div>
-      <div className="flex items-center justify-between mb-3 text-xs text-zinc-500">
+      <div className="flex items-center justify-between gap-3 mb-2 text-xs text-zinc-500">
         <span>Card {index + 1} of {deck.length} due</span>
+        <Badge tone="warning">{deck.length - index} left</Badge>
       </div>
+      {/* Session progress — completed reviews out of the due snapshot. */}
+      <ProgressBar
+        value={(index / deck.length) * 100}
+        color="#22d3ee"
+        label="Review session progress"
+        className="mb-4"
+      />
       <Card accent padding="lg" className="min-h-44">
-        <div className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Question</div>
+        <div className="text-xs font-semibold tracking-wide text-gradient-brand mb-1.5">Question</div>
         <div className="text-zinc-50 font-medium leading-snug mb-4"><Markdown content={card.q} /></div>
         {revealed && (
           <>
             <div className="border-t border-white/10 my-3" />
-            <div className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">Answer</div>
+            <div className="text-xs font-semibold tracking-wide text-gradient-brand mb-1.5">Answer</div>
             <div className="text-zinc-200 leading-snug"><Markdown content={card.a} /></div>
           </>
         )}

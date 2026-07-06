@@ -9,9 +9,13 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen text-zinc-50">
       <AppSidebar />
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex flex-col flex-1 min-w-0 min-h-0">
         <TopBar />
-        <main className="flex-1 overflow-y-auto">
+        {/* The single app scroll container — pages either scroll here or opt
+            into their own internal layout with h-full. No backdrop-blur
+            wrappers around the outlet: blur over a scrolling transcript is a
+            compositor hazard. */}
+        <main className="relative flex-1 min-h-0 overflow-y-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
