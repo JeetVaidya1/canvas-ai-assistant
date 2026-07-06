@@ -5,8 +5,9 @@ import shutil
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 
+import course_brain
 from auth import current_user_id, get_current_user, require_course_access
 from core import courses_store
 from core.courses_store import CourseStoreError
@@ -56,6 +57,7 @@ def create_course(course_id: str = Form(...), title: str = Form(...),
 
 @router.post("/upload")
 async def upload_files(
+    background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
     course_id: str = Form(...),
     user=Depends(get_current_user)
@@ -210,7 +212,11 @@ async def upload_files(
     if errors:
         response["errors"] = errors
         response["status"] = "partial" if uploaded_files else "failed"
-    
+
+    # Course materials changed -> rebuild the Course Brain topics off-request.
+    if uploaded_files:
+        background_tasks.add_task(course_brain.rebuild_topics_safely, course_id)
+
     print(f"📤 Enhanced processing complete!")
     return response
 

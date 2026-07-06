@@ -29,7 +29,7 @@ class FakeQuery:
         self._db = db
         self._table = table
         self._op = "select"
-        self._payload: Optional[Dict[str, Any]] = None
+        self._payload: Any = None  # dict for single insert/update, list for batch insert
         self._filters: List[tuple] = []
         self._limit: Optional[int] = None
         self._single = False
@@ -54,7 +54,8 @@ class FakeQuery:
         return self
 
     # -- operations ------------------------------------------------------
-    def insert(self, record: Dict[str, Any]) -> "FakeQuery":
+    def insert(self, record: Any) -> "FakeQuery":
+        """Accepts a single row dict OR a list of rows (supabase batch insert)."""
         self._op = "insert"
         self._payload = record
         return self
@@ -86,10 +87,14 @@ class FakeQuery:
         return self._execute_select(rows)
 
     def _execute_insert(self, rows: List[Dict[str, Any]]) -> FakeResult:
-        record = dict(self._payload or {})
-        record.setdefault("id", f"{self._table}-row-{len(rows) + 1}")
-        rows.append(record)
-        return FakeResult([dict(record)])
+        payload = self._payload if isinstance(self._payload, list) else [self._payload or {}]
+        inserted = []
+        for raw in payload:
+            record = dict(raw)
+            record.setdefault("id", f"{self._table}-row-{len(rows) + 1}")
+            rows.append(record)
+            inserted.append(dict(record))
+        return FakeResult(inserted)
 
     def _execute_update(self, rows: List[Dict[str, Any]]) -> FakeResult:
         updated = []

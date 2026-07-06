@@ -138,6 +138,47 @@ def test_ask_session_create_failure_is_honest_500(client, as_user, chat_env):
     assert LEAK_MARKER not in resp.text
 
 
+def test_ask_fires_chat_tracking_in_background(client, as_user, chat_env, monkeypatch):
+    """A successful /ask counts toward mastery/streak: track_interaction fires
+    (on BackgroundTasks — TestClient runs it after the response is built)."""
+    import deps
+
+    calls = []
+
+    class RecorderAnalytics:
+        def track_interaction(self, **kwargs):
+            calls.append(kwargs)
+            return True
+
+    monkeypatch.setattr(deps, "analytics_engine", RecorderAnalytics())
+    as_user(USER)
+    chat_env()
+    resp = client.post("/ask", data={"question": "What is a heap?", "course_id": COURSE})
+    assert resp.status_code == 200
+
+    [tracked] = calls
+    assert tracked["user_id"] == USER
+    assert tracked["course_id"] == COURSE
+    assert tracked["question"] == "What is a heap?"
+    assert tracked["question_type"] == "chat"
+    assert tracked["answer"] == STUB_ANSWER
+
+
+def test_ask_tracking_failure_never_affects_the_response(client, as_user, chat_env, monkeypatch):
+    import deps
+
+    class ExplodingAnalytics:
+        def track_interaction(self, **kwargs):
+            raise RuntimeError("analytics down")
+
+    monkeypatch.setattr(deps, "analytics_engine", ExplodingAnalytics())
+    as_user(USER)
+    chat_env()
+    resp = client.post("/ask", data={"question": "Q?", "course_id": COURSE})
+    assert resp.status_code == 200
+    assert resp.json()["answer"] == STUB_ANSWER
+
+
 def test_ask_foreign_course_is_403(client, as_user, chat_env):
     """/ask must not answer from a course the token user can't access."""
     as_user(USER)

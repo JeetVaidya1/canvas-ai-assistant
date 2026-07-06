@@ -61,7 +61,32 @@ def test_longer_run_counts_all_consecutive_days():
 
 @pytest.mark.unit
 @freeze_time("2026-06-23")
-def test_no_study_today_means_no_current_streak():
-    # Studied yesterday + before, but not today -> streak is 0 (must include today).
+def test_yesterday_grace_preserves_streak():
+    # V3 grace: studied yesterday + before but not (yet) today -> streak
+    # survives, anchored at yesterday. It shouldn't read 0 at breakfast.
     rows = [_ts("2026-06-22"), _ts("2026-06-21")]
+    assert _engine().calculate_study_streak(rows) == 2
+
+
+@pytest.mark.unit
+@freeze_time("2026-06-23")
+def test_two_days_idle_breaks_the_streak():
+    # Last activity two days ago -> beyond the one-day grace window -> 0.
+    rows = [_ts("2026-06-21"), _ts("2026-06-20")]
     assert _engine().calculate_study_streak(rows) == 0
+
+
+@pytest.mark.unit
+@freeze_time("2026-06-23")
+def test_grace_plus_today_do_not_double_count():
+    # Today + yesterday is still just a 2-day streak under the grace rule.
+    rows = [_ts("2026-06-23"), _ts("2026-06-22")]
+    assert _engine().calculate_study_streak(rows) == 2
+
+
+@pytest.mark.unit
+@freeze_time("2026-06-23")
+def test_future_dated_rows_are_ignored():
+    # Clock-skewed future rows must not break (or fake) the streak.
+    rows = [_ts("2026-06-25"), _ts("2026-06-23"), _ts("2026-06-22")]
+    assert _engine().calculate_study_streak(rows) == 2

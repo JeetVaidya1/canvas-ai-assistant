@@ -112,10 +112,12 @@ create index if not exists exam_sessions_status_idx on exam_sessions (status);
 create table if not exists quiz_sessions (
     id            uuid primary key,            -- set explicitly in code (uuid4)
     course_id     text,
-    user_id       text,
+    user_id       text,                         -- token user (NULL on pre-0013 legacy rows)
     topic         text,
     difficulty    text,
-    num_questions integer,
+    num_questions integer,                      -- questions that exist so far
+    num_requested integer,                      -- questions the user asked for (0013)
+    generation_status text default 'ready',     -- 'ready' | 'generating' | 'partial' (0013)
     status        text default 'active',       -- 'active' | 'completed'
     score         jsonb,                        -- {correct, total, pct}
     created_at    timestamptz not null default now()
@@ -145,6 +147,7 @@ create table if not exists quiz_responses (
     selected    text,
     is_correct  boolean,
     time_taken  double precision,
+    confidence  text,                            -- 'sure' | 'thinkso' | 'guessing' (0013)
     ts          timestamptz not null default now()
 );
 create index if not exists quiz_responses_quiz_idx on quiz_responses (quiz_id, user_id);
@@ -218,12 +221,34 @@ create index if not exists course_memberships_user_idx on course_memberships (us
 
 -- ---------------------------------------------------------------------------
 -- Concept prerequisite graph (Phase 4) — one DAG per course
+-- LEGACY (V3): the graph is now derived live from course_topics prereq edges
+-- (concept_graph.py); this table is kept only for pre-V3 rows.
 -- ---------------------------------------------------------------------------
 create table if not exists concept_graphs (
     course_id  text primary key,
     graph      jsonb,                          -- {concepts:[...], edges:[{prerequisite, concept}]}
     created_at timestamptz not null default now()
 );
+
+-- ---------------------------------------------------------------------------
+-- Course Brain topics (V3, migration 0012) — content-grounded course topics
+-- Synthesized by course_brain.py from sampled chunks; rebuilt (delete+insert)
+-- whenever course materials change. Everything that keys on "topic" (quiz
+-- targeting, mastery, readiness, planner, concept graph) reads from here.
+-- ---------------------------------------------------------------------------
+create table if not exists course_topics (
+    id           uuid primary key default gen_random_uuid(),
+    course_id    text not null references courses(course_id) on delete cascade,
+    slug         text not null,               -- kebab-case stable key
+    name         text not null,               -- clean human title (1-4 words)
+    description  text,                        -- one sentence
+    doc_coverage jsonb default '[]',          -- [{"doc": filename, "pages": [min, max]}]
+    prereq_slugs text[] default '{}',         -- edges within this course's topic set
+    position     int default 0,               -- teaching order (0-based)
+    created_at   timestamptz default now(),
+    unique (course_id, slug)
+);
+create index if not exists course_topics_course_idx on course_topics (course_id);
 
 -- ---------------------------------------------------------------------------
 -- Mistake-driven review queue (Phase 4) — per-user SM-2 items seeded by errors
