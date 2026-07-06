@@ -1,7 +1,7 @@
 // Slide-over question navigator: numbered grid with answered/current legend
 // and a finish CTA in the footer.
 import { motion, AnimatePresence } from 'motion/react'
-import { Flag, GraduationCap, LayoutGrid, X } from 'lucide-react'
+import { BookOpen, Flag, LayoutGrid, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { ExamSession } from './types'
 
@@ -90,7 +90,7 @@ export function QuestionNavigator({ open, onClose, session, onGoToQuestion, onRe
             {/* Footer — progress + submit */}
             <div className="border-t border-line p-4 space-y-3">
               <div className="flex items-center gap-2 text-xs text-ink-soft">
-                <GraduationCap className="h-3.5 w-3.5" />
+                <BookOpen className="h-3.5 w-3.5" />
                 <span className="tnum">{answeredCount}/{session.questions.length}</span> answered
               </div>
               <Button

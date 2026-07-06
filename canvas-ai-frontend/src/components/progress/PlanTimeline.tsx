@@ -1,6 +1,5 @@
 import { motion } from 'motion/react'
 import {
-  Sparkles,
   RefreshCw,
   Dumbbell,
   Clock,
@@ -16,7 +15,7 @@ type DayType = 'review' | 'new' | 'practice'
 type PlanDay = StudyPlan['days'][number]
 
 const TYPE_META: Record<DayType, { label: string; badge: 'accent' | 'warning' | 'success'; dot: string; icon: LucideIcon }> = {
-  new: { label: 'New', badge: 'accent', dot: 'bg-accent', icon: Sparkles },
+  new: { label: 'New', badge: 'accent', dot: 'bg-accent', icon: Circle },
   review: { label: 'Review', badge: 'warning', dot: 'bg-warning', icon: RefreshCw },
   practice: { label: 'Practice', badge: 'success', dot: 'bg-success', icon: Dumbbell },
 }

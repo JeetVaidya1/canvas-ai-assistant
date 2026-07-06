@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Calendar, Download, Sparkles, ChevronDown } from 'lucide-react'
+import { Calendar, Download, ChevronDown } from 'lucide-react'
 import {
   generateStudyPlan,
   getStudyPlan,
@@ -164,7 +164,6 @@ export default function PlannerPage() {
             size="sm"
             onClick={() => replanMutation.mutate()}
             loading={replanMutation.isPending}
-            leftIcon={<Sparkles className="w-4 h-4" />}
             title="Rebuild the plan around your current weak areas and due reviews"
           >
             {replanMutation.isPending ? 'Replanning...' : 'Focus on weak areas'}
@@ -243,7 +242,7 @@ export default function PlannerPage() {
             onClick={() => generateMutation.mutate()}
             loading={generateMutation.isPending}
             disabled={!courseId}
-            leftIcon={<Sparkles className="w-4 h-4" />}
+            leftIcon={<Calendar className="w-4 h-4" />}
           >
             {generateMutation.isPending ? 'Generating...' : plan ? 'Regenerate Plan' : 'Generate Plan'}
           </Button>
@@ -257,8 +256,17 @@ export default function PlannerPage() {
         <Card accent padding="lg" elevation={2}>
           <EmptyState
             icon={<Calendar />}
-            title="Generate a study plan from your exam date"
-            description="Set your available days and hours above — we’ll schedule new material, spaced-repetition reviews and practice blocks up to exam day."
+            title="No study plan yet"
+            description="Set your available days, hours, and exam date above — Vindexa schedules new material, spaced-repetition reviews, and practice blocks up to exam day."
+            action={
+              <Button
+                onClick={() => generateMutation.mutate()}
+                loading={generateMutation.isPending}
+                disabled={!courseId}
+              >
+                Generate plan
+              </Button>
+            }
           />
         </Card>
       )}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Brain, ChevronRight } from 'lucide-react'
+import { BookOpen, ChevronRight } from 'lucide-react'
 import type { Readiness } from '@/lib/api'
 import type { CourseTopic } from '@/lib/api/topics'
 import { Card } from '@/components/ui/Card'
@@ -61,7 +61,7 @@ export function TopicMasteryList({ readiness, topics, courseId }: TopicMasteryLi
       />
       {isEmpty ? (
         <EmptyState
-          icon={<Brain />}
+          icon={<BookOpen />}
           title="No topic mastery yet"
           description="Ask questions or take a quiz to start scoring topics."
         />

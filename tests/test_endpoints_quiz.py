@@ -123,12 +123,14 @@ def quiz_env(monkeypatch):
 
 
 def _seed_session(db: FakeSupabase, quiz_id: str = "quiz-1", user_id: str | None = USER,
-                  num_questions: int = 2, generation_status: str = "ready") -> None:
+                  num_questions: int = 2, generation_status: str = "ready",
+                  status: str = "active", course_id: str = COURSE,
+                  created_at: str = "2026-07-01T00:00:00") -> None:
     db.tables["quiz_sessions"].append({
-        "id": quiz_id, "course_id": COURSE, "user_id": user_id, "topic": "hashing",
+        "id": quiz_id, "course_id": course_id, "user_id": user_id, "topic": "hashing",
         "difficulty": "medium", "num_questions": num_questions,
         "num_requested": num_questions, "generation_status": generation_status,
-        "status": "active",
+        "status": status, "created_at": created_at,
     })
     for i in range(1, num_questions + 1):
         raw = _raw_question(i)
@@ -397,6 +399,123 @@ def test_submit_reports_calibration_buckets_and_confident_wrong(client, as_user,
     }
     [session] = db.tables["quiz_sessions"]
     assert session["status"] == "completed"
+
+
+# ---- GET /quiz/in-progress + GET /quiz/{id}/responses: resume everywhere ----
+
+def test_in_progress_requires_auth(client, quiz_env):
+    quiz_env()
+    assert client.get("/quiz/in-progress", params={"course_id": COURSE}).status_code == 401
+
+
+def test_responses_requires_auth(client, quiz_env):
+    db, _, _ = quiz_env()
+    _seed_session(db, "quiz-1", USER)
+    assert client.get("/quiz/quiz-1/responses").status_code == 401
+
+
+def test_in_progress_requires_course_id(client, as_user, quiz_env):
+    as_user(USER)
+    quiz_env()
+    missing = client.get("/quiz/in-progress")
+    empty = client.get("/quiz/in-progress", params={"course_id": "  "})
+    assert missing.status_code == empty.status_code == 400
+
+
+def test_in_progress_lists_only_own_open_sessions_in_course(client, as_user, quiz_env):
+    as_user(USER)
+    db, _, _ = quiz_env()
+    _seed_session(db, "quiz-mine", USER)
+    _seed_session(db, "quiz-foreign", OTHER)                       # other user
+    _seed_session(db, "quiz-elsewhere", USER, course_id="cs999")   # other course
+
+    resp = client.get("/quiz/in-progress", params={"course_id": COURSE})
+    assert resp.status_code == 200
+    [session] = resp.json()["sessions"]
+    assert session == {
+        "quiz_id": "quiz-mine",
+        "topic": "hashing",
+        "difficulty": "medium",
+        "num_requested": 2,
+        "num_answered": 0,
+        "num_available": 2,
+        "generation_status": "ready",
+        "created_at": "2026-07-01T00:00:00",
+    }
+
+
+def test_in_progress_excludes_completed_and_questionless_sessions(client, as_user, quiz_env):
+    as_user(USER)
+    db, _, _ = quiz_env()
+    _seed_session(db, "quiz-open", USER)
+    _seed_session(db, "quiz-done", USER, status="completed")
+    _seed_session(db, "quiz-empty", USER, num_questions=0)  # zero questions
+
+    body = client.get("/quiz/in-progress", params={"course_id": COURSE}).json()
+    assert [s["quiz_id"] for s in body["sessions"]] == ["quiz-open"]
+
+
+def test_in_progress_counts_distinct_answered_questions(client, as_user, quiz_env):
+    as_user(USER)
+    db, _, _ = quiz_env()
+    _seed_session(db, "quiz-1", USER, num_questions=4)
+    # q1 answered twice (re-answer) + q2 once -> 2 distinct.
+    for qid, selected in [("q1", "A"), ("q1", "B"), ("q2", "B")]:
+        r = client.post("/quiz/quiz-1/answer", data={"question_id": qid, "selected": selected})
+        assert r.status_code == 200
+
+    [session] = client.get("/quiz/in-progress", params={"course_id": COURSE}).json()["sessions"]
+    assert session["num_answered"] == 2
+    assert session["num_available"] == 4
+
+
+def test_in_progress_is_newest_first_capped_at_three(client, as_user, quiz_env):
+    as_user(USER)
+    db, _, _ = quiz_env()
+    for i in range(1, 6):  # 5 open sessions, quiz-5 newest
+        _seed_session(db, f"quiz-{i}", USER, created_at=f"2026-07-0{i}T00:00:00")
+
+    body = client.get("/quiz/in-progress", params={"course_id": COURSE}).json()
+    assert [s["quiz_id"] for s in body["sessions"]] == ["quiz-5", "quiz-4", "quiz-3"]
+
+
+def test_responses_returns_latest_answer_per_question_in_order(client, as_user, quiz_env):
+    as_user(USER)
+    db, _, _ = quiz_env()
+    _seed_session(db, "quiz-1", USER, num_questions=3)
+    # Answer q2 first, then q1 wrong, then q1 corrected -> latest wins, sorted q1,q2.
+    for qid, selected, conf in [("q2", "C", None), ("q1", "A", "guessing"), ("q1", "B", "sure")]:
+        data = {"question_id": qid, "selected": selected}
+        if conf:
+            data["confidence"] = conf
+        assert client.post("/quiz/quiz-1/answer", data=data).status_code == 200
+
+    resp = client.get("/quiz/quiz-1/responses")
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "quiz_id": "quiz-1",
+        "responses": [
+            {"question_id": "q1", "selected": "B", "is_correct": True, "confidence": "sure"},
+            {"question_id": "q2", "selected": "C", "is_correct": False, "confidence": None},
+        ],
+    }
+
+
+def test_responses_empty_when_nothing_answered(client, as_user, quiz_env):
+    as_user(USER)
+    db, _, _ = quiz_env()
+    _seed_session(db, "quiz-1", USER)
+    assert client.get("/quiz/quiz-1/responses").json() == {"quiz_id": "quiz-1", "responses": []}
+
+
+def test_responses_foreign_and_unknown_quiz_404_identically(client, as_user, quiz_env):
+    as_user(USER)
+    db, _, _ = quiz_env()
+    _seed_session(db, "quiz-foreign", OTHER)
+    foreign = client.get("/quiz/quiz-foreign/responses")
+    unknown = client.get("/quiz/does-not-exist/responses")
+    assert foreign.status_code == unknown.status_code == 404
+    assert foreign.json() == unknown.json() == {"detail": "Quiz not found"}
 
 
 def test_submit_without_confidence_yields_empty_calibration(client, as_user, quiz_env):

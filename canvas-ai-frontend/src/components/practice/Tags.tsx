@@ -1,4 +1,4 @@
-import { FileText, Sparkles } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import type { QuizSource } from '@/lib/api'
 
@@ -18,7 +18,7 @@ export function SourceTag({ source, label }: { source: QuizSource; label?: strin
 export function ConceptTag({ concept }: { concept?: string }) {
   if (!concept) return null
   return (
-    <Badge tone="accent" icon={<Sparkles />}>
+    <Badge tone="accent">
       <span className="truncate max-w-[14rem]">{concept}</span>
     </Badge>
   )

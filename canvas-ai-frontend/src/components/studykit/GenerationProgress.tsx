@@ -1,6 +1,6 @@
 // src/components/studykit/GenerationProgress.tsx — honest staged in-flight state (no fake percentages)
 import { AnimatePresence, motion } from 'motion/react'
-import { Check, Loader2, Sparkles } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/Card'
 import { LOADING_STAGES } from './noteUtils'
@@ -22,9 +22,6 @@ export function GenerationProgress({ stage, fileCount }: GenerationProgressProps
       <div className="mx-auto max-w-md py-8 text-center">
         <div className="relative mx-auto mb-6 h-16 w-16">
           <div className="absolute inset-0 animate-spin rounded-full border-4 border-accent/15 border-t-accent" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Sparkles className="h-6 w-6 text-accent" />
-          </div>
         </div>
         <h3 className="font-display text-lg font-semibold text-ink">Crafting your study kit</h3>
         <p className="mt-1 text-xs text-ink-faint">

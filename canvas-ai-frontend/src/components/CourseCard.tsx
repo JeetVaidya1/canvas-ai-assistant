@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { GraduationCap, Trash2, FileText, ArrowRight } from 'lucide-react'
+import { BookOpen, Trash2, FileText, ArrowRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { ProgressBar } from '@/components/ui/Progress'
 import { useCourseFiles } from '@/hooks/useCourseFiles'
@@ -50,7 +50,7 @@ export default function CourseCard({ courseId, title, lastVisit, onDelete }: Cou
     >
       <div className="flex items-start justify-between mb-4">
         <div className="w-10 h-10 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center">
-          <GraduationCap className="w-5 h-5 text-accent" />
+          <BookOpen className="w-5 h-5 text-accent" />
         </div>
         <button
           onClick={(e) => {

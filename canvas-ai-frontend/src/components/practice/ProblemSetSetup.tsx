@@ -12,6 +12,39 @@ import type { PracticeController } from './usePracticeSession'
 const SUBTITLE =
   'Open-ended problems generated fresh from your course. Difficulty adapts to your mastery, problem by problem.'
 
+/** Inline offer to pick an interrupted problem set back up (or let it go). */
+function ResumeSnapshotBar({ practice }: { practice: PracticeController }) {
+  const snap = practice.snapshot
+  if (!snap) return null
+  const answered = snap.userAnswers.filter((a) => a !== '').length
+  return (
+    <Card padding="none" className="mb-7 flex items-center gap-3 pl-4 pr-2 py-2.5 animate-fade-up">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-ink">Pick up your unfinished set</p>
+        <p className="mt-0.5 text-xs text-ink-faint">
+          {snap.topic || 'Practice'} ·{' '}
+          <span className="tnum">
+            {answered}/{snap.problems.length}
+          </span>{' '}
+          answered
+        </p>
+      </div>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={practice.resumeSnapshot}
+        leftIcon={<Play className="h-3.5 w-3.5" />}
+        className="flex-shrink-0"
+      >
+        Resume
+      </Button>
+      <Button size="sm" variant="ghost" onClick={practice.discardSnapshot} className="flex-shrink-0">
+        Discard
+      </Button>
+    </Card>
+  )
+}
+
 /** Center-first Problem Set setup: adaptive difficulty tiles, count, topic, one CTA. */
 export function ProblemSetSetup({ practice }: { practice: PracticeController }) {
   const { topics } = practice
@@ -44,6 +77,8 @@ export function ProblemSetSetup({ practice }: { practice: PracticeController }) 
 
   return (
     <SetupShell title="Set up your problem set" subtitle={SUBTITLE}>
+      <ResumeSnapshotBar practice={practice} />
+
       <div className="mb-6">
         <FieldLabel center>Difficulty</FieldLabel>
         <DifficultyTiles

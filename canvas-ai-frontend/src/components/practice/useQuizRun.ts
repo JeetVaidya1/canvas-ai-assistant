@@ -2,18 +2,20 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   generateQuiz,
   getQuizQuestions,
+  getQuizResponses,
   submitQuizAnswer,
   submitQuiz,
   type QuizConfidence,
   type QuizQuestion,
   type QuizResult,
+  type QuizStoredResponse,
 } from '@/lib/api'
 import { showError } from '@/lib/toast'
 import { usePracticeTopics } from '@/hooks/useTopics'
 import { useInvalidateProgress } from '@/hooks/useInvalidateProgress'
 import { useSessionTimer } from './useSessionTimer'
 import { WHOLE_COURSE } from './constants'
-import type { QuizDifficulty, QuizRunState, TopicListState } from './types'
+import type { AnsweredQuestion, QuizDifficulty, QuizRunState, TopicListState } from './types'
 
 /** How often to check for freshly written questions while generating. */
 const GENERATION_POLL_MS = 2500
@@ -38,11 +40,42 @@ export interface QuizController {
   setConfidence: (confidence: QuizConfidence | null) => void
   /** Starts a run; `topicOverride` lets the debrief re-drill a weak topic directly. */
   startQuiz: (topicOverride?: string) => Promise<void>
+  /** Rebuilds a run from a previously started quiz (server questions + graded answers). */
+  restoreQuiz: (quizId: string, topicLabel?: string | null) => Promise<void>
   submitAnswer: () => Promise<void>
   nextQuestion: () => Promise<void>
   /** Score the run at whatever has been answered (recovery from a failed auto-finish). */
   finishNow: () => Promise<void>
   resetQuiz: () => void
+}
+
+/**
+ * Rebuild the client-side answer log from server-stored responses. The server
+ * only stores the pick + verdict, so restored entries carry an honest sparse
+ * result: no explanation, and the correct letter only when the pick was right.
+ */
+function rebuildAnswers(
+  questions: QuizQuestion[],
+  byId: ReadonlyMap<string, QuizStoredResponse>,
+): AnsweredQuestion[] {
+  return questions.flatMap((question) => {
+    const stored = byId.get(question.id)
+    if (!stored) return []
+    return [
+      {
+        question,
+        selectedLetter: stored.selected,
+        confidence: stored.confidence ?? null,
+        result: {
+          is_correct: stored.is_correct,
+          correct_answer: stored.is_correct ? stored.selected : '',
+          explanation: '',
+          concept: question.concept,
+          source: question.source,
+        },
+      },
+    ]
+  })
 }
 
 /** Append questions we haven't seen; never reorder ones already in play. */
@@ -150,6 +183,62 @@ export function useQuizRun(courseId: string, userId: string): QuizController {
       }
     },
     [courseId, selectedTopic, difficulty, questionCount, resetTimer],
+  )
+
+  // Resume a previously started quiz: refetch its questions and graded answers,
+  // rebuild the run at the first unanswered question, and let the existing
+  // poll/auto-finish effects take over (they key off generationStatus).
+  const restoreQuiz = useCallback(
+    async (restoreId: string, topicLabel?: string | null) => {
+      if (!restoreId) return
+      setLoading(true)
+      try {
+        const [questionData, responseData] = await Promise.all([
+          getQuizQuestions(restoreId),
+          getQuizResponses(restoreId),
+        ])
+        if (!questionData.questions.length) {
+          showError('That quiz has no questions to resume — start a fresh drill instead.')
+          return
+        }
+        const byId = new Map(
+          (Array.isArray(responseData.responses) ? responseData.responses : []).map(
+            (r) => [r.question_id, r] as const,
+          ),
+        )
+        const answers = rebuildAnswers(questionData.questions, byId)
+        const firstUnanswered = questionData.questions.findIndex((q) => !byId.has(q.id))
+        // Everything available is answered -> park past the end: the existing
+        // effects either wait for the next generated question or score the run.
+        const currentIndex =
+          firstUnanswered === -1 ? questionData.questions.length : firstUnanswered
+        finishingRef.current = false
+        autoFinishRef.current = false
+        setRun({
+          quizId: questionData.quiz_id || restoreId,
+          questions: questionData.questions,
+          numRequested: questionData.num_requested || questionData.questions.length,
+          generationStatus: questionData.generation_status ?? 'ready',
+          topicLabel: topicLabel ?? WHOLE_COURSE,
+          currentIndex,
+          selectedLetter: '',
+          confidence: null,
+          feedback: null,
+          questionStart: Date.now(),
+          correctCount: answers.filter((a) => a.result.is_correct).length,
+          answers,
+        })
+        setResult(null)
+        resetTimer()
+      } catch (e) {
+        // Run stays null, so the setup screen (with its resume cards) remains
+        // the retry path.
+        showError(e instanceof Error ? e.message : 'Could not resume that quiz — please try again.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [resetTimer],
   )
 
   // Background poll: while the backend is still writing questions, pull what
@@ -315,6 +404,7 @@ export function useQuizRun(courseId: string, userId: string): QuizController {
     selectLetter,
     setConfidence,
     startQuiz,
+    restoreQuiz,
     submitAnswer,
     nextQuestion,
     finishNow: finishQuiz,

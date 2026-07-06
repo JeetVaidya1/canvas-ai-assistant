@@ -1,4 +1,4 @@
-import { ClipboardList, FileText, Flame } from 'lucide-react'
+import { ClipboardList, FileText } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ProgressRing } from '@/components/ui/Progress'
@@ -53,7 +53,6 @@ export default function CourseRail({
       <Card padding="none">
         <div className="divide-y divide-line">
           <div className="flex items-center gap-3 px-4 py-3">
-            <Flame className="w-4 h-4 text-ink-faint flex-shrink-0" />
             {streakLoading ? (
               <span className="h-3.5 w-24 rounded bg-paper-deep animate-pulse" aria-hidden />
             ) : streakError ? (

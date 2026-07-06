@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Brain, CheckCircle, Zap } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { CheckCircle, Clock, Play } from 'lucide-react'
 import { Markdown } from '@/components/ui/Markdown'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -22,7 +23,18 @@ interface ReviewPanelProps {
   userId: string
 }
 
+/** "later today" / "tomorrow" / "on Tue, Jul 8" — honest unlock time for the queue. */
+function formatUnlockDate(date: Date): string {
+  const now = new Date()
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const dayDiff = Math.round((startOfDay(date) - startOfDay(now)) / 86_400_000)
+  if (dayDiff <= 0) return 'later today'
+  if (dayDiff === 1) return 'tomorrow'
+  return `on ${date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}`
+}
+
 export default function ReviewPanel({ courseId, userId }: ReviewPanelProps) {
+  const navigate = useNavigate()
   const queueQuery = useReviewQueue(courseId, userId)
   const gradeMutation = useGradeReview(courseId, userId)
 
@@ -72,14 +84,50 @@ export default function ReviewPanel({ courseId, userId }: ReviewPanelProps) {
       )
     }
     if (queueQuery.isPending) return null // stays out of the way while loading
-    if (dueItems.length === 0) return null // nothing due — stay out of the way
+
+    if (dueItems.length === 0) {
+      // Honest quiet state: say when the next review unlocks, or how reviews
+      // get created in the first place.
+      const upcoming = (queueQuery.data?.items ?? [])
+        .filter((i) => !i.due && i.due_date)
+        .map((i) => new Date(i.due_date as string).getTime())
+        .filter((t) => Number.isFinite(t))
+      const nextDue = upcoming.length > 0 ? new Date(Math.min(...upcoming)) : null
+      return (
+        <Card padding="md" className="flex flex-wrap items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-paper-deep border border-line flex items-center justify-center flex-shrink-0">
+            <CheckCircle className="w-5 h-5 text-ink-faint" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-semibold text-ink">
+              {nextDue ? 'Nothing due right now' : 'No reviews scheduled yet'}
+            </h2>
+            <p className="text-xs text-ink-soft mt-0.5">
+              {nextDue
+                ? `Your next review unlocks ${formatUnlockDate(nextDue)}.`
+                : 'Miss a question in practice or a quiz and it lands here, scheduled for right before you’d forget it.'}
+            </p>
+          </div>
+          {!nextDue && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-shrink-0"
+              onClick={() => navigate(`/course/${courseId}/practice`)}
+            >
+              Start practicing
+            </Button>
+          )}
+        </Card>
+      )
+    }
 
     const dueCount = dueItems.length
     return (
       <Card accent padding="md" className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
-            <Zap className="w-5 h-5 text-accent" />
+            <Clock className="w-5 h-5 text-accent" />
           </div>
           <div>
             <h2 className="text-sm font-semibold text-ink">
@@ -88,7 +136,7 @@ export default function ReviewPanel({ courseId, userId }: ReviewPanelProps) {
             <p className="text-xs text-ink-soft mt-0.5">Questions you missed, resurfaced on schedule. Clear them to raise your readiness.</p>
           </div>
         </div>
-        <Button onClick={start} leftIcon={<Brain className="w-4 h-4" />} className="flex-shrink-0">
+        <Button onClick={start} leftIcon={<Play className="w-4 h-4" />} className="flex-shrink-0">
           Review now
         </Button>
       </Card>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { Plus, History, GraduationCap } from 'lucide-react'
+import { Plus, History, BookOpen } from 'lucide-react'
 import { BrandMark } from '@/components/ui/BrandMark'
 import { Composer } from '@/components/learn/Composer'
 import { MessageList } from '@/components/learn/MessageList'
@@ -252,7 +252,7 @@ export default function ChatPage() {
               </p>
               {hasFiles && (
                 <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs text-ink-soft">
-                  <GraduationCap className="h-3.5 w-3.5 text-accent" />
+                  <BookOpen className="h-3.5 w-3.5 text-accent" />
                   {course?.title ?? 'Course'} · {files!.length} sources indexed
                 </div>
               )}

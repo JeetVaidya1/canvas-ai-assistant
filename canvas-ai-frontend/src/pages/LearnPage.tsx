@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { MessagesSquare, Lightbulb, PenLine } from 'lucide-react'
+import { MessagesSquare, MessageCircleQuestion, PenLine } from 'lucide-react'
 import ChatPage from '@/pages/ChatPage'
 import SocraticTutor from '@/components/SocraticTutor'
 import FeynmanMode from '@/components/FeynmanMode'
@@ -11,7 +11,7 @@ type LearnTab = 'conversation' | 'socratic' | 'feynman'
 
 const TABS: SubTab[] = [
   { key: 'conversation', label: 'Conversation', icon: <MessagesSquare className="w-4 h-4" /> },
-  { key: 'socratic', label: 'Socratic Tutor', icon: <Lightbulb className="w-4 h-4" /> },
+  { key: 'socratic', label: 'Socratic Tutor', icon: <MessageCircleQuestion className="w-4 h-4" /> },
   { key: 'feynman', label: 'Feynman', icon: <PenLine className="w-4 h-4" /> },
 ]
 

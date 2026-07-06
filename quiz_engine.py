@@ -379,6 +379,88 @@ def get_quiz_questions(quiz_id: str, user_id: str) -> Dict[str, Any]:
     }
 
 
+# Resume-everywhere (V4 workstream C): how many unfinished sessions to surface.
+IN_PROGRESS_LIMIT = 3
+FINISHED_STATUSES = ("completed", "submitted")
+
+
+def _question_index(question_id: Any) -> int:
+    """Numeric index of a 'qN' question id ('q7' -> 7); unparseable ids sort first."""
+    try:
+        return int(str(question_id or "q0").lstrip("q"))
+    except ValueError:
+        return 0
+
+
+def get_in_progress_quizzes(course_id: str, user_id: str) -> List[Dict[str, Any]]:
+    """Newest unfinished quiz sessions for (course, user) — resume everywhere.
+
+    Excludes finished sessions (status in FINISHED_STATUSES) and sessions with
+    zero stored questions (nothing to resume). Returns at most
+    ``IN_PROGRESS_LIMIT`` items, newest first by created_at.
+    """
+    rows = (_supabase.table("quiz_sessions").select("*")
+            .eq("course_id", course_id).eq("user_id", user_id)
+            .execute().data or [])
+    open_sessions = sorted(
+        (r for r in rows if (r.get("status") or "active") not in FINISHED_STATUSES),
+        key=lambda r: str(r.get("created_at") or ""),
+        reverse=True,
+    )
+
+    items: List[Dict[str, Any]] = []
+    for session in open_sessions:
+        if len(items) >= IN_PROGRESS_LIMIT:
+            break
+        quiz_id = session.get("id")
+        questions = (_supabase.table("quiz_questions").select("question_id")
+                     .eq("quiz_id", quiz_id).execute().data or [])
+        if not questions:
+            continue  # nothing generated yet -> nothing to resume
+        responses = (_supabase.table("quiz_responses").select("question_id")
+                     .eq("quiz_id", quiz_id).eq("user_id", user_id)
+                     .execute().data or [])
+        items.append({
+            "quiz_id": quiz_id,
+            "topic": session.get("topic"),
+            "difficulty": session.get("difficulty"),
+            "num_requested": session.get("num_requested") or len(questions),
+            "num_answered": len({r.get("question_id") for r in responses}),
+            "num_available": len(questions),
+            "generation_status": session.get("generation_status") or "ready",
+            "created_at": session.get("created_at"),
+        })
+    return items
+
+
+def get_quiz_responses(quiz_id: str, user_id: str) -> Dict[str, Any]:
+    """The user's saved answers for a quiz — resume state for a picked session.
+
+    Ownership mirrors :func:`get_quiz_questions`: legacy NULL-user sessions are
+    admitted; unknown and foreign quizzes raise the SAME KeyError (-> 404) so
+    ids can't be enumerated. The latest response per question wins (same
+    "last wins" rule as :func:`submit_quiz`).
+    """
+    session = _fetch_session(quiz_id)
+    if not session or session.get("user_id") not in (None, user_id):
+        raise KeyError(f"Quiz {quiz_id} not found.")
+
+    rows = (_supabase.table("quiz_responses").select("*")
+            .eq("quiz_id", quiz_id).eq("user_id", user_id)
+            .execute().data or [])
+    latest: Dict[str, Dict[str, Any]] = {}
+    for r in rows:  # insertion order == chronological; last response wins
+        latest[r["question_id"]] = r
+
+    responses = [{
+        "question_id": question_id,
+        "selected": r.get("selected"),
+        "is_correct": r.get("is_correct"),
+        "confidence": r.get("confidence"),
+    } for question_id, r in sorted(latest.items(), key=lambda kv: _question_index(kv[0]))]
+    return {"quiz_id": quiz_id, "responses": responses}
+
+
 def _fetch_question(quiz_id: str, question_id: str) -> Optional[Dict[str, Any]]:
     resp = (_supabase.table("quiz_questions")
             .select("*")

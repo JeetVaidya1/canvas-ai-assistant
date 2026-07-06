@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { CheckCircle, AlertTriangle, XCircle, Sparkles, RotateCcw, BookOpen } from 'lucide-react'
+import { CheckCircle, AlertTriangle, XCircle, PenLine, RotateCcw, BookOpen } from 'lucide-react'
 import { feynmanEvaluate, type FeynmanResult } from '@/lib/api'
 import { showError } from '@/lib/toast'
 import { useInvalidateProgress } from '@/hooks/useInvalidateProgress'
@@ -127,7 +127,7 @@ export default function FeynmanMode({ courseId, userId }: FeynmanModeProps) {
         <Card className="space-y-5">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-4.5 h-4.5 text-accent" />
+              <PenLine className="w-4.5 h-4.5 text-accent" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-ink">Explain it in your own words</h3>
@@ -165,7 +165,7 @@ export default function FeynmanMode({ courseId, userId }: FeynmanModeProps) {
             onClick={() => void submit()}
             loading={loading}
             disabled={loading || !concept.trim() || !explanation.trim()}
-            leftIcon={!loading ? <Sparkles className="w-4 h-4" /> : undefined}
+            leftIcon={!loading ? <PenLine className="w-4 h-4" /> : undefined}
             className="w-full"
           >
             {loading ? 'Grading your explanation…' : 'Grade my explanation'}

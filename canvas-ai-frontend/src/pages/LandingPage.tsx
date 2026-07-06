@@ -1,22 +1,23 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   MessageCircle,
-  GraduationCap,
   Target,
   ClipboardList,
   RefreshCw,
   FileText,
   Upload,
-  Brain,
-  Zap,
+  Layers,
+  Timer,
   CheckCircle,
   ArrowRight,
   BookOpen,
 } from 'lucide-react'
-import { BrandMark } from '@/components/ui/BrandMark'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { ProgressRing } from '@/components/ui/Progress'
+import { PublicNav } from '@/components/marketing/PublicNav'
+import { PublicFooter } from '@/components/marketing/PublicFooter'
+import { SectionHead } from '@/components/marketing/SectionHead'
 
 const FEATURES = [
   {
@@ -25,7 +26,7 @@ const FEATURES = [
     description: 'Ask anything about your course. Every answer is retrieved from your own files and cites the exact source — no internet guesswork.',
   },
   {
-    icon: GraduationCap,
+    icon: BookOpen,
     title: 'Socratic & Feynman tutoring',
     description: 'Get guided to the answer with questions, or explain a concept back and have the gaps in your explanation pinpointed.',
   },
@@ -59,13 +60,13 @@ const STEPS = [
     description: 'Upload slides, PDFs and docs — or import straight from Canvas LMS, syllabus and exam dates included.',
   },
   {
-    icon: Brain,
+    icon: Layers,
     number: '02',
     title: 'Vindexa indexes it',
     description: 'Your materials are chunked, embedded and cross-linked into a course-specific knowledge base.',
   },
   {
-    icon: Zap,
+    icon: Timer,
     number: '03',
     title: 'Study with direction',
     description: 'Chat, drill, simulate exams — while your readiness score tells you exactly what to study next.',
@@ -80,15 +81,38 @@ const BENEFITS = [
   'Your files stay yours — scoped to your account',
 ]
 
-/** Numbered syllabus header — the editorial section treatment. */
-function SectionHead({ num, title }: { num: string; title: string }) {
-  return (
-    <div className="section-head mb-10">
-      <span className="section-num">{num}</span>
-      <h2 className="font-display text-2xl md:text-3xl font-semibold text-ink tracking-tight">{title}</h2>
-    </div>
-  )
-}
+const FAQS = [
+  {
+    question: 'How does grounding actually work?',
+    answer:
+      'Every answer is retrieved from the files you upload — your slides, readings and notes are chunked, embedded and searched per question, and each response cites the exact file and page it came from. If your materials don’t cover something, Vindexa says so instead of guessing from the open internet.',
+  },
+  {
+    question: 'What file types work? Does Canvas import work?',
+    answer:
+      'PDF, DOCX and PPTX uploads are supported. You can also connect Canvas LMS to import course files, the syllabus and exam dates directly, so you don’t have to download and re-upload everything by hand.',
+  },
+  {
+    question: 'How is my readiness score computed?',
+    answer:
+      'Readiness is calculated per topic from your actual performance — quiz drills, practice problems, mock exams and how recently you got each topic right. It updates as you study. It’s a signal for what to work on next, not a prediction of your grade.',
+  },
+  {
+    question: 'Is my data private?',
+    answer:
+      'Your files are stored in Supabase, scoped to your account, and used only to power your own study tools. Course content is processed via the Anthropic API to generate answers. We never sell your data, and nothing you upload is shared with other users.',
+  },
+  {
+    question: 'What does it cost?',
+    answer:
+      'One plan, around $15/month (draft pricing), with a 7-day free trial and no credit card required to start. There’s no free-forever tier — the trial is the free part.',
+  },
+  {
+    question: 'Does this replace studying?',
+    answer:
+      'No — and it isn’t meant to. Vindexa directs your effort: it finds your weak topics, drills them, and schedules review before you forget. You still do the reading, answer the questions, and sit the mock exams. It makes the work count; it doesn’t do the work.',
+  },
+]
 
 /** DOM-built product preview — a white sheet with paper window chrome. */
 function ProductPreview() {
@@ -155,19 +179,7 @@ export default function LandingPage() {
 
   return (
     <div className="relative w-full min-h-screen bg-paper text-ink">
-      {/* Nav — solid paper, hairline below */}
-      <nav className="fixed top-0 left-0 right-0 z-50 top-bar">
-        <div className="flex items-center justify-between px-6 h-14 max-w-6xl mx-auto">
-          <div className="flex items-center gap-2.5">
-            <BrandMark className="w-7 h-7" />
-            <span className="font-display text-lg font-semibold text-ink tracking-tight">Vindexa</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={toLogin}>Sign in</Button>
-            <Button size="sm" onClick={toLogin}>Get started</Button>
-          </div>
-        </div>
-      </nav>
+      <PublicNav />
 
       {/* ===== HERO ===== */}
       <section className="px-6 pt-32 pb-20 sm:pt-40">
@@ -261,6 +273,38 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===== FAQ ===== */}
+      <section className="py-20 px-6">
+        <div className="max-w-3xl mx-auto">
+          <SectionHead num="04" title="Questions" />
+          <dl>
+            {FAQS.map((faq) => (
+              <div key={faq.question} className="border-t border-line py-6 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-2 md:gap-8">
+                <dt className="text-sm font-semibold text-ink leading-snug">{faq.question}</dt>
+                <dd className="text-sm text-ink-soft leading-relaxed">{faq.answer}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {/* Pricing teaser */}
+          <div className="border-t border-line mt-0 pt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <p className="font-display text-xl font-semibold text-ink tracking-tight">
+                One plan. <span className="tnum">$15</span>/month.
+              </p>
+              <p className="text-sm text-ink-soft mt-1">7-day free trial, no credit card. Draft pricing — may change before launch.</p>
+            </div>
+            <Link
+              to="/pricing"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent-deep transition-colors focus-ring rounded"
+            >
+              See pricing
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ===== CTA ===== */}
       <section className="py-24 px-6">
         <div className="max-w-2xl mx-auto text-center">
@@ -276,16 +320,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== FOOTER ===== */}
-      <footer className="border-t border-line py-8">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <BrandMark className="w-5 h-5 opacity-60" />
-            <span className="text-xs text-ink-faint">Vindexa</span>
-          </div>
-          <span className="text-xs text-ink-faint">Grounded in your materials. Nothing else.</span>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }

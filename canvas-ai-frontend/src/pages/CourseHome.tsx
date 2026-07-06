@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { Clock, FileText, Sparkles } from 'lucide-react'
+import { Clock, FileText, Play } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useCourses } from '@/hooks/useCourses'
 import { useCourseFiles } from '@/hooks/useCourseFiles'
@@ -9,9 +9,11 @@ import { useLearningAnalytics } from '@/hooks/useAnalytics'
 import { useReadiness } from '@/hooks/useReadiness'
 import { useRecentActivity } from '@/hooks/useRecentActivity'
 import { useReviewQueue } from '@/hooks/useReviews'
+import { useQuizInProgress } from '@/hooks/useQuizInProgress'
 import { useUser } from '@/hooks/useUser'
 import { usePrefetch } from '@/hooks/usePrefetch'
 import TodayPanel from '@/components/home/TodayPanel'
+import { CoachMarks } from '@/components/onboarding/CoachMarks'
 import TopicsSection from '@/components/home/TopicsSection'
 import CourseRail from '@/components/home/CourseRail'
 import { buildTodayPlan, masteryForTopic, pageLabel } from '@/components/home/todayItems'
@@ -36,6 +38,7 @@ export default function CourseHome() {
   const topicsQ = useCourseTopics(courseId)
   const analyticsQ = useLearningAnalytics(courseId, userId)
   const rebuildTopics = useRebuildCourseTopics(courseId)
+  const quizInProgress = useQuizInProgress(courseId)
   const recent = useRecentActivity().filter((e) => e.courseId === courseId)
   const { prefetchLearn, prefetchPractice, prefetchStudyKit, prefetchProgress } = usePrefetch()
 
@@ -49,12 +52,14 @@ export default function CourseHome() {
   const go = (to: string) => navigate(`/course/${courseId}${to ? `/${to}` : ''}`)
 
   // Warm a destination's primary data while the cursor hovers its row.
+  // Destinations may carry a query string (e.g. practice?resume=<id>).
   const prefetchFor = (to: string) => {
     if (!courseId) return
-    if (to === 'learn' || to === 'chat') prefetchLearn()
-    else if (to === 'practice' || to === 'quiz') prefetchPractice(courseId)
-    else if (to === 'kit' || to === 'notes') prefetchStudyKit(courseId)
-    else if (to === 'progress') prefetchProgress(courseId)
+    const page = to.split('?')[0]
+    if (page === 'learn' || page === 'chat') prefetchLearn()
+    else if (page === 'practice' || page === 'quiz') prefetchPractice(courseId)
+    else if (page === 'kit' || page === 'notes') prefetchStudyKit(courseId)
+    else if (page === 'progress') prefetchProgress(courseId)
   }
 
   const plan = buildTodayPlan({
@@ -63,6 +68,7 @@ export default function CourseHome() {
     topics: topicsQ.data?.topics,
     recentPage: lastStudied,
     hasFiles,
+    quizSessions: quizInProgress.sessions,
   })
   // Topics have their own section skeleton, so Today only waits on its
   // primary remote sources (reviews + readiness) and the file count.
@@ -105,7 +111,7 @@ export default function CourseHome() {
         </div>
         <Button
           size="lg"
-          leftIcon={<Sparkles className="w-4 h-4" />}
+          leftIcon={<Play className="w-4 h-4" />}
           onClick={() => go(lastStudied ?? 'learn')}
           onMouseEnter={() => prefetchFor(lastStudied ?? 'learn')}
           className="flex-shrink-0"
@@ -165,6 +171,8 @@ export default function CourseHome() {
           />
         </aside>
       </motion.div>
+
+      <CoachMarks page="courseHome" />
     </div>
   )
 }

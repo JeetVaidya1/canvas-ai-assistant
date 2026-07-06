@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import type { RefObject } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { BookOpen, Check, Copy, Lightbulb, Wand2 } from 'lucide-react'
+import { Check, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CitedMarkdown } from '@/components/learn/CitedMarkdown'
 import { SourcesDisclosure } from '@/components/learn/SourcesDisclosure'
 import type { Message } from '@/lib/api'
 
 // After an answer, these keep the study loop going (Claude-style follow-ups).
-const FOLLOWUPS: ReadonlyArray<{ icon: typeof BookOpen; label: string; prompt: string }> = [
-  { icon: Lightbulb, label: 'Explain simpler', prompt: 'Explain that again in simpler terms, with an analogy.' },
-  { icon: BookOpen, label: 'Give an example', prompt: 'Give me a concrete worked example of that.' },
-  { icon: Wand2, label: 'Quiz me on this', prompt: 'Ask me 3 quick questions to test my understanding of what you just explained.' },
+const FOLLOWUPS: ReadonlyArray<{ label: string; prompt: string }> = [
+  { label: 'Explain simpler', prompt: 'Explain that again in simpler terms, with an analogy.' },
+  { label: 'Give an example', prompt: 'Give me a concrete worked example of that.' },
+  { label: 'Quiz me on this', prompt: 'Ask me 3 quick questions to test my understanding of what you just explained.' },
 ]
 
 function formatTime(ts: string): string {
@@ -98,13 +98,12 @@ export function MessageList({ messages, isTyping, showFollowups, onFollowup, bot
           transition={{ delay: 0.15 }}
           className="flex flex-wrap gap-2"
         >
-          {FOLLOWUPS.map(({ icon: Icon, label, prompt }) => (
+          {FOLLOWUPS.map(({ label, prompt }) => (
             <button
               key={label}
               onClick={() => onFollowup(prompt)}
               className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] text-ink-soft transition-all hover:border-accent-line hover:bg-accent-wash hover:text-accent-deep"
             >
-              <Icon className="h-3.5 w-3.5 text-ink-faint" />
               {label}
             </button>
           ))}
