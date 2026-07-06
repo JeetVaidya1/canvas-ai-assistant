@@ -27,8 +27,9 @@ jobs:
             libgl1 libglib2.0-0 tesseract-ocr poppler-utils
 
       # CPU-only torch first so sentence-transformers doesn't pull the CUDA build.
-      - name: Install CPU torch
-        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      # PyPI fallback: the pytorch.org CDN intermittently fails TLS from GH runners.
+      - name: Install torch (CPU index, PyPI fallback)
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu || pip install torch
 
       - name: Install dependencies
         run: pip install -r requirements.txt -r requirements-dev.txt
