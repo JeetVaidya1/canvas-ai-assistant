@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import Response
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 import exports
 import github_engine
@@ -36,7 +39,8 @@ async def github_push_endpoint(
         return github_engine.push_markdown(course_id, token, repo, base_path)
     except Exception as e:
         print(f"GitHub push failed: {e}")
-        raise HTTPException(502, detail=f"GitHub push failed: {e}")
+        logger.exception("GitHub push failed")
+        raise HTTPException(502, detail="GitHub push failed")
 
 
 @router.post("/api/github/import")
@@ -53,4 +57,5 @@ async def github_import_endpoint(
         return github_engine.import_repo_materials(course_id, repo, token, subdir)
     except Exception as e:
         print(f"GitHub import failed: {e}")
-        raise HTTPException(502, detail=f"GitHub import failed: {e}")
+        logger.exception("GitHub import failed")
+        raise HTTPException(502, detail="GitHub import failed")

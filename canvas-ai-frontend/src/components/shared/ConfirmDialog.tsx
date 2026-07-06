@@ -1,3 +1,6 @@
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
+
 interface ConfirmDialogProps {
   open: boolean
   title: string
@@ -9,6 +12,11 @@ interface ConfirmDialogProps {
   onCancel: () => void
 }
 
+/**
+ * Confirmation dialog built on the Modal primitive. Danger variant renders a
+ * rose destructive Button; cancel receives initial focus so Enter never
+ * destroys anything by accident.
+ */
 export default function ConfirmDialog({
   open,
   title,
@@ -19,33 +27,24 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  if (!open) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
-      <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl relative z-10 w-full max-w-md p-6 space-y-4">
-        <h3 className="text-lg font-semibold text-zinc-50">{title}</h3>
-        <p className="text-zinc-400">{description}</p>
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-lg text-zinc-300 hover:bg-zinc-800 transition-colors"
-          >
+    <Modal
+      open={open}
+      onClose={onCancel}
+      title={title}
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancel} data-autofocus>
             {cancelLabel}
-          </button>
-          <button
-            onClick={onConfirm}
-            className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-              variant === 'danger'
-                ? 'bg-red-600 hover:bg-red-500 text-white'
-                : 'bg-cyan-500 hover:bg-cyan-400 text-white'
-            }`}
-          >
+          </Button>
+          <Button variant={variant === 'danger' ? 'danger' : 'primary'} onClick={onConfirm}>
             {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-zinc-400 leading-relaxed">{description}</p>
+    </Modal>
   )
 }

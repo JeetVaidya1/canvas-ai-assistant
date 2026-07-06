@@ -1,6 +1,8 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import Response, StreamingResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, Form, Depends
+import os
+
+from auth import current_user_id
+from deps import analytics_engine, practice_generator
 
 import readiness_engine
 

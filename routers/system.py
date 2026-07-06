@@ -1,8 +1,30 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import Response, StreamingResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+import logging
+import os
+
+from fastapi import APIRouter, HTTPException, Depends
+from deps import (
+    CONVERSATIONAL_MODE,
+    ENHANCED_MODE,
+    analyze_course_content_diversity,
+    extract_topic_from_filename_debug,
+    practice_generator,
+    supabase,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def require_debug_enabled() -> None:
+    """Gate for debug/introspection routes.
+
+    They dump course content and internals with no auth, so they 404 unless
+    ENABLE_DEBUG_ENDPOINTS=1 is set (default: off). 404 (not 403) so their
+    existence isn't advertised in production.
+    """
+    if os.getenv("ENABLE_DEBUG_ENDPOINTS", "").strip().lower() not in ("1", "true", "yes"):
+        raise HTTPException(status_code=404, detail="Not Found")
 
 
 @router.get("/system-status")
@@ -33,12 +55,11 @@ def get_system_status():
     }
 
 
-@router.get("/admin/usage")
+@router.get("/admin/usage", dependencies=[Depends(require_debug_enabled)])
 def get_usage_stats():
     """AI token usage + estimated USD cost since process start (cost observability).
 
-    NOTE: open in this build for quick visibility; gate behind an admin check
-    before exposing publicly.
+    Gated behind ENABLE_DEBUG_ENDPOINTS (404 when off), same as the debug routes.
     """
     import usage_tracker
 
@@ -59,11 +80,12 @@ def rag_health():
             "match_count": 1
         }).execute()
         return {"ok": True, "rows": len(res.data or []), "course_id": course_id}
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
+    except Exception:
+        logger.exception("RAG health check failed")
+        return {"ok": False, "error": "rag health check failed"}
 
 
-@router.get("/debug-course-content/{course_id}")
+@router.get("/debug-course-content/{course_id}", dependencies=[Depends(require_debug_enabled)])
 async def debug_course_content(course_id: str):
     """Debug endpoint to see what content is available for any course"""
     try:
@@ -121,7 +143,7 @@ async def debug_course_content(course_id: str):
         return {"error": str(e), "course_id": course_id}
 
 
-@router.get("/course-subject-detection/{course_id}")
+@router.get("/course-subject-detection/{course_id}", dependencies=[Depends(require_debug_enabled)])
 async def detect_course_subject(course_id: str):
     """Detect what subject area a course covers - useful for UI and analytics"""
     try:
@@ -185,7 +207,7 @@ async def detect_course_subject(course_id: str):
         }
 
 
-@router.get("/debug-topic-extraction/{course_id}")
+@router.get("/debug-topic-extraction/{course_id}", dependencies=[Depends(require_debug_enabled)])
 async def debug_topic_extraction(course_id: str):
     """Debug endpoint to see exactly what's happening in topic extraction"""
     try:
@@ -263,7 +285,7 @@ async def debug_topic_extraction(course_id: str):
         }
 
 
-@router.get("/debug-practice-content/{course_id}/{topic}")
+@router.get("/debug-practice-content/{course_id}/{topic}", dependencies=[Depends(require_debug_enabled)])
 async def debug_practice_content(course_id: str, topic: str):
     """Debug what content is found when generating practice questions for a topic"""
     try:
@@ -410,7 +432,7 @@ async def debug_practice_content(course_id: str, topic: str):
         }
 
 
-@router.get("/debug-vector-content/{course_id}")
+@router.get("/debug-vector-content/{course_id}", dependencies=[Depends(require_debug_enabled)])
 async def debug_vector_content(course_id: str, limit: int = 20):
     """See what content is actually in the vector store for a course"""
     try:

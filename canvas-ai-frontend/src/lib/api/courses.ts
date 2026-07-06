@@ -45,8 +45,8 @@ export async function uploadFiles(
 
   // Backend returns: { status, message, files: [{ filename, url, ... }], chunks: [...] }
   const data = await apiFetch('/upload', { method: 'POST', body: form })
-  const names = (data.files || []).map((f: any) => f.filename)
-  return names
+  const uploaded = (data.files || []) as Array<{ filename: string }>
+  return uploaded.map((f) => f.filename)
 }
 
 export async function listFiles(course_id: string): Promise<string[]> {

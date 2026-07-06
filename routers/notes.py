@@ -1,6 +1,17 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import Response, StreamingResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, Form, HTTPException, Depends
+from auth import current_user_id
+from deps import supabase
+from notes_engine import (
+    delete_note_from_db,
+    generate_notes_from_files,
+    get_notes_from_db,
+    save_notes_to_db,
+)
+from rate_limit import ai_rate_limit
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -135,7 +146,8 @@ async def save_notes_endpoint(
             
     except Exception as e:
         print(f"❌ Notes saving error: {e}")
-        raise HTTPException(500, detail=f"Notes saving failed: {str(e)}")
+        logger.exception("Notes saving failed")
+        raise HTTPException(500, detail="Notes saving failed")
 
 
 @router.put("/notes/{note_id}")
@@ -168,7 +180,8 @@ async def update_note_endpoint(
         raise
     except Exception as e:
         print(f"❌ Notes update error: {e}")
-        raise HTTPException(500, detail=f"Notes update failed: {str(e)}")
+        logger.exception("Notes update failed")
+        raise HTTPException(500, detail="Notes update failed")
 
 
 @router.get("/notes/{course_id}")
@@ -191,7 +204,8 @@ async def get_notes_endpoint(course_id: str):
         
     except Exception as e:
         print(f"❌ Notes retrieval error: {e}")
-        raise HTTPException(500, detail=f"Failed to retrieve notes: {str(e)}")
+        logger.exception("Failed to retrieve notes")
+        raise HTTPException(500, detail="Failed to retrieve notes")
 
 
 @router.delete("/notes/{note_id}")
@@ -218,5 +232,6 @@ async def delete_note_endpoint(note_id: str):
             
     except Exception as e:
         print(f"❌ Note deletion error: {e}")
-        raise HTTPException(500, detail=f"Note deletion failed: {str(e)}")
+        logger.exception("Note deletion failed")
+        raise HTTPException(500, detail="Note deletion failed")
 

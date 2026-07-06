@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Download, Github, Upload, ChevronDown, Sparkles, GraduationCap, Users, Copy } from 'lucide-react'
-import { exportCourseMarkdown, githubPush, githubImport, getContextPack, importCanvasLms, publishCourse, getShareInfo } from '@/lib/api'
+import { exportCourseMarkdown, githubPush, githubImport, getContextPack, importCanvasLms, publishCourse } from '@/lib/api'
 import { useUser } from '@/hooks/useUser'
+import { useShareInfo } from '@/hooks/useShareInfo'
 import { showError, showSuccess } from '@/lib/toast'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -24,22 +26,21 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
   const [canvasToken, setCanvasToken] = useState('')
   const [canvasCourse, setCanvasCourse] = useState('')
   const [busy, setBusy] = useState<'export' | 'push' | 'import' | 'context' | 'canvas' | 'publish' | null>(null)
-  const [shareCode, setShareCode] = useState<string | null>(null)
-  const [joinCount, setJoinCount] = useState(0)
 
-  useEffect(() => {
-    if (!courseId) return
-    getShareInfo(courseId).then((info) => {
-      if (info) { setShareCode(info.share_code); setJoinCount(info.join_count || 0) }
-    }).catch(() => { /* not published yet */ })
-  }, [courseId])
+  const qc = useQueryClient()
+  // null means "not published yet" (the hook normalizes the backend's error
+  // response for unpublished courses).
+  const shareInfoQuery = useShareInfo(courseId)
+  const shareCode = shareInfoQuery.data?.share_code ?? null
+  const joinCount = shareInfoQuery.data?.join_count ?? 0
 
   const handlePublish = async () => {
     setBusy('publish')
     try {
       const r = await publishCourse(courseId, userId)
-      setShareCode(r.share_code)
       showSuccess(r.republished ? 'Catalog listing updated' : `Published — share code ${r.share_code}`)
+      // Pull the fresh share info (code + join count) into the cache.
+      await qc.invalidateQueries({ queryKey: ['shareInfo', courseId] })
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Publish failed')
     } finally {

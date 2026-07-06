@@ -1,10 +1,13 @@
 # ingest.py — GPT-5 optimized ingestion (cleaning, chunking, embeddings, metadata, upsert)
+import logging
 import os, io, re, json, time, hashlib, tempfile
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from dotenv import load_dotenv
 from providers import make_client
 from vector_store import VectorStore
+
+logger = logging.getLogger(__name__)
 
 # Optional imports (fail gracefully if unavailable)
 try:
@@ -309,7 +312,7 @@ def process_file(filename: str, file_bytes: bytes, course_id: str) -> List[Dict[
             "num_chunks": len(clean_chunks)
         }, on_conflict="course_id,filename").execute()
     except Exception as e:
-        print(f"files upsert warn: {e}")
+        logger.warning("files upsert warn: %s", e)
 
     # 7) Return preview of first 5 chunks w/ metadata
     preview = []
@@ -334,10 +337,10 @@ def delete_file_from_course(course_id: str, filename: str) -> bool:
         try:
             supabase.storage.from_("course-files").remove([f"{course_id}/{filename}"])
         except Exception as e:
-            print(f"Storage deletion warn: {e}")
+            logger.warning("Storage deletion warn: %s", e)
         return True
     except Exception as e:
-        print(f"Error deleting file {filename} from course {course_id}: {e}")
+        logger.exception("Error deleting file %s from course %s", filename, course_id)
         return False
 
 def delete_course(course_id: str) -> bool:
@@ -360,9 +363,9 @@ def delete_course(course_id: str) -> bool:
             if files_list:
                 supabase.storage.from_("course-files").remove([f"{course_id}/{f['name']}" for f in files_list])
         except Exception as e:
-            print(f"Storage cleanup warn: {e}")
+            logger.warning("Storage cleanup warn: %s", e)
 
         return True
     except Exception as e:
-        print(f"Error deleting course {course_id}: {e}")
+        logger.exception("Error deleting course %s", course_id)
         return False

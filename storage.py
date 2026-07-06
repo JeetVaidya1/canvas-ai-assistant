@@ -1,13 +1,13 @@
 # storage.py
 
-import os
 from supabase import create_client
-from dotenv import load_dotenv
 from storage3.exceptions import StorageApiError
 
-load_dotenv()
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+from core.config import get_settings
+
+_settings = get_settings()
+SUPABASE_URL = _settings.supabase_url
+SUPABASE_KEY = _settings.supabase_key
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def upload_file(bucket: str, file_bytes: bytes, path: str) -> str:

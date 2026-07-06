@@ -1,5 +1,9 @@
-from fastapi import APIRouter, Form, HTTPException
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, Depends, Form, HTTPException
+from auth import current_user_id
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 import review_engine
 
@@ -13,7 +17,8 @@ async def get_reviews_endpoint(course_id: str, user_id: str = Depends(current_us
         return review_engine.get_due(course_id, user_id, include_all=include_all)
     except Exception as e:
         print(f"Review queue fetch failed: {e}")
-        raise HTTPException(500, detail=f"Review queue fetch failed: {e}")
+        logger.exception("Review queue fetch failed")
+        raise HTTPException(500, detail="Review queue fetch failed")
 
 
 @router.post("/api/reviews/{item_id}/grade")
@@ -31,4 +36,5 @@ async def grade_review_endpoint(
         raise HTTPException(404, detail=str(e))
     except Exception as e:
         print(f"Review grade failed: {e}")
-        raise HTTPException(500, detail=f"Review grade failed: {e}")
+        logger.exception("Review grade failed")
+        raise HTTPException(500, detail="Review grade failed")

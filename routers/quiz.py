@@ -1,6 +1,14 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import Response, StreamingResponse
-from deps import *  # noqa: F401,F403  shared state, engines, helpers, stdlib re-exports
+from fastapi import APIRouter, Form, HTTPException, Depends
+from datetime import datetime
+
+from auth import current_user_id
+from deps import supabase, validate_course_for_practice
+from quiz_assistant_engine import assist_with_quiz_question
+from rate_limit import ai_rate_limit
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 import quiz_engine
 
@@ -143,7 +151,8 @@ async def generate_quiz_endpoint(
         return quiz_engine.generate_quiz(course_id, clean_topic, num_questions, difficulty)
     except Exception as e:
         print(f"Quiz generation failed: {e}")
-        raise HTTPException(500, detail=f"Quiz generation failed: {e}")
+        logger.exception("Quiz generation failed")
+        raise HTTPException(500, detail="Quiz generation failed")
 
 
 @router.post("/quiz/{quiz_id}/answer")
@@ -161,7 +170,8 @@ async def answer_quiz_endpoint(
         raise HTTPException(404, detail=str(e))
     except Exception as e:
         print(f"Quiz answer grading failed: {e}")
-        raise HTTPException(500, detail=f"Grading failed: {e}")
+        logger.exception("Grading failed")
+        raise HTTPException(500, detail="Grading failed")
 
 
 @router.post("/quiz/{quiz_id}/submit")
@@ -174,5 +184,6 @@ async def submit_quiz_endpoint(
         return quiz_engine.submit_quiz(quiz_id, user_id)
     except Exception as e:
         print(f"Quiz submit failed: {e}")
-        raise HTTPException(500, detail=f"Submit failed: {e}")
+        logger.exception("Submit failed")
+        raise HTTPException(500, detail="Submit failed")
 

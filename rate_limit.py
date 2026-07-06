@@ -11,7 +11,6 @@ Daily-cap persistence (surviving restarts) also lands with the Phase 5 tiering.
 """
 from __future__ import annotations
 
-import os
 import threading
 import time
 from collections import defaultdict, deque
@@ -20,6 +19,7 @@ from typing import Deque, Dict, Tuple
 from fastapi import Depends, HTTPException
 
 from auth import current_user_id
+from core.config import get_settings
 
 
 class SlidingWindowLimiter:
@@ -50,9 +50,10 @@ class SlidingWindowLimiter:
             self._hits.clear()
 
 
-# Default AI limit: tune via env. Generous enough for real study sessions, tight
-# enough that a runaway loop is capped. Phase 5 will vary this by subscription tier.
-_AI_PER_MINUTE = int(os.getenv("AI_RATE_LIMIT_PER_MINUTE", "20"))
+# Default AI limit: tune via AI_RATE_LIMIT_PER_MINUTE. Generous enough for real
+# study sessions, tight enough that a runaway loop is capped. Phase 5 will vary
+# this by subscription tier.
+_AI_PER_MINUTE = get_settings().ai_rate_limit_per_minute
 _ai_limiter = SlidingWindowLimiter(_AI_PER_MINUTE, 60.0)
 
 

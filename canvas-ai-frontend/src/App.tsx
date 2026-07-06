@@ -1,11 +1,9 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import RequireAuth from '@/components/RequireAuth'
 import ErrorBoundary from '@/components/shared/ErrorBoundary'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
-import { ShaderCanvas } from '@/components/ui/animated-shader-hero'
-import { FallingBooks } from '@/components/ui/falling-books'
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
@@ -28,21 +26,6 @@ function PageFallback() {
   )
 }
 
-/** The animated WebGL shader + falling books are a MARKETING background only.
- *  Rendering them app-wide pinned the GPU on every screen (and the shell's
- *  backdrop-blur re-blurred the moving canvas every frame) — the source of the
- *  app-wide lag. Restrict them to the landing + login routes. */
-function MarketingBackground() {
-  const { pathname } = useLocation()
-  if (pathname !== '/' && pathname !== '/login') return null
-  return (
-    <>
-      <ShaderCanvas />
-      <FallingBooks />
-    </>
-  )
-}
-
 /** Redirect old tool paths to the new consolidated destinations. */
 function RedirectCourse({ to }: { to: string }) {
   const { courseId } = useParams<{ courseId: string }>()
@@ -60,7 +43,6 @@ function Page({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <ErrorBoundary>
-      <MarketingBackground />
       <div className="relative z-10">
       <Routes>
         <Route path="/" element={<Suspense fallback={<PageFallback />}><LandingPage /></Suspense>} />
