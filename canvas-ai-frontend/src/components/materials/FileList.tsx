@@ -18,7 +18,7 @@ export default function FileList({ courseId }: FileListProps) {
     return (
       <div className="space-y-2" aria-label="Loading files">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-10 rounded-lg bg-zinc-800/50 animate-pulse" />
+          <div key={i} className="h-10 rounded-lg bg-paper-deep animate-pulse" />
         ))}
       </div>
     )
@@ -53,15 +53,15 @@ export default function FileList({ courseId }: FileListProps) {
         {files.map((filename) => (
           <li
             key={filename}
-            className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors group"
+            className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-paper-deep/60 transition-colors group"
           >
-            <span className="text-zinc-300 text-sm truncate flex-1 flex items-center gap-2.5">
-              <FileText className="w-4 h-4 text-cyan-300/70 flex-shrink-0" />
+            <span className="text-ink text-sm truncate flex-1 flex items-center gap-2.5">
+              <FileText className="w-4 h-4 text-ink-faint flex-shrink-0" />
               {filename}
             </span>
             <button
               onClick={() => setDeleteTarget(filename)}
-              className="p-1.5 text-zinc-600 hover:text-rose-400 hover:bg-white/[0.06] rounded-lg transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+              className="p-1.5 text-ink-faint hover:text-danger hover:bg-danger-wash rounded-lg transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
               aria-label={`Delete ${filename}`}
             >
               <Trash2 className="w-3.5 h-3.5" />

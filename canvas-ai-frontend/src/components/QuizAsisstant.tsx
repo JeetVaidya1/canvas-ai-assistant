@@ -133,24 +133,24 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
 
   const getSourceIcon = (source: string) => {
     if (source.toLowerCase().includes('web') || source.toLowerCase().includes('search')) {
-      return <Globe className="w-3 h-3 text-cyan-400" />
+      return <Globe className="w-3 h-3 text-accent" />
     }
-    return <FileText className="w-3 h-3 text-zinc-400" />
+    return <FileText className="w-3 h-3 text-ink-faint" />
   }
 
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="card-surface accent-top rounded-t-xl p-5">
+      <div className="card-surface rounded-t-xl p-5">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0">
-              <Brain className="w-5 h-5 text-cyan-300" />
+            <div className="w-10 h-10 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
+              <Brain className="w-5 h-5 text-accent" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-0.5">Answer Helper</p>
-              <h2 className="text-lg font-semibold text-zinc-100">Quiz Assistant</h2>
-              <p className="text-sm text-zinc-400">
+              <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-ink-faint mb-0.5">Answer Helper</p>
+              <h2 className="text-lg font-semibold text-ink">Quiz Assistant</h2>
+              <p className="text-sm text-ink-soft">
                 Paste any quiz question and get intelligent help with explanations
               </p>
             </div>
@@ -176,16 +176,16 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
               <div key={conv.id} className="space-y-4">
                 {/* User Question */}
                 <div className="flex items-start gap-4 flex-row-reverse">
-                  <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-zinc-300" />
+                  <div className="w-8 h-8 rounded-full bg-paper-deep border border-line flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-ink-soft" />
                   </div>
                   <div className="max-w-3xl text-right">
-                    <div className="inline-block px-4 py-3 rounded-lg bg-gradient-brand text-white glow-brand-sm">
+                    <div className="inline-block px-4 py-3 rounded-lg bg-paper-deep border border-line text-ink">
                       <p className="whitespace-pre-wrap leading-relaxed">
                         {conv.question}
                       </p>
                     </div>
-                    <p className="text-xs text-zinc-400 mt-2 px-1">
+                    <p className="text-xs text-ink-faint mt-2 px-1">
                       {new Date(conv.timestamp).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit'
@@ -196,16 +196,16 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
 
                 {/* AI Response */}
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0">
-                    <Brain className="w-4 h-4 text-cyan-300" />
+                  <div className="w-8 h-8 rounded-full bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
+                    <Brain className="w-4 h-4 text-accent" />
                   </div>
                   <div className="flex-1">
                     {conv.response.status === 'success' ? (
                       <div className="space-y-4">
                         {/* Answer Header */}
                         <div className="flex items-center gap-3">
-                          <Target className="w-5 h-5 text-cyan-300" />
-                          <span className="font-semibold text-zinc-50">Answer</span>
+                          <Target className="w-5 h-5 text-accent" />
+                          <span className="font-semibold text-ink">Answer</span>
                           <Badge tone={getConfidenceTone(conv.response.confidence)}>
                             {getConfidenceText(conv.response.confidence)}
                           </Badge>
@@ -215,16 +215,16 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                         </div>
 
                         {/* Main Answer */}
-                        <div className="bg-gradient-brand-soft border border-cyan-400/15 rounded-lg p-4">
+                        <div className="bg-accent-wash border border-accent-line rounded-lg p-4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
-                              <div className="text-lg font-semibold text-zinc-100">
+                              <div className="text-lg font-semibold text-ink">
                                 <Markdown content={conv.response.answer} />
                               </div>
                             </div>
                             <button
                               onClick={() => copyAnswer(conv.response.answer)}
-                              className="p-2 text-cyan-300 hover:bg-cyan-400/10 rounded-lg transition-colors flex-shrink-0"
+                              className="p-2 text-accent-deep hover:bg-accent-line/50 rounded-lg transition-colors flex-shrink-0"
                               aria-label="Copy answer"
                               title="Copy answer"
                             >
@@ -236,42 +236,42 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                         {/* Explanation */}
                         <div>
                           <div className="flex items-center gap-2 mb-3">
-                            <Lightbulb className="w-5 h-5 text-amber-400" />
-                            <span className="font-semibold text-zinc-50">Explanation</span>
+                            <Lightbulb className="w-5 h-5 text-warning" />
+                            <span className="font-semibold text-ink">Explanation</span>
                           </div>
-                          <div className="bg-white/[0.04] border border-white/10 rounded-lg p-4">
-                            <Markdown content={conv.response.explanation} className="text-zinc-300" />
+                          <div className="bg-paper-deep border border-line rounded-lg p-4">
+                            <Markdown content={conv.response.explanation} />
                           </div>
                         </div>
 
                         {/* Quick Stats */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="bg-white/[0.04] border border-white/10 rounded-lg p-3">
+                          <div className="bg-paper-deep border border-line rounded-lg p-3">
                             <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-zinc-400" />
+                              <Clock className="w-4 h-4 text-ink-faint" />
                               <div>
-                                <div className="text-xs text-zinc-500 font-medium">Est. Time</div>
-                                <div className="text-sm font-semibold text-zinc-100">{conv.response.estimated_time}</div>
+                                <div className="text-xs text-ink-faint font-medium">Est. Time</div>
+                                <div className="text-sm font-semibold text-ink">{conv.response.estimated_time}</div>
                               </div>
                             </div>
                           </div>
 
-                          <div className="bg-white/[0.04] border border-white/10 rounded-lg p-3">
+                          <div className="bg-paper-deep border border-line rounded-lg p-3">
                             <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-zinc-400" />
+                              <FileText className="w-4 h-4 text-ink-faint" />
                               <div>
-                                <div className="text-xs text-zinc-500 font-medium">Sources</div>
-                                <div className="text-sm font-semibold text-zinc-100">{conv.response.relevant_sources.length}</div>
+                                <div className="text-xs text-ink-faint font-medium">Sources</div>
+                                <div className="text-sm font-semibold text-ink tnum">{conv.response.relevant_sources.length}</div>
                               </div>
                             </div>
                           </div>
 
-                          <div className="bg-white/[0.04] border border-white/10 rounded-lg p-3">
+                          <div className="bg-paper-deep border border-line rounded-lg p-3">
                             <div className="flex items-center gap-2">
-                              <TrendingUp className="w-4 h-4 text-zinc-400" />
+                              <TrendingUp className="w-4 h-4 text-ink-faint" />
                               <div>
-                                <div className="text-xs text-zinc-500 font-medium">Confidence</div>
-                                <div className="text-sm font-semibold text-zinc-100">
+                                <div className="text-xs text-ink-faint font-medium">Confidence</div>
+                                <div className="text-sm font-semibold text-ink tnum">
                                   {Math.round(conv.response.confidence * 100)}%
                                 </div>
                               </div>
@@ -283,13 +283,13 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                         {conv.response.study_tips.length > 0 && (
                           <div>
                             <div className="flex items-center gap-2 mb-3">
-                              <Lightbulb className="w-4 h-4 text-amber-400" />
-                              <span className="font-semibold text-zinc-50">Study Tips</span>
+                              <Lightbulb className="w-4 h-4 text-warning" />
+                              <span className="font-semibold text-ink">Study Tips</span>
                             </div>
                             <div className="space-y-2">
                               {conv.response.study_tips.map((tip, index) => (
-                                <div key={index} className="bg-amber-500/10 border border-amber-400/25 rounded-lg p-3">
-                                  <p className="text-sm text-amber-300">{tip}</p>
+                                <div key={index} className="bg-marker-soft border border-marker rounded-lg p-3">
+                                  <p className="text-sm text-ink">{tip}</p>
                                 </div>
                               ))}
                             </div>
@@ -300,8 +300,8 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                         {conv.response.relevant_sources.length > 0 && (
                           <div>
                             <div className="flex items-center gap-2 mb-3">
-                              <FileText className="w-4 h-4 text-zinc-400" />
-                              <span className="font-semibold text-zinc-50">Sources Referenced</span>
+                              <FileText className="w-4 h-4 text-ink-faint" />
+                              <span className="font-semibold text-ink">Sources Referenced</span>
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {conv.response.relevant_sources.map((source, index) => (
@@ -365,7 +365,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
             )}
 
             {!courseId && (
-              <div className="flex items-center gap-2 text-amber-400 text-sm">
+              <div className="flex items-center gap-2 text-warning text-sm">
                 <AlertCircle className="w-4 h-4" />
                 Select a course first
               </div>
@@ -378,12 +378,12 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
       {conversations.length === 0 && (
         <div className="card-surface border-t-0 rounded-t-none rounded-b-xl p-6">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0">
-              <HelpCircle className="w-5 h-5 text-cyan-300" />
+            <div className="w-10 h-10 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
+              <HelpCircle className="w-5 h-5 text-accent" />
             </div>
             <div>
-              <h4 className="font-semibold text-zinc-50 mb-2">Pro Tips for Best Results:</h4>
-              <ul className="text-sm text-zinc-400 space-y-1">
+              <h4 className="font-semibold text-ink mb-2">Pro Tips for Best Results:</h4>
+              <ul className="text-sm text-ink-soft space-y-1">
                 <li>Copy the entire question including all answer choices</li>
                 <li>Include any context or background information provided</li>
                 <li>For math problems, include diagrams or formulas if mentioned</li>

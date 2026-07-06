@@ -66,7 +66,7 @@ export function QuizSetup({ quiz }: { quiz: QuizController }) {
         {quiz.loading ? 'Generating your drill…' : 'Start drill'}
       </Button>
       {quiz.loading && (
-        <p className="mt-3 text-center text-xs text-zinc-500">
+        <p className="mt-3 text-center text-xs text-ink-faint">
           Retrieving from your materials, reranking, and writing questions — this can take a moment.
         </p>
       )}

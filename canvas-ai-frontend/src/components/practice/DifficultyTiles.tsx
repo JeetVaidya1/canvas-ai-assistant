@@ -73,17 +73,17 @@ export function DifficultyTiles<T extends string>({
             onClick={() => onChange(d.value)}
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(
-              'rounded-2xl border px-3 py-4 text-center transition-all outline-none',
-              'focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0c14]',
+              'rounded-xl border px-3 py-4 text-center transition-all outline-none',
+              'focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
               active
-                ? 'border-cyan-400/50 bg-gradient-brand-soft ring-2 ring-cyan-400/25 shadow-[0_8px_24px_-12px_rgba(34,211,238,0.5)]'
-                : 'border-white/10 bg-white/[0.03] hover:border-cyan-400/30 hover:bg-white/[0.05]',
+                ? 'border-accent bg-accent-wash ring-1 ring-inset ring-accent/20'
+                : 'border-line bg-surface hover:border-line-strong hover:bg-surface-hover',
             )}
           >
-            <div className={cn('text-sm font-semibold', active ? 'text-cyan-200' : 'text-zinc-200')}>
+            <div className={cn('text-sm font-semibold', active ? 'text-accent-deep' : 'text-ink')}>
               {d.label}
             </div>
-            <div className="mt-0.5 text-[11px] text-zinc-500">{d.hint}</div>
+            <div className={cn('mt-0.5 text-[11px]', active ? 'text-accent-deep/70' : 'text-ink-faint')}>{d.hint}</div>
           </button>
         )
       })}

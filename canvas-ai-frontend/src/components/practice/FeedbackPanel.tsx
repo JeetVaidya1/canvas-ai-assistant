@@ -12,7 +12,7 @@ interface FeedbackPanelProps {
   children?: ReactNode
 }
 
-/** Post-answer verdict panel — emerald for correct, rose for incorrect. */
+/** Post-answer verdict panel — success ink for correct, danger ink for incorrect. */
 export function FeedbackPanel({ show, correct, explanation, children }: FeedbackPanelProps) {
   return (
     <AnimatePresence>
@@ -28,7 +28,7 @@ export function FeedbackPanel({ show, correct, explanation, children }: Feedback
             role="status"
             className={cn(
               'rounded-xl border p-4 mb-5',
-              correct ? 'bg-emerald-500/10 border-emerald-500/25' : 'bg-rose-500/10 border-rose-500/25',
+              correct ? 'bg-success-wash border-success/25' : 'bg-danger-wash border-danger/25',
             )}
           >
             <div className="flex items-start gap-2.5">
@@ -39,16 +39,16 @@ export function FeedbackPanel({ show, correct, explanation, children }: Feedback
                 className="flex-shrink-0 mt-0.5"
               >
                 {correct ? (
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <CheckCircle className="w-5 h-5 text-success" />
                 ) : (
-                  <XCircle className="w-5 h-5 text-rose-400" />
+                  <XCircle className="w-5 h-5 text-danger" />
                 )}
               </motion.div>
               <div className="min-w-0 flex-1">
-                <h4 className={cn('text-sm font-semibold mb-1', correct ? 'text-emerald-400' : 'text-rose-400')}>
+                <h4 className={cn('text-sm font-semibold mb-1', correct ? 'text-success' : 'text-danger')}>
                   {correct ? 'Correct!' : 'Not quite right'}
                 </h4>
-                <div className={cn('text-sm', correct ? 'text-emerald-300/90' : 'text-rose-300/90')}>
+                <div className="text-sm text-ink-soft">
                   <Markdown content={explanation} />
                 </div>
                 {children}

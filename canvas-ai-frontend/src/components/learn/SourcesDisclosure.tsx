@@ -17,7 +17,7 @@ export function SourcesDisclosure({ sources }: SourcesDisclosureProps) {
     <div className="mt-3">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/20 bg-cyan-500/[0.08] px-2.5 py-1 text-[11px] font-medium text-cyan-200 transition-colors hover:bg-cyan-500/15"
+        className="inline-flex items-center gap-1.5 rounded-full border border-accent-line bg-accent-wash px-2.5 py-1 text-[11px] font-medium text-accent-deep transition-colors hover:border-accent/50"
       >
         <FileText className="h-3 w-3" />
         {sources.length} source{sources.length !== 1 ? 's' : ''} from your materials

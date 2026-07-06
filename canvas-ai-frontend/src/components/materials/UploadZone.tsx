@@ -63,14 +63,14 @@ export default function UploadZone({ courseId, prominent = false }: UploadZonePr
           'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-all focus-ring',
           prominent ? 'px-6 py-10' : 'px-5 py-7',
           dragActive
-            ? 'border-cyan-400/60 bg-gradient-brand-soft'
-            : 'border-border-strong bg-white/[0.02] hover:border-cyan-400/40 hover:bg-white/[0.04]',
+            ? 'border-accent bg-accent-wash'
+            : 'border-line-strong bg-paper-deep/40 hover:border-accent-line hover:bg-accent-wash/40',
           busy && 'pointer-events-none opacity-60',
         )}
       >
-        <Upload className={cn('w-6 h-6 transition-colors', dragActive ? 'text-cyan-300' : 'text-zinc-500')} />
-        <span className="text-sm font-medium text-zinc-300">Drop files here or click to browse</span>
-        <span className="text-xs text-zinc-600">PDF, DOCX, PPTX, TXT, MD</span>
+        <Upload className={cn('w-6 h-6 transition-colors', dragActive ? 'text-accent' : 'text-ink-faint')} />
+        <span className="text-sm font-medium text-ink-soft">Drop files here or click to browse</span>
+        <span className="text-xs text-ink-faint">PDF, DOCX, PPTX, TXT, MD</span>
         <input
           ref={inputRef}
           type="file"
@@ -86,16 +86,16 @@ export default function UploadZone({ courseId, prominent = false }: UploadZonePr
       </label>
 
       {pending.length > 0 && (
-        <div className="rounded-xl border border-border bg-bg-subtle/60 p-4 space-y-3">
+        <div className="rounded-xl border border-line bg-paper-deep/60 p-4 space-y-3">
           <ul className="space-y-1.5">
             {pending.map((f) => (
-              <li key={f.name} className="flex items-center gap-2.5 text-sm text-zinc-300">
-                <FileText className="w-4 h-4 text-cyan-300/70 flex-shrink-0" />
+              <li key={f.name} className="flex items-center gap-2.5 text-sm text-ink">
+                <FileText className="w-4 h-4 text-ink-faint flex-shrink-0" />
                 <span className="truncate flex-1">{f.name}</span>
                 {!busy && (
                   <button
                     onClick={() => removePending(f.name)}
-                    className="p-1 text-zinc-600 hover:text-zinc-300 rounded transition-colors"
+                    className="p-1 text-ink-faint hover:text-ink rounded transition-colors"
                     aria-label={`Remove ${f.name}`}
                   >
                     <X className="w-3.5 h-3.5" />
@@ -107,10 +107,10 @@ export default function UploadZone({ courseId, prominent = false }: UploadZonePr
 
           {busy ? (
             <div className="space-y-2">
-              <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
-                <div className="h-full w-1/3 rounded-full bg-gradient-brand animate-sheen" />
+              <div className="h-1 rounded-full bg-line/60 overflow-hidden">
+                <div className="h-full w-1/3 rounded-full bg-accent animate-indeterminate" />
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-ink-faint">
                 Uploading and indexing — chunking, embedding and linking your {pending.length === 1 ? 'file' : 'files'} into the course knowledge base…
               </p>
             </div>

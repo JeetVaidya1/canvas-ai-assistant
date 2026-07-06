@@ -52,11 +52,11 @@ export function ExamSetup({
       >
         {/* Identity */}
         <div className="mb-8 text-center">
-          <BrandMark className="mx-auto mb-5 h-14 w-14 glow-brand-sm" />
-          <h1 className="text-[28px] font-semibold tracking-tight text-zinc-50">
+          <BrandMark className="mx-auto mb-5 h-14 w-14" />
+          <h1 className="font-display text-[28px] font-semibold tracking-tight text-ink">
             Set up your mock exam
           </h1>
-          <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
             A timed simulation built from your materials. Answers and the clock auto-save — close the tab and pick up
             exactly where you left off. AI judges with partial credit and grounded explanations.
           </p>
@@ -64,7 +64,7 @@ export function ExamSetup({
 
         {/* Difficulty — 4 big selectable tiles */}
         <div className="mb-6">
-          <div className="mb-2.5 text-center text-xs font-medium text-zinc-400">Difficulty</div>
+          <div className="mb-2.5 text-center text-xs font-medium text-ink-soft">Difficulty</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {DIFFICULTIES.map((d) => {
               const active = difficulty === d.value
@@ -73,16 +73,16 @@ export function ExamSetup({
                   key={d.value}
                   onClick={() => onDifficultyChange(d.value)}
                   aria-pressed={active}
-                  className={`group rounded-2xl border px-3 py-4 text-center transition-all ${
+                  className={`group rounded-xl border px-3 py-4 text-center transition-all ${
                     active
-                      ? 'border-cyan-400/50 bg-gradient-brand-soft ring-2 ring-cyan-400/25 shadow-[0_8px_24px_-12px_rgba(34,211,238,0.5)]'
-                      : 'border-white/10 bg-white/[0.03] hover:border-cyan-400/30 hover:bg-white/[0.05]'
+                      ? 'border-accent bg-accent-wash ring-2 ring-accent/20'
+                      : 'card-surface card-interactive'
                   }`}
                 >
-                  <div className={`text-sm font-semibold ${active ? 'text-cyan-200' : 'text-zinc-200'}`}>
+                  <div className={`text-sm font-semibold ${active ? 'text-accent-deep' : 'text-ink'}`}>
                     {d.label}
                   </div>
-                  <div className="mt-0.5 text-[10px] text-zinc-500 leading-tight">{d.hint}</div>
+                  <div className="mt-0.5 text-[10px] text-ink-faint leading-tight">{d.hint}</div>
                 </button>
               )
             })}
@@ -91,8 +91,8 @@ export function ExamSetup({
 
         {/* Question count — segmented control */}
         <div className="mb-8">
-          <div className="mb-2.5 text-center text-xs font-medium text-zinc-400">Questions</div>
-          <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
+          <div className="mb-2.5 text-center text-xs font-medium text-ink-soft">Questions</div>
+          <div className="flex gap-1.5 rounded-xl border border-line bg-paper-deep p-1.5">
             {COUNTS.map((c) => {
               const active = questionCount === c
               return (
@@ -100,10 +100,10 @@ export function ExamSetup({
                   key={c}
                   onClick={() => onQuestionCountChange(c)}
                   aria-pressed={active}
-                  className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${
+                  className={`flex-1 rounded-lg py-2.5 text-sm font-semibold tnum transition-all ${
                     active
-                      ? 'bg-gradient-brand text-white shadow-[0_6px_18px_-8px_rgba(34,211,238,0.5)]'
-                      : 'text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200'
+                      ? 'bg-accent text-white elev-1'
+                      : 'text-ink-soft hover:bg-surface hover:text-ink'
                   }`}
                 >
                   {c}
@@ -125,7 +125,7 @@ export function ExamSetup({
           {loading ? 'Generating your exam…' : 'Start exam'}
         </Button>
         {loading && (
-          <p className="mt-3 text-center text-xs text-zinc-500">
+          <p className="mt-3 text-center text-xs text-ink-faint">
             Retrieving from your materials and writing exam questions — this can take a moment.
           </p>
         )}
@@ -144,14 +144,14 @@ export function ExamSetup({
         <div className="mt-6 flex items-center justify-center gap-4 text-xs">
           <button
             onClick={() => setShowUpload((v) => !v)}
-            className="text-zinc-400 transition-colors hover:text-cyan-300"
+            className="text-ink-soft transition-colors hover:text-accent"
           >
             or solve a past paper
           </button>
-          <span className="text-zinc-700">·</span>
+          <span className="text-ink-faint">·</span>
           <button
             onClick={onLoadSample}
-            className="text-zinc-400 transition-colors hover:text-cyan-300"
+            className="text-ink-soft transition-colors hover:text-accent"
           >
             try a sample exam
           </button>

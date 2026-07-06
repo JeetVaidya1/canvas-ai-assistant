@@ -15,10 +15,11 @@ interface FeynmanModeProps {
   userId: string
 }
 
+// Ring hexes match the muted semantic tokens in index.css (success/warning/danger).
 const VERDICT_TONE: Record<FeynmanResult['verdict'], { ring: string; text: string; label: string; blurb: string }> = {
-  solid: { ring: '#34d399', text: 'text-emerald-400', label: 'Solid', blurb: 'You can teach this.' },
-  partial: { ring: '#fbbf24', text: 'text-amber-400', label: 'Partial', blurb: 'Close — a few gaps to close.' },
-  shaky: { ring: '#fb7185', text: 'text-rose-400', label: 'Shaky', blurb: "Let's shore up the fundamentals." },
+  solid: { ring: '#2f7d5c', text: 'text-success', label: 'Solid', blurb: 'You can teach this.' },
+  partial: { ring: '#a8741a', text: 'text-warning', label: 'Partial', blurb: 'Close — a few gaps to close.' },
+  shaky: { ring: '#bb4444', text: 'text-danger', label: 'Shaky', blurb: "Let's shore up the fundamentals." },
 }
 
 export default function FeynmanMode({ courseId, userId }: FeynmanModeProps) {
@@ -65,11 +66,11 @@ export default function FeynmanMode({ courseId, userId }: FeynmanModeProps) {
               <Card accent className="flex items-center gap-6">
                 <ScoreRing score={result.score_pct} ring={tone.ring} />
                 <div className="min-w-0">
-                  <h3 className="text-lg font-semibold text-zinc-50 tracking-tight">
+                  <h3 className="text-lg font-semibold text-ink tracking-tight">
                     {concept} — <span className={tone.text}>{tone.label}</span>
                   </h3>
-                  <p className="text-sm text-zinc-400">{tone.blurb}</p>
-                  <p className="text-sm text-zinc-300 mt-2 leading-relaxed">{result.summary}</p>
+                  <p className="text-sm text-ink-soft">{tone.blurb}</p>
+                  <p className="text-sm text-ink-soft mt-2 leading-relaxed">{result.summary}</p>
                   {result.review_items_added > 0 && (
                     <Badge tone="warning" icon={<BookOpen />} className="mt-2.5">
                       +{result.review_items_added} gap{result.review_items_added === 1 ? '' : 's'} seeded
@@ -82,30 +83,30 @@ export default function FeynmanMode({ courseId, userId }: FeynmanModeProps) {
               {result.strengths.length > 0 && (
                 <Section
                   title="What you nailed"
-                  icon={<CheckCircle className="w-4 h-4 text-emerald-400" />}
+                  icon={<CheckCircle className="w-4 h-4 text-success" />}
                   items={result.strengths}
-                  tone="text-emerald-300"
-                  dot="bg-emerald-400/60"
+                  tone="text-ink-soft"
+                  dot="bg-success"
                   delay={0.05}
                 />
               )}
               {result.gaps.length > 0 && (
                 <Section
                   title="What you missed"
-                  icon={<AlertTriangle className="w-4 h-4 text-amber-400" />}
+                  icon={<AlertTriangle className="w-4 h-4 text-warning" />}
                   items={result.gaps}
-                  tone="text-amber-300"
-                  dot="bg-amber-400/60"
+                  tone="text-ink-soft"
+                  dot="bg-warning"
                   delay={0.12}
                 />
               )}
               {result.misconceptions.length > 0 && (
                 <Section
                   title="What to rethink"
-                  icon={<XCircle className="w-4 h-4 text-rose-400" />}
+                  icon={<XCircle className="w-4 h-4 text-danger" />}
                   items={result.misconceptions}
-                  tone="text-rose-300"
-                  dot="bg-rose-400/60"
+                  tone="text-ink-soft"
+                  dot="bg-danger"
                   delay={0.19}
                 />
               )}
@@ -125,12 +126,12 @@ export default function FeynmanMode({ courseId, userId }: FeynmanModeProps) {
       <div className="mx-auto w-full max-w-3xl px-5 py-8">
         <Card className="space-y-5">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-400/20 glow-brand-sm flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-4.5 h-4.5 text-cyan-300" />
+            <div className="w-10 h-10 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-4.5 h-4.5 text-accent" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-zinc-50">Explain it in your own words</h3>
-              <p className="text-sm text-zinc-400 mt-1 leading-relaxed">
+              <h3 className="text-base font-semibold text-ink">Explain it in your own words</h3>
+              <p className="text-sm text-ink-soft mt-1 leading-relaxed">
                 If you can teach it, you understand it. Explain a concept like you would to a classmate —
                 I'll grade it against your course material and surface your blind spots.
               </p>
@@ -155,7 +156,7 @@ export default function FeynmanMode({ courseId, userId }: FeynmanModeProps) {
                 className="resize-none"
               />
               {wordCount > 0 && (
-                <p className="text-[11px] text-zinc-500 mt-1.5 text-right">{wordCount} words</p>
+                <p className="text-[11px] text-ink-faint mt-1.5 text-right tnum">{wordCount} words</p>
               )}
             </Field>
           </div>
@@ -181,7 +182,7 @@ function ScoreRing({ score, ring }: { score: number; ring: string }) {
   return (
     <div className="relative w-28 h-28 flex-shrink-0">
       <svg className="w-28 h-28 -rotate-90" viewBox="0 0 88 88">
-        <circle cx="44" cy="44" r="36" fill="none" stroke="#252e42" strokeWidth="8" />
+        <circle cx="44" cy="44" r="36" fill="none" stroke="#e7e3d9" strokeWidth="8" />
         <motion.circle
           cx="44"
           cy="44"
@@ -197,8 +198,8 @@ function ScoreRing({ score, ring }: { score: number; ring: string }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold text-gradient-brand leading-none">{score}</span>
-        <span className="text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">score</span>
+        <span className="font-display text-4xl font-semibold text-ink leading-none tnum">{score}</span>
+        <span className="text-[10px] tracking-wide text-ink-faint mt-0.5">score</span>
       </div>
     </div>
   )
@@ -207,8 +208,8 @@ function ScoreRing({ score, ring }: { score: number; ring: string }) {
 function Field({ label, step, children }: { label: string; step: number; children: ReactNode }) {
   return (
     <div>
-      <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 mb-1.5">
-        <span className="w-4 h-4 rounded-full bg-gradient-brand-soft border border-cyan-400/20 text-[10px] text-cyan-300 flex items-center justify-center">
+      <label className="flex items-center gap-2 text-xs font-medium text-ink-soft mb-1.5">
+        <span className="w-4 h-4 rounded-full bg-accent-wash border border-accent-line text-[10px] text-accent-deep flex items-center justify-center">
           {step}
         </span>
         {label}
@@ -240,10 +241,10 @@ function Section({
       transition={{ duration: 0.35, delay }}
     >
       <Card padding="sm">
-        <h4 className="text-sm font-semibold text-zinc-100 mb-2.5 flex items-center gap-2">
+        <h4 className="text-sm font-semibold text-ink mb-2.5 flex items-center gap-2">
           {icon}
           {title}
-          <span className="ml-auto text-[11px] font-normal text-zinc-500">{items.length}</span>
+          <span className="ml-auto text-[11px] font-normal text-ink-faint tnum">{items.length}</span>
         </h4>
         <ul className="space-y-2">
           {items.map((it, i) => (

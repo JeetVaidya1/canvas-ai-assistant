@@ -34,13 +34,13 @@ export function ExamPreStart({ session, timeRemaining, onStart, onAbandon }: Exa
         className="w-full max-w-md"
       >
         <div className="mb-7 text-center">
-          <BrandMark className="mx-auto mb-5 h-14 w-14 glow-brand-sm" />
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gradient-brand mb-1.5">
+          <BrandMark className="mx-auto mb-5 h-14 w-14" />
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint mb-1.5">
             {isResume ? 'Resume your exam' : 'Ready when you are'}
           </p>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 truncate">{session.examName}</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink truncate">{session.examName}</h1>
           {isResume && (
-            <p className="text-xs text-amber-400/90 mt-2">
+            <p className="text-xs text-warning mt-2">
               In progress — {answeredCount}/{session.questions.length} answered, clock resumes where you left off.
             </p>
           )}
@@ -48,9 +48,9 @@ export function ExamPreStart({ session, timeRemaining, onStart, onAbandon }: Exa
 
         <div className="grid grid-cols-3 gap-3 mb-7">
           {stats.map((s) => (
-            <div key={s.label} className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center">
-              <div className="text-xl font-bold text-zinc-100">{s.value}</div>
-              <div className="text-[11px] text-zinc-400 mt-0.5">{s.label}</div>
+            <div key={s.label} className="card-surface rounded-xl px-3 py-4 text-center">
+              <div className="font-display text-xl font-semibold text-ink tnum">{s.value}</div>
+              <div className="text-[11px] text-ink-faint mt-0.5">{s.label}</div>
             </div>
           ))}
         </div>
@@ -65,7 +65,7 @@ export function ExamPreStart({ session, timeRemaining, onStart, onAbandon }: Exa
         </Button>
         <button
           onClick={onAbandon}
-          className="mt-4 w-full text-center text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+          className="mt-4 w-full text-center text-xs text-ink-faint transition-colors hover:text-ink"
         >
           ← Back to setup
         </button>

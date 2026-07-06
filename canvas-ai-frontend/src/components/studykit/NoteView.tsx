@@ -19,6 +19,8 @@ const copyToClipboard = async (text: string) => {
 /**
  * The generated (or reopened) note: editable title, Markdown preview with a
  * raw-edit toggle, copy, and save/update through the notes mutation hook.
+ * Paper & Ink: the note reads like a typeset page — serif title, prose set
+ * directly on the white sheet at a comfortable measure.
  */
 export default function NoteView({ studio, className }: { studio: NotesStudio; className?: string }) {
   const {
@@ -29,17 +31,17 @@ export default function NoteView({ studio, className }: { studio: NotesStudio; c
   const [previewMode, setPreviewMode] = useState(true)
 
   return (
-    <Card accent padding="none" className={`overflow-hidden ${className ?? ''}`}>
-      <div className="bg-white/[0.03] px-6 py-4 border-b border-white/10">
+    <Card padding="none" className={`overflow-hidden ${className ?? ''}`}>
+      <div className="px-6 py-4 border-b border-line">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <Edit3 className="w-5 h-5 text-cyan-300 flex-shrink-0" />
+            <Edit3 className="w-5 h-5 text-accent flex-shrink-0" />
             <input
               type="text"
               value={noteTitle}
               onChange={(e) => setNoteTitle(e.target.value)}
               placeholder="Enter note title…"
-              className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 text-zinc-50 placeholder-zinc-500 min-w-0 w-full"
+              className="font-display text-xl font-semibold bg-transparent border-none focus:outline-none focus:ring-0 text-ink placeholder-ink-faint min-w-0 w-full"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -77,26 +79,26 @@ export default function NoteView({ studio, className }: { studio: NotesStudio; c
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="px-6 py-7 sm:px-10">
         {errMsg && (
           <ErrorState compact title={errMsg} onRetry={() => void save()} retrying={saving} className="mb-4" />
         )}
 
         {previewMode ? (
-          <div className="prose prose-lg prose-invert max-w-none">
-            <Markdown content={generatedNotes} className="text-zinc-300" />
+          <div className="mx-auto max-w-[70ch]">
+            <Markdown content={generatedNotes} />
           </div>
         ) : (
           <textarea
             value={generatedNotes}
             onChange={(e) => setGeneratedNotes(e.target.value)}
-            className="w-full h-[28rem] p-4 bg-white/[0.03] border border-white/10 text-zinc-100 rounded-lg outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25 resize-none font-mono text-sm transition-colors"
+            className="w-full h-[28rem] p-4 bg-paper-deep border border-line text-ink rounded-lg outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 resize-none font-mono text-sm transition-colors"
             placeholder="Your generated notes will appear here…"
           />
         )}
 
         {generatedNotes && (
-          <div className="mt-6 pt-4 border-t border-white/10 flex items-center gap-6 text-sm text-zinc-400 flex-wrap">
+          <div className="mt-6 pt-4 border-t border-line flex items-center gap-6 text-sm text-ink-soft flex-wrap">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
               <span>{getReadingTime(getWordCount(generatedNotes))}</span>

@@ -24,8 +24,8 @@ export default function ProgressPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-4 h-14 border-b border-[#18181d] flex items-center justify-between flex-shrink-0 gap-4">
-        <span className="text-xs text-zinc-500 pl-1.5">
+      <div className="px-4 h-14 border-b border-line flex items-center justify-between flex-shrink-0 gap-4">
+        <span className="text-xs text-ink-faint pl-1.5">
           {tab === 'analytics' ? 'See where you stand' : 'Plan your path to the exam'}
         </span>
         <SubTabs

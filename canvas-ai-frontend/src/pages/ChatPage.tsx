@@ -203,18 +203,18 @@ export default function ChatPage() {
       <div className="absolute right-4 top-3 z-20 flex items-center gap-2">
         <button
           onClick={() => setHistoryOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[13px] text-zinc-300 backdrop-blur transition-colors hover:bg-white/[0.08] hover:text-zinc-100"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink-soft elev-1 transition-colors hover:bg-surface-hover hover:text-ink"
         >
           <History className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">History</span>
           {sessions.length > 0 && (
-            <span className="rounded-full bg-white/[0.1] px-1.5 text-[11px] text-zinc-400">{sessions.length}</span>
+            <span className="rounded-full bg-paper-deep px-1.5 text-[11px] text-ink-faint tnum">{sessions.length}</span>
           )}
         </button>
         {!isEmpty && (
           <button
             onClick={startNew}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[13px] text-zinc-300 backdrop-blur transition-colors hover:bg-white/[0.08] hover:text-zinc-100"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink-soft elev-1 transition-colors hover:bg-surface-hover hover:text-ink"
           >
             <Plus className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">New</span>
@@ -241,18 +241,18 @@ export default function ChatPage() {
             className="w-full max-w-2xl"
           >
             <div className="mb-6 text-center">
-              <BrandMark className="mx-auto mb-5 h-14 w-14 glow-brand" />
-              <h1 className="text-[28px] font-semibold tracking-tight text-zinc-50">
+              <BrandMark className="mx-auto mb-5 h-14 w-14" />
+              <h1 className="font-display text-[30px] font-semibold leading-tight text-ink">
                 What do you want to understand?
               </h1>
-              <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+              <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
                 {hasFiles
                   ? 'Ask anything — answers are grounded in your own materials, with exact page citations.'
                   : 'Upload course files from Materials to get answers grounded in your own notes.'}
               </p>
               {hasFiles && (
-                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-zinc-400">
-                  <GraduationCap className="h-3.5 w-3.5 text-cyan-400/80" />
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs text-ink-soft">
+                  <GraduationCap className="h-3.5 w-3.5 text-accent" />
                   {course?.title ?? 'Course'} · {files!.length} sources indexed
                 </div>
               )}
@@ -274,7 +274,7 @@ export default function ChatPage() {
                   key={s.label}
                   onClick={() => void handleAsk(s.prompt)}
                   disabled={!courseId}
-                  className="rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-[13px] text-zinc-300 transition-all hover:border-cyan-400/40 hover:bg-white/[0.06] hover:text-zinc-100 disabled:opacity-50"
+                  className="rounded-full border border-line bg-surface px-3.5 py-1.5 text-[13px] text-ink-soft transition-all hover:border-accent-line hover:bg-accent-wash hover:text-accent-deep disabled:opacity-50"
                 >
                   {s.label}
                 </button>
@@ -308,7 +308,7 @@ export default function ChatPage() {
                   hasFiles={hasFiles}
                   textareaRef={textareaRef}
                 />
-                <p className="mt-2 text-center text-[11px] text-zinc-500">
+                <p className="mt-2 text-center text-[11px] text-ink-faint">
                   Grounded in your {course?.title ?? 'course'} materials · Enter to send, Shift+Enter for a new line
                 </p>
               </div>

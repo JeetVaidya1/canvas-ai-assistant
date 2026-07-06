@@ -38,11 +38,11 @@ export default function NotesComposer({ studio }: { studio: NotesStudio }) {
       >
         {/* Heading */}
         <div className="mb-6 text-center">
-          <BrandMark className="mx-auto mb-5 h-14 w-14 glow-brand" />
-          <h1 className="text-[28px] font-semibold tracking-tight text-zinc-50">
+          <BrandMark className="mx-auto mb-5 h-14 w-14" />
+          <h1 className="font-display text-[28px] font-semibold tracking-tight text-ink">
             Create study notes
           </h1>
-          <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
             Grounded in your materials, with auto-generated flashcards.
           </p>
         </div>
@@ -50,11 +50,11 @@ export default function NotesComposer({ studio }: { studio: NotesStudio }) {
         {/* Centerpiece: focus-topic input (styled like the chat composer) */}
         <div
           className={cn(
-            'relative flex w-full items-center rounded-[20px] border border-white/12 bg-white/[0.03] p-2 shadow-lg transition-all',
-            'focus-within:border-cyan-400/60 focus-within:bg-white/[0.05] focus-within:glow-brand-sm',
+            'relative flex w-full items-center rounded-[20px] border border-line bg-surface p-2 elev-1 transition-all',
+            'focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20',
           )}
         >
-          <span className="pl-3 pr-1 text-cyan-300/70">
+          <span className="pl-3 pr-1 text-accent">
             <Sparkles className="h-5 w-5" />
           </span>
           <input
@@ -65,11 +65,11 @@ export default function NotesComposer({ studio }: { studio: NotesStudio }) {
               if (e.key === 'Enter' && !noFiles && !loading) void generate()
             }}
             placeholder="What should these notes cover?  (e.g. Binary Search Trees — or leave blank for the whole course)"
-            className="flex-1 bg-transparent px-2 py-2.5 text-[15px] text-zinc-100 placeholder-zinc-500 outline-none"
+            className="flex-1 bg-transparent px-2 py-2.5 text-[15px] text-ink placeholder-ink-faint outline-none"
           />
         </div>
 
-        {/* Style — inline segmented pills */}
+        {/* Style — inline hairline pills */}
         <div className="mt-4 flex items-center justify-center gap-2">
           {NOTE_STYLES.map((style) => {
             const active = noteStyle === style.value
@@ -79,11 +79,12 @@ export default function NotesComposer({ studio }: { studio: NotesStudio }) {
                 type="button"
                 onClick={() => setNoteStyle(style.value)}
                 title={style.hint}
+                aria-pressed={active}
                 className={cn(
-                  'rounded-full border px-4 py-1.5 text-[13px] font-medium transition-all',
+                  'rounded-full border px-4 py-1.5 text-[13px] font-medium transition-all focus-ring',
                   active
-                    ? 'bg-gradient-brand-soft border-cyan-400/40 text-cyan-100 ring-1 ring-inset ring-cyan-400/30'
-                    : 'border-white/10 bg-white/[0.02] text-zinc-300 hover:border-white/20 hover:bg-white/[0.05] hover:text-zinc-100',
+                    ? 'border-accent-line bg-accent-wash text-accent-deep'
+                    : 'border-line bg-surface text-ink-soft hover:border-line-strong hover:text-ink',
                 )}
               >
                 {style.label}
@@ -98,9 +99,9 @@ export default function NotesComposer({ studio }: { studio: NotesStudio }) {
             type="button"
             onClick={() => setSourcesOpen((v) => !v)}
             disabled={noFiles || filesQuery.isLoading}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-[13px] text-zinc-300 transition-colors hover:border-cyan-400/40 hover:bg-white/[0.06] hover:text-zinc-100 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-1.5 text-[13px] text-ink-soft transition-colors hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:opacity-50 focus-ring"
           >
-            <FileText className="h-3.5 w-3.5 text-cyan-300/80" />
+            <FileText className="h-3.5 w-3.5 text-ink-faint" />
             {filesQuery.isLoading
               ? 'Loading your files…'
               : noFiles
@@ -125,11 +126,11 @@ export default function NotesComposer({ studio }: { studio: NotesStudio }) {
             >
               <Card padding="md" className="mt-3">
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-400">Pick the files to ground these notes in</span>
+                  <span className="text-xs font-medium text-ink-soft">Pick the files to ground these notes in</span>
                   <button
                     type="button"
                     onClick={toggleSelectAll}
-                    className="text-xs font-medium text-cyan-300 transition-colors hover:text-cyan-200"
+                    className="text-xs font-medium text-accent transition-colors hover:text-accent-deep"
                   >
                     {allSelected ? 'Clear' : 'Select all'}
                   </button>
@@ -147,12 +148,12 @@ export default function NotesComposer({ studio }: { studio: NotesStudio }) {
                         className={cn(
                           'group flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all',
                           checked
-                            ? 'border-cyan-400/40 bg-gradient-brand-soft'
-                            : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]',
+                            ? 'border-accent-line bg-accent-wash'
+                            : 'border-line bg-surface hover:border-line-strong hover:bg-surface-hover',
                         )}
                       >
                         <SourceCheckbox checked={checked} />
-                        <span className={cn('truncate text-sm', checked ? 'font-medium text-zinc-100' : 'text-zinc-300')}>
+                        <span className={cn('truncate text-sm', checked ? 'font-medium text-ink' : 'text-ink-soft')}>
                           {file}
                         </span>
                       </button>
@@ -184,12 +185,12 @@ export default function NotesComposer({ studio }: { studio: NotesStudio }) {
           />
         )}
         {noFiles && courseId && !filesQuery.isError && !filesQuery.isLoading && (
-          <p className="mt-2.5 text-center text-xs text-zinc-500">
+          <p className="mt-2.5 text-center text-xs text-ink-faint">
             Upload course files from Materials to generate notes.
           </p>
         )}
         {!courseId && (
-          <p className="mt-2.5 text-center text-xs text-amber-400">Select a course to get started.</p>
+          <p className="mt-2.5 text-center text-xs text-warning">Select a course to get started.</p>
         )}
         {errMsg && (
           <ErrorState compact title={errMsg} onRetry={() => void generate()} className="mt-3" />

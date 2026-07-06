@@ -17,8 +17,8 @@ export default function StudyKitPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-4 h-14 border-b border-[#18181d] flex items-center flex-shrink-0">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 pl-1.5">
+      <div className="px-4 h-14 border-b border-line flex items-center flex-shrink-0">
+        <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-ink-faint pl-1.5">
           Grounded notes & flashcards
         </span>
       </div>

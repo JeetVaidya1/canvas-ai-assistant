@@ -41,8 +41,8 @@ export function ProblemCard({ practice }: { practice: PracticeController }) {
         meta={`${practice.selectedTopic} · ${practice.difficulty}`}
         progress={progress}
         right={
-          <span className="inline-flex items-center gap-1.5 text-sm text-zinc-400">
-            <Clock className="h-4 w-4 text-cyan-300" />
+          <span className="inline-flex items-center gap-1.5 text-sm text-ink-soft tnum">
+            <Clock className="h-4 w-4 text-ink-faint" />
             {formatTime(practice.timeElapsed)}
           </span>
         }
@@ -77,7 +77,7 @@ export function ProblemCard({ practice }: { practice: PracticeController }) {
               </Badge>
             </div>
 
-            <div className="text-xl font-medium leading-snug text-zinc-50 mb-6">
+            <div className="text-xl font-medium leading-snug text-ink mb-6">
               <Markdown content={problem.question} />
             </div>
 

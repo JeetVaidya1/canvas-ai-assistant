@@ -16,10 +16,11 @@ interface SubTabsProps {
 }
 
 /** Segmented control used inside the consolidated destinations (Learn / Practice
- *  / Study Kit / Progress) to switch between their sub-modes. */
+ *  / Study Kit / Progress). Paper & Ink: inset paper well, active = raised
+ *  white sheet with ink text. */
 export function SubTabs({ tabs, active, onChange, className }: SubTabsProps) {
   return (
-    <div className={cn('inline-flex items-center gap-1 p-1 rounded-xl bg-[#101014] border border-[#1f1f26]', className)}>
+    <div className={cn('inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-paper-deep border border-line', className)}>
       {tabs.map((t) => {
         const isActive = t.key === active
         return (
@@ -27,12 +28,13 @@ export function SubTabs({ tabs, active, onChange, className }: SubTabsProps) {
             key={t.key}
             onClick={() => onChange(t.key)}
             className={cn(
-              'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all',
+              'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-[7px] text-sm font-medium transition-all focus-ring',
               isActive
-                ? 'bg-gradient-brand-soft text-cyan-100 ring-1 ring-inset ring-cyan-400/25 shadow-[0_2px_10px_-4px_rgba(34,211,238,0.5)]'
-                : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05]',
+                ? 'bg-surface text-ink border border-line shadow-[0_1px_2px_rgba(33,31,26,0.06)]'
+                : 'text-ink-soft hover:text-ink border border-transparent',
             )}
             title={t.hint}
+            aria-pressed={isActive}
           >
             {t.icon}
             {t.label}

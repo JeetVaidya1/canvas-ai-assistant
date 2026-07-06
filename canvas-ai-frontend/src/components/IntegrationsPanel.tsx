@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
 const inputClass =
-  'w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 ' +
-  'focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 outline-none text-sm transition-colors'
+  'w-full px-3 py-2 bg-surface border border-line rounded-lg text-ink placeholder-ink-faint ' +
+  'hover:border-line-strong focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none text-sm transition-colors'
 
 interface IntegrationsPanelProps {
   courseId: string
@@ -137,37 +137,37 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-4 text-left"
       >
-        <span className="text-sm font-semibold text-zinc-100 flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-lg bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center">
-            <Github className="w-4 h-4 text-cyan-300" />
+        <span className="text-sm font-semibold text-ink flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-lg bg-paper-deep border border-line flex items-center justify-center">
+            <Github className="w-4 h-4 text-ink-soft" />
           </span>
           Export &amp; integrations
         </span>
-        <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-ink-faint transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="px-4 pb-4 space-y-4 border-t border-zinc-700/40 pt-4">
-          <div className="border-b border-zinc-700/40 pb-4">
+        <div className="px-4 pb-4 space-y-4 border-t border-line pt-4">
+          <div className="border-b border-line pb-4">
             {shareCode ? (
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <Users className="w-4 h-4 text-cyan-300" />
-                  <span className="text-sm font-medium text-zinc-100">Published to the class catalog</span>
+                  <Users className="w-4 h-4 text-accent" />
+                  <span className="text-sm font-medium text-ink">Published to the class catalog</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <code className="px-2.5 py-1 bg-zinc-900 border border-cyan-400/20 rounded text-cyan-300 text-sm font-mono tracking-widest">{shareCode}</code>
+                  <code className="px-2.5 py-1 bg-accent-wash border border-accent-line rounded text-accent-deep text-sm font-mono tracking-widest">{shareCode}</code>
                   <button
                     onClick={() => { void navigator.clipboard.writeText(shareCode); showSuccess('Share code copied') }}
-                    className="p-1.5 text-zinc-400 hover:text-cyan-300 hover:bg-zinc-800 rounded-lg transition-colors"
+                    className="p-1.5 text-ink-soft hover:text-accent hover:bg-paper-deep rounded-lg transition-colors"
                     title="Copy share code"
                     aria-label="Copy share code"
                   >
                     <Copy className="w-4 h-4" />
                   </button>
-                  <span className="text-xs text-zinc-500">{joinCount} classmate{joinCount === 1 ? '' : 's'} joined</span>
+                  <span className="text-xs text-ink-faint">{joinCount} classmate{joinCount === 1 ? '' : 's'} joined</span>
                 </div>
-                <p className="text-xs text-zinc-500 mt-1.5">Classmates enter this code to study the same course — each keeps their own progress.</p>
+                <p className="text-xs text-ink-faint mt-1.5">Classmates enter this code to study the same course — each keeps their own progress.</p>
               </div>
             ) : (
               <div>
@@ -178,7 +178,7 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
                 >
                   {busy === 'publish' ? 'Publishing…' : 'Share with your class'}
                 </Button>
-                <p className="text-xs text-zinc-500 mt-1.5">Publish this course so classmates can join with a code. You stay the owner.</p>
+                <p className="text-xs text-ink-faint mt-1.5">Publish this course so classmates can join with a code. You stay the owner.</p>
               </div>
             )}
           </div>
@@ -191,7 +191,7 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
             >
               {busy === 'context' ? 'Building…' : 'Copy study context for AI'}
             </Button>
-            <p className="text-xs text-zinc-500 mt-1.5">A grounded brief of your weak areas + source excerpts — paste into Claude, ChatGPT, or a Project. (Vindexa also runs as an MCP server; see mcp_server.py.)</p>
+            <p className="text-xs text-ink-faint mt-1.5">A grounded brief of your weak areas + source excerpts — paste into Claude, ChatGPT, or a Project. (Vindexa also runs as an MCP server; see mcp_server.py.)</p>
           </div>
 
           <div>
@@ -203,11 +203,11 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
             >
               {busy === 'export' ? 'Exporting…' : 'Export course as Markdown (.zip)'}
             </Button>
-            <p className="text-xs text-zinc-500 mt-1.5">Notes, flashcards, and your study plan as version-control-friendly Markdown.</p>
+            <p className="text-xs text-ink-faint mt-1.5">Notes, flashcards, and your study plan as version-control-friendly Markdown.</p>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-xs font-medium text-zinc-500">GitHub repository (owner/name)</label>
+            <label className="block text-xs font-medium text-ink-soft">GitHub repository (owner/name)</label>
             <input
               value={repo}
               onChange={(e) => setRepo(e.target.value)}
@@ -247,14 +247,14 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
                 {busy === 'import' ? 'Importing…' : 'Import materials'}
               </Button>
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-ink-faint">
               Tokens are sent only with your request and never stored. Importing pulls text/Markdown files into this course.
             </p>
           </div>
 
-          <div className="space-y-2 border-t border-zinc-700/40 pt-4">
-            <label className="block text-xs font-medium text-zinc-500 flex items-center gap-1.5">
-              <GraduationCap className="w-3.5 h-3.5 text-cyan-300" /> Import from Canvas LMS
+          <div className="space-y-2 border-t border-line pt-4">
+            <label className="block text-xs font-medium text-ink-soft flex items-center gap-1.5">
+              <GraduationCap className="w-3.5 h-3.5 text-accent" /> Import from Canvas LMS
             </label>
             <div className="grid grid-cols-2 gap-2">
               <input
@@ -285,7 +285,7 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
             >
               {busy === 'canvas' ? 'Importing…' : 'Import syllabus, materials & exam dates'}
             </Button>
-            <p className="text-xs text-zinc-500">Pulls your syllabus and files, and detects your next exam to prefill the planner.</p>
+            <p className="text-xs text-ink-faint">Pulls your syllabus and files, and detects your next exam to prefill the planner.</p>
           </div>
         </div>
       )}

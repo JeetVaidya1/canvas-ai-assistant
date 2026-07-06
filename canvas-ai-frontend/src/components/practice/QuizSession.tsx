@@ -30,12 +30,12 @@ export function QuizSession({ quiz }: { quiz: QuizController }) {
         progress={progress}
         right={
           <>
-            <span className="inline-flex items-center gap-1.5 text-sm text-emerald-400/90">
+            <span className="inline-flex items-center gap-1.5 text-sm text-success tnum">
               <CheckCircle className="h-4 w-4" />
               {run.correctCount}
             </span>
-            <span className="inline-flex items-center gap-1.5 text-sm text-zinc-400">
-              <Clock className="h-4 w-4 text-cyan-300" />
+            <span className="inline-flex items-center gap-1.5 text-sm text-ink-soft tnum">
+              <Clock className="h-4 w-4 text-ink-faint" />
               {formatTime(quiz.timeElapsed)}
             </span>
           </>
@@ -57,7 +57,7 @@ export function QuizSession({ quiz }: { quiz: QuizController }) {
               <SourceTag source={question.source} />
             </div>
 
-            <div className="text-xl font-medium leading-snug text-zinc-50 mb-6">
+            <div className="text-xl font-medium leading-snug text-ink mb-6">
               <Markdown content={question.question} />
             </div>
 
@@ -92,12 +92,12 @@ export function QuizSession({ quiz }: { quiz: QuizController }) {
                 <>
                   {/* Cited mistake explanation — grounded in the user's own pages. */}
                   {!feedback.is_correct && feedback.mistake_explanation && (
-                    <div className="mt-3 rounded-lg bg-zinc-900/70 border border-zinc-700 p-3">
-                      <div className="text-xs font-semibold text-amber-400 mb-1 flex items-center gap-1.5">
+                    <div className="mt-3 rounded-lg bg-warning-wash border border-warning/25 p-3">
+                      <div className="text-xs font-semibold text-warning mb-1 flex items-center gap-1.5">
                         <Target className="w-3.5 h-3.5" />
                         Why you missed this
                       </div>
-                      <div className="text-sm text-zinc-300">
+                      <div className="text-sm text-ink-soft">
                         <Markdown content={feedback.mistake_explanation} />
                       </div>
                       {feedback.mistake_source?.doc_name && (

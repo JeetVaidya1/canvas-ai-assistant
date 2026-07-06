@@ -7,9 +7,11 @@ import { Card } from '@/components/ui/Card'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { SectionHead } from './SectionHead'
 
-const NO_DATA_COLOR = '#3a4358'
-const EDGE_COLOR = '#38445e'
-const NODE_FILL = '#19202f'
+// Paper & Ink graph palette: hairline edges, white node sheets, ink-soft labels.
+const NO_DATA_COLOR = '#d8d3c5'
+const EDGE_COLOR = '#d8d3c5'
+const NODE_FILL = '#ffffff'
+const LABEL_COLOR = '#5d5850'
 const MAX_BLOCKERS = 5
 
 interface GraphNode {
@@ -115,7 +117,7 @@ interface ConceptGraphMapProps {
 }
 
 /**
- * Concept prerequisite graph — layered SVG node/edge map on navy. Mastery is
+ * Concept prerequisite graph — layered SVG node/edge map on paper. Mastery is
  * colored via the app-wide semantic scoreTone. Product differentiator: wide,
  * prominent tile with a legend and "fix the foundation first" blockers.
  */
@@ -127,14 +129,15 @@ export function ConceptGraphMap({ graph, isError, onRetry }: ConceptGraphMapProp
     <Card accent padding="lg" elevation={2}>
       <div className="flex items-start justify-between gap-3">
         <SectionHead
-          icon={Network}
+          num="02"
           title="Concept map"
           hint="How concepts build on each other — fix the upstream gaps first"
+          className="flex-1"
         />
         {hasData && (
           <div className="hidden sm:flex items-center gap-3 flex-shrink-0 pt-1">
             {LEGEND.map((it) => (
-              <span key={it.label} className="inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
+              <span key={it.label} className="inline-flex items-center gap-1.5 text-[11px] text-ink-soft">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: it.color }} />
                 {it.label}
               </span>
@@ -196,10 +199,10 @@ export function ConceptGraphMap({ graph, isError, onRetry }: ConceptGraphMapProp
                     fill={NODE_FILL}
                     stroke={color}
                     strokeWidth={1.5}
-                    style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))' }}
+                    style={{ filter: 'drop-shadow(0 1px 2px rgba(33,31,26,0.08))' }}
                   />
                   <circle cx={x - w / 2 + 14} cy={y} r={4} fill={color} />
-                  <text x={x - w / 2 + 26} y={y + 4} fontSize={12} fill="#e6e6ec" fontWeight={500}>
+                  <text x={x - w / 2 + 26} y={y + 4} fontSize={12} fill={LABEL_COLOR} fontWeight={500}>
                     {label}
                   </text>
                   {node.has_data && (
@@ -216,17 +219,17 @@ export function ConceptGraphMap({ graph, isError, onRetry }: ConceptGraphMapProp
 
       {/* Foundation-first blockers, surfaced under the graph they explain. */}
       {!isError && graph && graph.blockers.length > 0 && (
-        <div className="mt-5 pt-4 border-t border-white/[0.06]">
-          <p className="text-xs font-semibold text-amber-300/90 mb-3">Fix the foundation first</p>
+        <div className="mt-5 pt-4 border-t border-line">
+          <p className="text-xs font-semibold text-warning mb-3">Fix the foundation first</p>
           <div className="space-y-2">
             {graph.blockers.slice(0, MAX_BLOCKERS).map((b) => (
               <div key={`${b.prerequisite}->${b.concept}`} className="flex items-center flex-wrap gap-2 text-sm">
-                <span className="text-amber-200 bg-amber-500/10 border border-amber-500/25 rounded px-2 py-0.5 text-xs">
-                  {b.prerequisite} <span className="text-amber-300/70">({Math.round(b.prerequisite_pct)}%)</span>
+                <span className="text-warning bg-warning-wash border border-warning/25 rounded px-2 py-0.5 text-xs">
+                  {b.prerequisite} <span className="text-warning/70 tnum">({Math.round(b.prerequisite_pct)}%)</span>
                 </span>
-                <ArrowRight className="w-3.5 h-3.5 text-zinc-600" />
-                <span className="text-zinc-300 text-xs">
-                  {b.concept} <span className="text-zinc-500">({Math.round(b.concept_pct)}%)</span>
+                <ArrowRight className="w-3.5 h-3.5 text-ink-faint" />
+                <span className="text-ink-soft text-xs">
+                  {b.concept} <span className="text-ink-faint tnum">({Math.round(b.concept_pct)}%)</span>
                 </span>
               </div>
             ))}

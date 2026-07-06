@@ -17,8 +17,8 @@ export default function ExamsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center px-6">
         <BrandMark className="mb-5 h-14 w-14" />
-        <h3 className="text-lg font-semibold text-zinc-100 mb-1.5">Select a course first</h3>
-        <p className="text-sm text-zinc-500 max-w-sm">Pick a course from the sidebar to use Exam Mode.</p>
+        <h3 className="text-lg font-semibold text-ink mb-1.5">Select a course first</h3>
+        <p className="text-sm text-ink-soft max-w-sm">Pick a course from the sidebar to use Exam Mode.</p>
       </div>
     )
   }

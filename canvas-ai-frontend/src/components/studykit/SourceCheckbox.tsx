@@ -18,7 +18,7 @@ export function SourceCheckbox({ checked, className }: SourceCheckboxProps) {
       aria-hidden
       className={cn(
         'flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-[5px] border transition-colors',
-        checked ? 'border-transparent bg-gradient-brand' : 'border-white/20 group-hover:border-white/40',
+        checked ? 'border-transparent bg-accent' : 'border-line-strong bg-surface group-hover:border-ink-faint',
         className,
       )}
     >

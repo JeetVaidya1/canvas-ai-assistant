@@ -34,13 +34,13 @@ export default class ErrorBoundary extends Component<Props, State> {
           <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
             <AlertCircle className="w-8 h-8 text-red-400" />
           </div>
-          <h3 className="text-xl font-semibold text-zinc-200 mb-2">Something went wrong</h3>
-          <p className="text-zinc-500 mb-4 max-w-md">
+          <h3 className="text-xl font-semibold text-ink mb-2">Something went wrong</h3>
+          <p className="text-ink-soft mb-4 max-w-md">
             {this.state.error?.message || 'An unexpected error occurred.'}
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="bg-cyan-500 hover:bg-cyan-400 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
+            className="bg-accent hover:bg-accent-deep text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
           >
             Try Again
           </button>

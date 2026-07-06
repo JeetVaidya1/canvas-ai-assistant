@@ -54,9 +54,9 @@ function persistDoneTasks(courseId: string, tasks: ReadonlySet<string>): void {
 function PlannerSkeleton() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 space-y-6 animate-pulse" aria-hidden>
-      <div className="h-20 rounded-xl bg-white/[0.04] border border-white/[0.06]" />
+      <div className="h-20 rounded-xl bg-paper-deep border border-line" />
       {[0, 1, 2].map((i) => (
-        <div key={i} className="h-32 rounded-xl bg-white/[0.04] border border-white/[0.06]" />
+        <div key={i} className="h-32 rounded-xl bg-paper-deep border border-line" />
       ))}
     </div>
   )
@@ -186,18 +186,18 @@ export default function PlannerPage() {
         <Card accent padding="md" className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-5">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/12 border border-cyan-400/20 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-cyan-300" />
+              <div className="w-10 h-10 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-accent" />
               </div>
               <div>
-                <p className="text-lg font-semibold text-zinc-50 leading-none tabular-nums">{plan.days.length}</p>
-                <p className="text-xs text-zinc-400 mt-1">study days</p>
+                <p className="font-display text-xl font-semibold text-ink leading-none tnum">{plan.days.length}</p>
+                <p className="text-xs text-ink-soft mt-1">study days</p>
               </div>
             </div>
-            <div className="h-9 w-px bg-white/[0.08]" />
+            <div className="h-9 w-px bg-line" />
             <div>
-              <p className="text-lg font-semibold text-zinc-50 leading-none tabular-nums">{totalHours}h</p>
-              <p className="text-xs text-zinc-400 mt-1">total planned</p>
+              <p className="font-display text-xl font-semibold text-ink leading-none tnum">{totalHours}h</p>
+              <p className="text-xs text-ink-soft mt-1">total planned</p>
             </div>
           </div>
           <Button
@@ -213,7 +213,7 @@ export default function PlannerPage() {
       {/* Setup form */}
       {showSetup && (
         <Card accent padding="md">
-          <h2 className="text-sm font-semibold text-zinc-100 mb-4">Plan your revision</h2>
+          <h2 className="text-sm font-semibold text-ink mb-4">Plan your revision</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <Input
               label="Days available"

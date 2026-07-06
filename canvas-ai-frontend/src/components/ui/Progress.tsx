@@ -16,7 +16,7 @@ export function ProgressBar({ value, className, color, label }: ProgressBarProps
   const barColor = color ?? scoreTone(clamped).stroke
   return (
     <div
-      className={cn('h-1.5 rounded-full bg-white/[0.06] overflow-hidden', className)}
+      className={cn('h-1.5 rounded-full bg-paper-deep border border-line/60 overflow-hidden', className)}
       role="progressbar"
       aria-valuenow={Math.round(clamped)}
       aria-valuemin={0}
@@ -28,7 +28,7 @@ export function ProgressBar({ value, className, color, label }: ProgressBarProps
         style={{ backgroundColor: barColor }}
         initial={{ width: 0 }}
         animate={{ width: `${clamped}%` }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       />
     </div>
   )
@@ -47,8 +47,8 @@ interface ProgressRingProps {
 }
 
 /**
- * Circular progress ring (readiness, mastery). Center content via children —
- * e.g. the % figure. Single implementation app-wide.
+ * Circular progress ring (readiness, mastery). Center content via children.
+ * Ink on paper: warm track, semantic stroke, no glow filters.
  */
 export function ProgressRing({ value, size = 104, strokeWidth = 8, color, className, children }: ProgressRingProps) {
   const clamped = Math.max(0, Math.min(100, value))
@@ -58,15 +58,14 @@ export function ProgressRing({ value, size = 104, strokeWidth = 8, color, classN
   return (
     <div className={cn('relative flex-shrink-0', className)} style={{ width: size, height: size }}>
       <svg className="-rotate-90" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#222228" strokeWidth={strokeWidth} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e7e3d9" strokeWidth={strokeWidth} />
         <motion.circle
           cx={size / 2} cy={size / 2} r={r} fill="none"
           stroke={ringColor} strokeWidth={strokeWidth} strokeLinecap="round"
           strokeDasharray={circ}
           initial={{ strokeDashoffset: circ }}
           animate={{ strokeDashoffset: circ * (1 - clamped / 100) }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          style={{ filter: `drop-shadow(0 0 6px ${ringColor}55)` }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         />
       </svg>
       {children && <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>}

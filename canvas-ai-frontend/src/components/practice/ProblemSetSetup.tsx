@@ -80,9 +80,9 @@ export function ProblemSetSetup({ practice }: { practice: PracticeController }) 
       </div>
 
       {practice.difficulty === 'adaptive' ? (
-        <div className="mb-8 flex items-start gap-2.5 rounded-xl border border-cyan-400/15 bg-gradient-brand-soft px-3.5 py-3">
-          <Gauge className="mt-0.5 h-4 w-4 flex-shrink-0 text-cyan-300" />
-          <p className="text-xs text-cyan-200/80">
+        <div className="mb-8 flex items-start gap-2.5 rounded-xl border border-accent-line bg-accent-wash px-3.5 py-3">
+          <Gauge className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" />
+          <p className="text-xs text-accent-deep">
             Adaptive mode reads your recent mastery and calibrates each problem's difficulty —
             you'll see the resolved level on every card.
           </p>

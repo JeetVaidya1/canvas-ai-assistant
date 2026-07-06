@@ -5,27 +5,26 @@ import CountUp from '@/components/ui/CountUp'
 
 interface StatTileProps {
   icon: LucideIcon
-  tint: string
-  chip: string
   label: string
   value: number
   suffix?: string
   unit: string
 }
 
-function StatTile({ icon: Icon, tint, chip, label, value, suffix = '', unit }: StatTileProps) {
+/** Report-card stat tile: serif display number, quiet ink icon chip. */
+function StatTile({ icon: Icon, label, value, suffix = '', unit }: StatTileProps) {
   return (
-    <Card accent elevation={1}>
+    <Card elevation={1}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium text-zinc-400">{label}</p>
-          <p className="text-3xl font-bold text-zinc-50 mt-1.5 leading-none tabular-nums">
+          <p className="text-xs font-medium text-ink-soft">{label}</p>
+          <p className="font-display text-3xl font-semibold text-ink mt-1.5 leading-none tnum">
             <CountUp to={value} />{suffix}
           </p>
-          <p className="text-xs text-zinc-500 mt-1.5">{unit}</p>
+          <p className="text-xs text-ink-faint mt-1.5">{unit}</p>
         </div>
-        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${chip}`}>
-          <Icon className={`w-5 h-5 ${tint}`} />
+        <div className="w-10 h-10 rounded-lg bg-paper-deep border border-line flex items-center justify-center">
+          <Icon className="w-5 h-5 text-ink-soft" />
         </div>
       </div>
     </Card>
@@ -42,24 +41,18 @@ export function StatStrip({ analytics }: StatStripProps) {
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <StatTile
         icon={Flame}
-        tint="text-cyan-300"
-        chip="bg-cyan-500/12 border-cyan-400/20"
         label="Study streak"
         value={analytics.study_streak}
         unit="days"
       />
       <StatTile
         icon={BookOpen}
-        tint="text-sky-300"
-        chip="bg-blue-500/12 border-blue-400/20"
         label="Questions asked"
         value={analytics.total_questions}
         unit="total"
       />
       <StatTile
         icon={Target}
-        tint="text-emerald-300"
-        chip="bg-emerald-500/12 border-emerald-400/20"
         label="Avg confidence"
         value={Math.round(analytics.avg_confidence * 100)}
         suffix="%"
@@ -67,8 +60,6 @@ export function StatStrip({ analytics }: StatStripProps) {
       />
       <StatTile
         icon={Brain}
-        tint="text-sky-300"
-        chip="bg-sky-500/12 border-sky-400/20"
         label="Topics studied"
         value={analytics.topics_progress.length}
         unit="concepts"

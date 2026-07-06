@@ -44,7 +44,7 @@ export function TopicField({
             type="button"
             onClick={onRetry}
             disabled={loading}
-            className="inline-flex items-center gap-1 text-xs text-cyan-300 transition-colors hover:text-cyan-200 disabled:opacity-50"
+            className="inline-flex items-center gap-1 text-xs text-accent transition-colors hover:text-accent-deep disabled:opacity-50"
             aria-label="Refresh topics"
           >
             <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} />
@@ -66,7 +66,7 @@ export function TopicField({
           placeholder={loading ? 'Loading topics…' : 'Select topic'}
         />
       )}
-      {helper && !error && <p className="mt-2 text-center text-xs text-zinc-500">{helper}</p>}
+      {helper && !error && <p className="mt-2 text-center text-xs text-ink-faint">{helper}</p>}
       {error && <ErrorInline message={error} onRetry={onRetry} className="mt-2.5" />}
     </div>
   )

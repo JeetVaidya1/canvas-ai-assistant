@@ -67,26 +67,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-paper flex items-center justify-center px-4">
+      <div className="w-full max-w-sm animate-fade-up">
         <button
           onClick={() => navigate('/')}
           className="flex items-center gap-2.5 mb-8 mx-auto focus-ring rounded-lg"
           aria-label="Back to home"
         >
           <BrandMark className="w-8 h-8" />
-          <span className="text-lg font-semibold text-zinc-50 tracking-tight">Vindexa</span>
+          <span className="font-display text-lg font-semibold text-ink tracking-tight">Vindexa</span>
         </button>
 
         <div className="card-surface elev-2 rounded-2xl p-7">
           {sent ? (
             <div className="text-center py-6">
-              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-400/20 flex items-center justify-center mx-auto mb-4">
-                <Mail className="w-5 h-5 text-cyan-300" />
+              <div className="w-12 h-12 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center mx-auto mb-4">
+                <Mail className="w-5 h-5 text-accent" />
               </div>
-              <h2 className="text-lg font-semibold text-zinc-50 mb-1">Check your email</h2>
-              <p className="text-sm text-zinc-400">
-                We sent a link to <span className="text-zinc-200">{email}</span>.
+              <h2 className="font-display text-lg font-semibold text-ink mb-1">Check your email</h2>
+              <p className="text-sm text-ink-soft">
+                We sent a link to <span className="text-ink font-medium">{email}</span>.
               </p>
               <Button variant="ghost" size="sm" className="mt-5" onClick={() => { setSent(false); setMode('signin') }}>
                 Back to sign in
@@ -94,21 +94,21 @@ export default function LoginPage() {
             </div>
           ) : (
             <>
-              <h1 className="text-xl font-semibold text-zinc-50 mb-1">{TITLES[mode]}</h1>
-              <p className="text-sm text-zinc-400 mb-6">Your courses and progress, private to you.</p>
+              <h1 className="font-display text-2xl font-semibold text-ink mb-1">{TITLES[mode]}</h1>
+              <p className="text-sm text-ink-soft mb-6">Your courses and progress, private to you.</p>
 
               <button
                 onClick={() => void google()}
-                className="w-full mb-4 bg-white text-zinc-800 py-2.5 rounded-lg font-medium text-sm hover:bg-zinc-100 transition-colors flex items-center justify-center gap-2 focus-ring"
+                className="w-full mb-4 bg-surface text-ink border border-line py-2.5 rounded-lg font-medium text-sm hover:bg-surface-hover hover:border-line-strong transition-colors flex items-center justify-center gap-2 focus-ring"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0012 23z"/><path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 010-4.2V7.06H2.18a11 11 0 000 9.88l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38z"/></svg>
                 Continue with Google
               </button>
 
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px bg-border-subtle" />
-                <span className="text-xs text-zinc-600">or</span>
-                <div className="flex-1 h-px bg-border-subtle" />
+                <div className="flex-1 h-px bg-line" />
+                <span className="text-xs text-ink-faint">or</span>
+                <div className="flex-1 h-px bg-line" />
               </div>
 
               <form onSubmit={submit} className="space-y-3">
@@ -140,20 +140,20 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="mt-5 text-center text-sm text-zinc-500 space-y-1.5">
+              <div className="mt-5 text-center text-sm text-ink-faint space-y-1.5">
                 {mode !== 'magic' && (
-                  <button onClick={() => setMode('magic')} className="text-cyan-300 hover:text-cyan-200 block w-full transition-colors">
+                  <button onClick={() => setMode('magic')} className="text-accent hover:text-accent-deep block w-full transition-colors">
                     Email me a magic link instead
                   </button>
                 )}
                 {mode === 'signin' && (
-                  <button onClick={() => setMode('signup')} className="hover:text-zinc-300 block w-full transition-colors">
-                    New here? <span className="text-cyan-300">Create an account</span>
+                  <button onClick={() => setMode('signup')} className="hover:text-ink-soft block w-full transition-colors">
+                    New here? <span className="text-accent hover:text-accent-deep">Create an account</span>
                   </button>
                 )}
                 {mode !== 'signin' && (
-                  <button onClick={() => setMode('signin')} className="hover:text-zinc-300 block w-full transition-colors">
-                    Already have an account? <span className="text-cyan-300">Sign in</span>
+                  <button onClick={() => setMode('signin')} className="hover:text-ink-soft block w-full transition-colors">
+                    Already have an account? <span className="text-accent hover:text-accent-deep">Sign in</span>
                   </button>
                 )}
               </div>

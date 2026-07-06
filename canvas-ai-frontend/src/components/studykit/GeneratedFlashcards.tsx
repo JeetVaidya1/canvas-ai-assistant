@@ -24,27 +24,27 @@ function FlipCard({ card, flipped, onFlip }: { card: Flashcard; flipped: boolean
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* Front — Question */}
-        <div className="absolute inset-0 [backface-visibility:hidden] rounded-2xl card-surface accent-top glow-brand p-7 flex flex-col">
-          <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-gradient-brand">
+        {/* Front — Question: white index-card sheet */}
+        <div className="absolute inset-0 [backface-visibility:hidden] rounded-2xl card-surface p-7 flex flex-col">
+          <div className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
             <Brain className="w-3.5 h-3.5" /> Question
           </div>
           <div className="flex-1 flex items-center justify-center text-center px-2">
-            <p className="text-lg font-medium text-zinc-100 leading-relaxed">{card.q}</p>
+            <p className="text-lg font-medium text-ink leading-relaxed">{card.q}</p>
           </div>
-          <p className="text-xs text-zinc-500 text-center">Tap to reveal answer</p>
+          <p className="text-xs text-ink-faint text-center">Tap to reveal answer</p>
         </div>
-        {/* Back — Answer */}
-        <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl bg-gradient-brand-soft border border-cyan-400/25 p-7 flex flex-col">
-          <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-cyan-300">
+        {/* Back — Answer: pen-blue-washed sheet */}
+        <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl bg-accent-wash border border-accent-line p-7 flex flex-col">
+          <div className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-accent-deep">
             <Sparkles className="w-3.5 h-3.5" /> Answer
           </div>
           <div className="flex-1 flex items-center justify-center text-center overflow-auto px-2">
-            <div className="prose prose-invert prose-sm max-w-none text-zinc-100">
+            <div className="text-sm text-ink max-w-none">
               <Markdown content={card.a} />
             </div>
           </div>
-          <p className="text-xs text-cyan-300/60 text-center">Tap to flip back</p>
+          <p className="text-xs text-accent-deep/70 text-center">Tap to flip back</p>
         </div>
       </motion.div>
     </button>
@@ -76,9 +76,9 @@ export function FlashcardDeck({ cards }: { cards: Flashcard[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 text-sm text-zinc-400">
-          <Layers className="w-4 h-4 text-cyan-300" />
-          Card <span className="text-zinc-100 font-semibold">{safeIndex + 1}</span> of {cards.length}
+        <div className="flex items-center gap-2 text-sm text-ink-soft">
+          <Layers className="w-4 h-4 text-accent" />
+          Card <span className="text-ink font-semibold tnum">{safeIndex + 1}</span> of {cards.length}
         </div>
         <div className="flex items-center gap-1.5">
           {cards.map((_, i) => (
@@ -86,10 +86,10 @@ export function FlashcardDeck({ cards }: { cards: Flashcard[] }) {
               key={i}
               className={`h-1.5 rounded-full transition-all ${
                 i === safeIndex
-                  ? 'w-6 bg-gradient-brand'
+                  ? 'w-6 bg-accent'
                   : seen.has(i)
-                  ? 'w-1.5 bg-cyan-400/50'
-                  : 'w-1.5 bg-white/15'
+                  ? 'w-1.5 bg-accent/40'
+                  : 'w-1.5 bg-line-strong'
               }`}
             />
           ))}
@@ -118,7 +118,7 @@ export function FlashcardDeck({ cards }: { cards: Flashcard[] }) {
         >
           Previous
         </Button>
-        <span className="text-xs text-zinc-500">{seen.size}/{cards.length} reviewed</span>
+        <span className="text-xs text-ink-faint tnum">{seen.size}/{cards.length} reviewed</span>
         <Button
           variant="secondary"
           size="sm"
@@ -151,13 +151,13 @@ export function GeneratedFlashcardsPanel({ cards }: GeneratedFlashcardsProps) {
     )
   }
   return (
-    <Card accent padding="lg" className="sticky top-6">
-      <h3 className="text-base font-semibold text-zinc-100 mb-1 flex items-center gap-2">
-        <Layers className="w-5 h-5 text-cyan-300" />
+    <Card padding="lg" className="sticky top-6">
+      <h3 className="text-base font-semibold text-ink mb-1 flex items-center gap-2">
+        <Layers className="w-5 h-5 text-accent" />
         Flashcard Deck
-        <Badge tone="neutral" className="ml-1">{cards.length} cards</Badge>
+        <Badge tone="marker" className="ml-1">{cards.length} cards</Badge>
       </h3>
-      <p className="text-xs text-zinc-400 mb-5">Auto-generated from your notes. Flip to study.</p>
+      <p className="text-xs text-ink-soft mb-5">Auto-generated from your notes. Flip to study.</p>
       <FlashcardDeck cards={cards} />
     </Card>
   )
@@ -173,12 +173,12 @@ interface SpacedRepetitionPanelProps {
 export function SpacedRepetitionPanel({ cards, courseId, userId }: SpacedRepetitionPanelProps) {
   if (cards.length === 0) return null
   return (
-    <Card accent padding="lg">
-      <h3 className="text-base font-semibold text-zinc-100 mb-1 flex items-center gap-2">
-        <BookOpen className="w-5 h-5 text-cyan-300" />
+    <Card padding="lg">
+      <h3 className="text-base font-semibold text-ink mb-1 flex items-center gap-2">
+        <BookOpen className="w-5 h-5 text-accent" />
         Spaced Repetition
       </h3>
-      <p className="text-xs text-zinc-400 mb-5">
+      <p className="text-xs text-ink-soft mb-5">
         Save this deck and review it on an SM-2 schedule to lock it into memory.
       </p>
       <Flashcards cards={cards} courseId={courseId} userId={userId} />

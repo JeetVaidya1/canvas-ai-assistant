@@ -51,7 +51,7 @@ export function CountSelector({ counts, value, onChange, label }: CountSelectorP
     <div
       role="radiogroup"
       aria-label={label}
-      className="flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5"
+      className="flex gap-1.5 rounded-xl border border-line bg-paper-deep p-1.5"
     >
       {counts.map((c, i) => {
         const active = value === c
@@ -68,11 +68,11 @@ export function CountSelector({ counts, value, onChange, label }: CountSelectorP
             onClick={() => onChange(c)}
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(
-              'flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all outline-none',
-              'focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0c14]',
+              'flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all outline-none tnum',
+              'focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
               active
-                ? 'bg-gradient-brand-soft text-cyan-100 ring-1 ring-inset ring-cyan-400/30'
-                : 'text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200',
+                ? 'bg-surface text-accent-deep ring-1 ring-inset ring-accent-line shadow-[0_1px_2px_rgba(33,31,26,0.06)]'
+                : 'text-ink-soft hover:bg-surface hover:text-ink',
             )}
           >
             {c}

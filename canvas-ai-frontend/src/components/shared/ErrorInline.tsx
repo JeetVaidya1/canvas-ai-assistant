@@ -21,13 +21,13 @@ export default function ErrorInline({
     <div
       role="alert"
       className={cn(
-        'flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3',
+        'flex items-center justify-between gap-3 rounded-xl border border-danger/25 bg-danger-wash px-4 py-3',
         className,
       )}
     >
       <div className="flex min-w-0 items-center gap-2.5">
-        <AlertTriangle className="h-4 w-4 flex-shrink-0 text-rose-400" />
-        <p className="text-sm text-zinc-300">{message}</p>
+        <AlertTriangle className="h-4 w-4 flex-shrink-0 text-danger" />
+        <p className="text-sm text-ink">{message}</p>
       </div>
       {onRetry && (
         <Button

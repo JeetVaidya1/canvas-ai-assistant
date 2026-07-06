@@ -49,31 +49,31 @@ export default function CourseCard({ courseId, title, lastVisit, onDelete }: Cou
       className="group h-full flex flex-col"
     >
       <div className="flex items-start justify-between mb-4">
-        <div className="w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center">
-          <GraduationCap className="w-5 h-5 text-cyan-300" />
+        <div className="w-10 h-10 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center">
+          <GraduationCap className="w-5 h-5 text-accent" />
         </div>
         <button
           onClick={(e) => {
             e.stopPropagation()
             onDelete()
           }}
-          className="p-1.5 text-zinc-600 hover:text-rose-400 hover:bg-white/[0.06] rounded-lg transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+          className="p-1.5 text-ink-faint hover:text-danger hover:bg-danger-wash rounded-lg transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
           aria-label={`Delete ${title}`}
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <h3 className="text-base font-semibold text-zinc-50">{title}</h3>
+      <h3 className="text-base font-semibold text-ink">{title}</h3>
       <div className="flex items-center gap-2.5 mt-2">
-        <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400">
+        <span className="inline-flex items-center gap-1.5 text-xs text-ink-soft">
           <FileText className="w-3.5 h-3.5" />
           {fileCount === 0 ? 'No files yet' : `${fileCount} file${fileCount !== 1 ? 's' : ''}`}
         </span>
         {lastVisit && (
           <>
-            <span className="text-zinc-700">·</span>
-            <span className="text-xs text-zinc-500">{timeAgo(lastVisit)}</span>
+            <span className="text-line-strong">·</span>
+            <span className="text-xs text-ink-faint">{timeAgo(lastVisit)}</span>
           </>
         )}
       </div>
@@ -82,15 +82,15 @@ export default function CourseCard({ courseId, title, lastVisit, onDelete }: Cou
         {score !== null && tone ? (
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] text-zinc-500">Exam readiness</span>
+              <span className="text-[11px] text-ink-faint">Exam readiness</span>
               <span className={`text-[11px] font-medium ${tone.text}`}>{score}% · {tone.label}</span>
             </div>
             <ProgressBar value={score} label={`${title} readiness`} />
           </div>
         ) : (
-          <div className="flex items-center justify-between text-[11px] text-zinc-600">
+          <div className="flex items-center justify-between text-[11px] text-ink-faint">
             <span>{fileCount === 0 ? 'Add materials to get started' : 'Study to build your readiness score'}</span>
-            <ArrowRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-cyan-300 group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="w-3.5 h-3.5 text-ink-faint group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
           </div>
         )}
       </div>

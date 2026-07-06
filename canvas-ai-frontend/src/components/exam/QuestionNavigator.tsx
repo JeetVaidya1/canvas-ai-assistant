@@ -25,23 +25,23 @@ export function QuestionNavigator({ open, onClose, session, onGoToQuestion, onRe
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-30 bg-ink/30"
           />
           <motion.aside
             initial={{ x: 360 }}
             animate={{ x: 0 }}
             exit={{ x: 360 }}
             transition={{ type: 'spring', stiffness: 320, damping: 34 }}
-            className="fixed inset-y-0 right-0 z-40 flex w-[340px] max-w-[88vw] flex-col border-l border-white/10 bg-[#0c0f18]"
+            className="fixed inset-y-0 right-0 z-40 flex w-[340px] max-w-[88vw] flex-col border-l border-line bg-surface elev-3"
           >
-            <div className="flex h-14 items-center justify-between px-4 border-b border-white/10">
+            <div className="flex h-14 items-center justify-between px-4 border-b border-line">
               <div className="flex items-center gap-2">
-                <LayoutGrid className="h-4 w-4 text-cyan-300" />
-                <span className="text-sm font-semibold text-zinc-100">Questions</span>
+                <LayoutGrid className="h-4 w-4 text-accent" />
+                <span className="text-sm font-semibold text-ink">Questions</span>
               </div>
               <button
                 onClick={onClose}
-                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-zinc-100"
+                className="rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-paper-deep hover:text-ink"
                 aria-label="Close navigator"
               >
                 <X className="h-4 w-4" />
@@ -49,15 +49,15 @@ export function QuestionNavigator({ open, onClose, session, onGoToQuestion, onRe
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-3 px-4 py-3 text-[11px] text-zinc-400 border-b border-white/10">
+            <div className="flex items-center gap-3 px-4 py-3 text-[11px] text-ink-soft border-b border-line">
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-gradient-brand" /> Current
+                <span className="w-2.5 h-2.5 rounded-sm bg-accent" /> Current
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/40 border border-emerald-500/40" /> Answered
+                <span className="w-2.5 h-2.5 rounded-sm bg-success-wash border border-success/40" /> Answered
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-white/[0.04] border border-white/10" /> Empty
+                <span className="w-2.5 h-2.5 rounded-sm bg-paper-deep border border-line" /> Empty
               </span>
             </div>
 
@@ -72,12 +72,12 @@ export function QuestionNavigator({ open, onClose, session, onGoToQuestion, onRe
                       key={q.id}
                       onClick={() => { onGoToQuestion(index); onClose() }}
                       aria-label={`Go to question ${index + 1}${isAnswered ? ', answered' : ', unanswered'}${isCurrent ? ', current' : ''}`}
-                      className={`aspect-square rounded-lg text-sm font-bold transition-all ${
+                      className={`aspect-square rounded-lg text-sm font-bold tnum transition-all ${
                         isCurrent
-                          ? 'bg-gradient-brand text-white ring-1 ring-inset ring-cyan-400/30 glow-brand-sm'
+                          ? 'bg-accent text-white'
                           : isAnswered
-                          ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
-                          : 'bg-white/[0.04] border border-white/10 text-zinc-400 hover:border-cyan-400/30 hover:text-zinc-200'
+                          ? 'bg-success-wash border border-success/30 text-success hover:border-success/50'
+                          : 'bg-paper-deep border border-line text-ink-soft hover:border-accent-line hover:text-ink'
                       }`}
                     >
                       {index + 1}
@@ -88,15 +88,15 @@ export function QuestionNavigator({ open, onClose, session, onGoToQuestion, onRe
             </div>
 
             {/* Footer — progress + submit */}
-            <div className="border-t border-white/10 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-xs text-zinc-400">
+            <div className="border-t border-line p-4 space-y-3">
+              <div className="flex items-center gap-2 text-xs text-ink-soft">
                 <GraduationCap className="h-3.5 w-3.5" />
-                {answeredCount}/{session.questions.length} answered
+                <span className="tnum">{answeredCount}/{session.questions.length}</span> answered
               </div>
               <Button
                 onClick={() => { onClose(); onRequestSubmit() }}
                 leftIcon={<Flag className="w-3.5 h-3.5" />}
-                className="w-full !bg-emerald-600 hover:!bg-emerald-500"
+                className="w-full"
               >
                 Finish &amp; submit
               </Button>
