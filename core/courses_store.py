@@ -90,6 +90,62 @@ def list_courses() -> List[Dict[str, Any]]:
     return [{"course_id": row["course_id"], "title": row.get("title")} for row in rows]
 
 
+def list_courses_for_user(user_id: str) -> List[Dict[str, Any]]:
+    """Courses the user owns or has joined, as [{course_id, title}, ...].
+
+    Ownership is ``courses.owner_id``; membership is a row in
+    ``course_memberships`` (the same tables auth.user_owns_or_member checks,
+    so listing and access control can never disagree). Owned courses come
+    first, then joined ones, without duplicates.
+    """
+    if not isinstance(user_id, str) or not user_id.strip():
+        raise CourseStoreError("user_id must be a non-empty string")
+    user_id = user_id.strip()
+    try:
+        db = _get_db()
+        owned = (
+            db.table("courses")
+            .select("course_id, title")
+            .eq("owner_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+            .data
+            or []
+        )
+        memberships = (
+            db.table("course_memberships")
+            .select("course_id")
+            .eq("user_id", user_id)
+            .execute()
+            .data
+            or []
+        )
+        seen = {row["course_id"] for row in owned}
+        courses = [{"course_id": row["course_id"], "title": row.get("title")} for row in owned]
+        for membership in memberships:
+            course_id = membership.get("course_id")
+            if not course_id or course_id in seen:
+                continue
+            seen.add(course_id)
+            rows = (
+                db.table("courses")
+                .select("course_id, title")
+                .eq("course_id", course_id)
+                .limit(1)
+                .execute()
+                .data
+                or []
+            )
+            if rows:
+                courses.append({"course_id": rows[0]["course_id"], "title": rows[0].get("title")})
+    except CourseStoreError:
+        raise
+    except Exception as exc:
+        logger.exception("Course listing failed for user %s", user_id)
+        raise CourseStoreError(f"course listing failed for user {user_id}") from exc
+    return courses
+
+
 def delete_course(course_id: str) -> None:
     """Delete a course row (files/embeddings cascade via FK in schema.sql)."""
     course_id = _require_course_id(course_id)

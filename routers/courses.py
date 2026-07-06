@@ -19,46 +19,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/upload/{course_id}")
-async def upload(course_id: str, file: UploadFile = File(...)):
-    # 1) Read the file bytes
-    content = await file.read()
-
-    # 2) Upload to Supabase Storage (overwrite if exists)
-    storage_path = f"{course_id}/{file.filename}"
-    public_url = upload_file("course-files", content, storage_path)
-
-    # 3) Record metadata in Supabase
-    try:
-        result = supabase.table("files").insert({
-            "course_id":   course_id,
-            "filename":    file.filename,
-            "storage_path": storage_path,
-            "file_type":   file.filename.rsplit(".", 1)[-1],
-            "uploaded_at": datetime.utcnow().isoformat()
-        }).execute()
-        metadata = result.data
-    except Exception as e:
-        logger.exception("DB insert failed")
-        raise HTTPException(500, detail="DB insert failed")
-
-    # 4) **Enhanced processing with fallback**
-    try:
-        if ENHANCED_MODE:
-            print("🚀 Using enhanced multimodal processing...")
-            chunks = process_file_enhanced(file.filename, content, course_id)
-        else:
-            chunks = process_file(file.filename, content, course_id)
-    except Exception as e:
-        print(f"⚠️ Processing failed, using fallback: {e}")
-        chunks = process_file(file.filename, content, course_id)
-
-    # 5) Return everything
-    return {
-        "url":    public_url,
-        "meta":   metadata,
-        "chunks": chunks
-    }
+# NOTE: the legacy single-file POST /upload/{course_id} route was DELETED.
+# It had no authentication and no course-access check, and the frontend never
+# calls it (src/lib/api/courses.ts only uses the authenticated bulk POST
+# /upload below). Removing it closes the hole outright instead of securing
+# dead code.
 
 
 @router.get("/")
@@ -251,16 +216,18 @@ async def upload_files(
 
 
 @router.get("/list-courses")
-def list_courses():
+def list_courses(user_id: str = Depends(current_user_id)):
+    """List ONLY the courses the token user owns or has joined."""
     try:
-        return {"courses": courses_store.list_courses()}
+        return {"courses": courses_store.list_courses_for_user(user_id)}
     except CourseStoreError:
         logger.exception("Failed to list courses")
         raise HTTPException(500, detail="Failed to list courses")
 
 
 @router.get("/list-files")
-def list_files(course_id: str):
+def list_files(course_id: str, user=Depends(get_current_user)):
+    require_course_access(course_id, user)
     try:
         # Fetch from Supabase files table
         resp = supabase.table("files").select("filename").eq("course_id", course_id).execute()

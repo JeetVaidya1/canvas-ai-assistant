@@ -12,6 +12,7 @@ from deps import (
     supabase,
 )
 from rate_limit import ai_rate_limit
+from routers.system import require_debug_enabled
 from storage import upload_file
 
 import logging
@@ -19,6 +20,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _require_owned_exam_session(session_id: str, user_id: str) -> dict:
+    """Load an exam session and enforce that the token user created it.
+
+    Returns the manager's success payload ({"status": "success", "session": ...}).
+    Non-enumeration choice: unknown sessions and sessions created by another
+    user both raise the SAME 404, so session ids can't be probed.
+    """
+    result = exam_session_manager.get_session(session_id)
+    session = result.get("session") if isinstance(result, dict) else None
+    if not session or result.get("status") != "success" or session.get("user_id") != user_id:
+        raise HTTPException(404, detail="Session not found")
+    return result
 
 
 @router.post("/api/upload-past-paper", dependencies=[Depends(ai_rate_limit)])
@@ -220,8 +235,9 @@ async def create_exam_session(
 
 
 @router.post("/api/start-exam-session/{session_id}")
-async def start_exam_session(session_id: str):
-    """Start an exam session (begin timing)"""
+async def start_exam_session(session_id: str, user_id: str = Depends(current_user_id)):
+    """Start an exam session (begin timing). Only the creating user may."""
+    _require_owned_exam_session(session_id, user_id)
     try:
         result = exam_session_manager.start_exam_session(session_id)
         
@@ -239,8 +255,9 @@ async def start_exam_session(session_id: str):
 
 
 @router.post("/api/pause-exam-session/{session_id}")
-async def pause_exam_session(session_id: str):
-    """Pause/unpause an exam session"""
+async def pause_exam_session(session_id: str, user_id: str = Depends(current_user_id)):
+    """Pause/unpause an exam session. Only the creating user may."""
+    _require_owned_exam_session(session_id, user_id)
     try:
         result = exam_session_manager.pause_exam_session(session_id)
         
@@ -261,9 +278,11 @@ async def pause_exam_session(session_id: str):
 async def save_exam_answer(
     session_id: str = Form(...),
     question_id: str = Form(...),
-    answer: str = Form(...)
+    answer: str = Form(...),
+    user_id: str = Depends(current_user_id)
 ):
-    """Save an answer to an exam question"""
+    """Save an answer to an exam question. Only the creating user may."""
+    _require_owned_exam_session(session_id, user_id)
     try:
         result = exam_session_manager.save_answer(session_id, question_id, answer)
         
@@ -283,9 +302,11 @@ async def save_exam_answer(
 @router.post("/api/navigate-exam-question")
 async def navigate_exam_question(
     session_id: str = Form(...),
-    question_index: int = Form(...)
+    question_index: int = Form(...),
+    user_id: str = Depends(current_user_id)
 ):
-    """Navigate to a specific question in the exam"""
+    """Navigate to a specific question in the exam. Only the creating user may."""
+    _require_owned_exam_session(session_id, user_id)
     try:
         result = exam_session_manager.navigate_to_question(session_id, question_index)
         
@@ -303,8 +324,9 @@ async def navigate_exam_question(
 
 
 @router.post("/api/submit-exam/{session_id}")
-async def submit_exam(session_id: str):
-    """Submit and score the exam"""
+async def submit_exam(session_id: str, user_id: str = Depends(current_user_id)):
+    """Submit and score the exam. Only the creating user may."""
+    _require_owned_exam_session(session_id, user_id)
     try:
         result = exam_session_manager.submit_exam(session_id)
         
@@ -322,16 +344,10 @@ async def submit_exam(session_id: str):
 
 
 @router.get("/api/exam-session/{session_id}")
-async def get_exam_session(session_id: str):
-    """Get current exam session state"""
+async def get_exam_session(session_id: str, user_id: str = Depends(current_user_id)):
+    """Get current exam session state. Only the creating user may."""
     try:
-        result = exam_session_manager.get_session(session_id)
-        
-        if result.get("status") == "error":
-            raise HTTPException(404, detail=result.get("message"))
-        
-        return result
-        
+        return _require_owned_exam_session(session_id, user_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -341,10 +357,20 @@ async def get_exam_session(session_id: str):
 
 
 @router.get("/api/exam-history/{user_id}")
-async def get_exam_history(user_id: str, course_id: Optional[str] = None):
-    """Get user's exam history"""
+async def get_exam_history(
+    user_id: str,
+    course_id: Optional[str] = None,
+    token_user_id: str = Depends(current_user_id),
+):
+    """Get the TOKEN user's exam history.
+
+    The ``user_id`` path segment is kept only for frontend URL compatibility
+    (src/lib/api/exams.ts builds /api/exam-history/{userId}); it is IGNORED —
+    identity always comes from the bearer token, so one user can never read
+    another's history by editing the URL.
+    """
     try:
-        history = exam_session_manager.get_user_exam_history(user_id, course_id)
+        history = exam_session_manager.get_user_exam_history(token_user_id, course_id)
         
         return {
             "status": "success",
@@ -359,8 +385,9 @@ async def get_exam_history(user_id: str, course_id: Optional[str] = None):
 
 
 @router.delete("/api/exam-session/{session_id}")
-async def delete_exam_session(session_id: str):
-    """Delete an exam session"""
+async def delete_exam_session(session_id: str, user_id: str = Depends(current_user_id)):
+    """Delete an exam session. Only the creating user may."""
+    _require_owned_exam_session(session_id, user_id)
     try:
         success = exam_session_manager.delete_session(session_id)
         
@@ -489,9 +516,15 @@ async def get_exam_analytics(course_id: str, user_id: str):
         raise HTTPException(500, detail="Analytics failed")
 
 
-@router.get("/api/admin/auto-submit-expired-exams")
+@router.get("/api/admin/auto-submit-expired-exams",
+            dependencies=[Depends(require_debug_enabled)])
 async def auto_submit_expired_exams():
-    """Admin endpoint to auto-submit expired exams"""
+    """Maintenance endpoint to auto-submit expired exams.
+
+    There is no admin role, so this is gated exactly like the debug routes in
+    routers/system.py: it 404s unless ENABLE_DEBUG_ENDPOINTS is set, hiding
+    its existence in production.
+    """
     try:
         expired_count = exam_session_manager.auto_submit_expired_exams()
         return {

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Form, HTTPException, Depends
 import json
 from datetime import datetime
 
-from auth import current_user_id
+from auth import current_user_id, get_current_user, require_course_access
 from deps import (
     CONVERSATIONAL_MODE,
     ENHANCED_MODE,
@@ -20,14 +20,43 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _require_owned_session(session_id: str, user_id: str) -> dict:
+    """Fetch a chat session and enforce that the token user owns it.
+
+    Non-enumeration choice: a session owned by someone else returns the SAME
+    404 as a session that doesn't exist, so an attacker probing session ids
+    can't even learn that a foreign session exists.
+    """
+    try:
+        rows = (supabase.table("chat_sessions")
+                .select("*")
+                .eq("id", session_id)
+                .limit(1)
+                .execute()
+                .data)
+    except Exception:
+        logger.exception("Couldn't fetch session %s", session_id)
+        raise HTTPException(500, detail="Couldn't fetch session")
+    if not rows or rows[0].get("user_id") != user_id:
+        raise HTTPException(404, detail="Session not found")
+    return rows[0]
+
+
 @router.post("/ask", dependencies=[Depends(ai_rate_limit)])
 async def ask_endpoint(
     question: str = Form(...),
     course_id: str = Form(...),
     session_id: str | None = Form(None),
-    user_id: str = Depends(current_user_id)
+    user=Depends(get_current_user)
 ):
-    # 1) Create a new chat_session if none was provided
+    user_id = user["id"]
+    # 0) The token user must own or be a member of the course being queried.
+    require_course_access(course_id, user)
+
+    # 1) Create a new chat_session if none was provided; if one WAS provided
+    # it must belong to the token user (404 otherwise, non-enumeration).
+    if session_id:
+        _require_owned_session(session_id, user_id)
     if not session_id:
         try:
             resp = supabase.table("chat_sessions").insert({
@@ -93,11 +122,17 @@ async def ask_stream_endpoint(
     question: str = Form(...),
     course_id: str = Form(...),
     session_id: str | None = Form(None),
-    user_id: str = Depends(current_user_id),
+    user=Depends(get_current_user),
 ):
     """Streaming chat: emits Server-Sent Events with answer text deltas."""
     from fastapi.responses import StreamingResponse
     from conversational_rag_engine import conversational_ask_stream
+
+    user_id = user["id"]
+    # Same guards as /ask: course access + session ownership come first.
+    require_course_access(course_id, user)
+    if session_id:
+        _require_owned_session(session_id, user_id)
 
     # 1) Ensure a chat session exists, then record the question (same as /ask).
     if not session_id:
@@ -174,10 +209,14 @@ def list_sessions(user_id: str = Depends(current_user_id)):
 
 
 @router.get("/sessions/{session_id}/messages")
-def get_messages(session_id: str):
+def get_messages(session_id: str, user_id: str = Depends(current_user_id)):
     """
     Fetch all messages in a session, oldest first.
+
+    Only the session's owner may read it; foreign/unknown sessions 404
+    (see _require_owned_session for the non-enumeration rationale).
     """
+    _require_owned_session(session_id, user_id)
     try:
         resp = supabase.table("messages") \
             .select("*") \
@@ -192,10 +231,13 @@ def get_messages(session_id: str):
 
 
 @router.delete("/sessions/{session_id}")
-def delete_session(session_id: str):
+def delete_session(session_id: str, user_id: str = Depends(current_user_id)):
     """
     Delete a chat session and all its messages.
+
+    Only the session's owner may delete it; foreign/unknown sessions 404.
     """
+    _require_owned_session(session_id, user_id)
     try:
         # First delete all messages in the session
         supabase.table("messages").delete().eq("session_id", session_id).execute()

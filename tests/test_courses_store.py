@@ -143,6 +143,67 @@ def test_list_courses_returns_id_and_title_pairs(fake_db):
 
 
 @pytest.mark.unit
+def test_list_courses_for_user_returns_owned_only(fake_db):
+    fake_db(
+        [
+            {"course_id": "cs101", "title": "Algorithms", "owner_id": "u1"},
+            {"course_id": "bio200", "title": "Cells", "owner_id": "u2"},
+        ]
+    )
+    assert courses_store.list_courses_for_user("u1") == [
+        {"course_id": "cs101", "title": "Algorithms"}
+    ]
+
+
+@pytest.mark.unit
+def test_list_courses_for_user_includes_memberships(fake_db):
+    db = fake_db(
+        [
+            {"course_id": "cs101", "title": "Algorithms", "owner_id": "u1"},
+            {"course_id": "bio200", "title": "Cells", "owner_id": "u2"},
+            {"course_id": "chem300", "title": "Orgo", "owner_id": "u2"},
+        ]
+    )
+    db.tables["course_memberships"] = [{"course_id": "bio200", "user_id": "u1"}]
+    assert courses_store.list_courses_for_user("u1") == [
+        {"course_id": "cs101", "title": "Algorithms"},
+        {"course_id": "bio200", "title": "Cells"},
+    ]
+
+
+@pytest.mark.unit
+def test_list_courses_for_user_dedupes_owned_and_joined(fake_db):
+    db = fake_db([{"course_id": "cs101", "title": "Algorithms", "owner_id": "u1"}])
+    db.tables["course_memberships"] = [{"course_id": "cs101", "user_id": "u1"}]
+    assert courses_store.list_courses_for_user("u1") == [
+        {"course_id": "cs101", "title": "Algorithms"}
+    ]
+
+
+@pytest.mark.unit
+def test_list_courses_for_user_skips_dangling_membership(fake_db):
+    """A membership row pointing at a deleted course must not surface."""
+    db = fake_db([])
+    db.tables["course_memberships"] = [{"course_id": "ghost", "user_id": "u1"}]
+    assert courses_store.list_courses_for_user("u1") == []
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("bad", ["", "   ", None])
+def test_list_courses_for_user_rejects_invalid_user_id(fake_db, bad):
+    fake_db([])
+    with pytest.raises(CourseStoreError):
+        courses_store.list_courses_for_user(bad)
+
+
+@pytest.mark.unit
+def test_list_courses_for_user_failure_raises_store_error(fake_db):
+    fake_db([], fail=True)
+    with pytest.raises(CourseStoreError):
+        courses_store.list_courses_for_user("u1")
+
+
+@pytest.mark.unit
 def test_delete_course_removes_only_that_row(fake_db):
     db = fake_db(
         [
