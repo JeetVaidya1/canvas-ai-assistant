@@ -6,6 +6,9 @@ import {
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
+import { ProgressRing } from '@/components/ui/Progress'
+import { scoreTone } from '@/lib/score'
 import { useCourses } from '@/hooks/useCourses'
 import { useCourseFiles } from '@/hooks/useCourseFiles'
 import { useRecentActivity } from '@/hooks/useRecentActivity'
@@ -22,15 +25,9 @@ const ACTIONS: ReadonlyArray<{
   { key: 'learn', label: 'Learn', desc: 'Chat, Socratic tutor & Feynman checks — grounded in your files.', capability: 'Cites exact pages', icon: MessageCircle, tint: { icon: 'text-cyan-300', chip: 'bg-cyan-500/12 border-cyan-400/20' } },
   { key: 'practice', label: 'Practice', desc: 'Rapid quiz drills or deep adaptive problem sets.', capability: 'Adapts to mastery', icon: Target, tint: { icon: 'text-sky-300', chip: 'bg-blue-500/12 border-blue-400/20' } },
   { key: 'exam', label: 'Exam', desc: 'Sit a timed mock exam, graded with concept breakdown.', capability: 'Timed & graded', icon: ClipboardList, tint: { icon: 'text-rose-300', chip: 'bg-rose-500/12 border-rose-400/20' } },
-  { key: 'kit', label: 'Study Kit', desc: 'Generate notes, spaced-repetition flashcards & audio.', capability: 'Notes · cards · audio', icon: Layers, tint: { icon: 'text-emerald-300', chip: 'bg-emerald-500/12 border-emerald-400/20' } },
+  { key: 'kit', label: 'Study Kit', desc: 'Generate grounded notes with spaced-repetition flashcards.', capability: 'Notes · flashcards', icon: Layers, tint: { icon: 'text-emerald-300', chip: 'bg-emerald-500/12 border-emerald-400/20' } },
   { key: 'progress', label: 'Progress', desc: 'Mastery map, weak spots & an AI study plan.', capability: 'Concept graph', icon: BarChart3, tint: { icon: 'text-sky-300', chip: 'bg-sky-500/12 border-sky-400/20' } },
 ]
-
-function tone(score: number) {
-  if (score >= 70) return { label: 'On track', ring: '#34d399', text: 'text-emerald-300', soft: 'text-emerald-400/90' }
-  if (score >= 40) return { label: 'Getting there', ring: '#fbbf24', text: 'text-amber-300', soft: 'text-amber-400/90' }
-  return { label: 'Needs work', ring: '#fb7185', text: 'text-rose-300', soft: 'text-rose-400/90' }
-}
 
 export default function CourseHome() {
   const { courseId } = useParams<{ courseId: string }>()
@@ -58,9 +55,7 @@ export default function CourseHome() {
   const fileCount = files?.length ?? 0
   const hasFiles = fileCount > 0
   const score = readiness ? Math.round(readiness.score_pct) : null
-  const t = score !== null ? tone(score) : null
-  const r = 42
-  const circ = 2 * Math.PI * r
+  const t = score !== null ? scoreTone(score) : null
 
   const lastStudied = recent[0]?.page
 
@@ -126,23 +121,10 @@ export default function CourseHome() {
             <div className="flex flex-col md:flex-row md:items-center gap-6">
               {/* Ring */}
               <div className="flex items-center gap-5 flex-shrink-0">
-                <div className="relative w-[104px] h-[104px]">
-                  <svg className="w-[104px] h-[104px] -rotate-90" viewBox="0 0 104 104">
-                    <circle cx="52" cy="52" r={r} fill="none" stroke="#222228" strokeWidth="8" />
-                    <motion.circle
-                      cx="52" cy="52" r={r} fill="none" stroke={t.ring} strokeWidth="8" strokeLinecap="round"
-                      strokeDasharray={circ}
-                      initial={{ strokeDashoffset: circ }}
-                      animate={{ strokeDashoffset: circ * (1 - score / 100) }}
-                      transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-                      style={{ filter: `drop-shadow(0 0 6px ${t.ring}55)` }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-2xl font-bold ${t.text}`}>{score}%</span>
-                    <span className="text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">ready</span>
-                  </div>
-                </div>
+                <ProgressRing value={score}>
+                  <span className={`text-2xl font-bold ${t.text}`}>{score}%</span>
+                  <span className="text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">ready</span>
+                </ProgressRing>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 mb-1">Exam readiness</p>
                   <p className={`text-xl font-semibold ${t.text}`}>{t.label}</p>
@@ -159,11 +141,8 @@ export default function CourseHome() {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {readiness.gaps.slice(0, 5).map((g) => (
-                        <button
-                          key={g} onClick={() => go('practice')}
-                          className="text-xs text-amber-200 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 hover:border-amber-400/40 rounded-full px-3 py-1 transition-colors"
-                        >
-                          {g}
+                        <button key={g} onClick={() => go('practice')} className="focus-ring rounded-full">
+                          <Badge tone="warning" className="cursor-pointer hover:bg-amber-500/20 transition-colors">{g}</Badge>
                         </button>
                       ))}
                     </div>
