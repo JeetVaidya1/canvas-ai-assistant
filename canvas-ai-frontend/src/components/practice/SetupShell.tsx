@@ -24,9 +24,9 @@ export function SetupShell({ title, subtitle, children }: SetupShellProps) {
         className="w-full max-w-xl"
       >
         <div className="mb-8 text-center">
-          <BrandMark className="mx-auto mb-5 h-14 w-14 glow-brand-sm" />
-          <h1 className="text-[28px] font-semibold tracking-tight text-zinc-50">{title}</h1>
-          <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">{subtitle}</p>
+          <BrandMark className="mx-auto mb-5 h-14 w-14" />
+          <h1 className="font-display text-[28px] font-semibold text-ink">{title}</h1>
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">{subtitle}</p>
         </div>
         {children}
       </motion.div>
@@ -46,13 +46,13 @@ export function FieldLabel({ children, action, center = false }: FieldLabelProps
   if (action) {
     return (
       <div className="mb-2.5 flex items-center justify-between">
-        <span className="text-xs font-semibold text-zinc-400">{children}</span>
+        <span className="text-xs font-semibold text-ink-soft">{children}</span>
         {action}
       </div>
     )
   }
   return (
-    <div className={cn('mb-2.5 text-xs font-semibold text-zinc-400', center && 'text-center')}>
+    <div className={cn('mb-2.5 text-xs font-semibold text-ink-soft', center && 'text-center')}>
       {children}
     </div>
   )

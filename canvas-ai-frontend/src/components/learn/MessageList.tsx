@@ -28,9 +28,9 @@ function CopyButton({ text }: { text: string }) {
         setCopied(true)
         window.setTimeout(() => setCopied(false), 1400)
       }}
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-200"
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-ink-faint transition-colors hover:bg-paper-deep hover:text-ink"
     >
-      {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
       {copied ? 'Copied' : 'Copy'}
     </button>
   )
@@ -58,16 +58,16 @@ export function MessageList({ messages, isTyping, showFollowups, onFollowup, bot
             className={cn('group', msg.role === 'user' ? 'mb-6 flex justify-end' : 'mb-8')}
           >
             {msg.role === 'user' ? (
-              <div className="max-w-[80%] rounded-2xl rounded-br-md border border-cyan-400/20 bg-cyan-500/[0.12] px-4 py-2.5 text-[15px] leading-relaxed text-zinc-50">
+              <div className="max-w-[80%] rounded-2xl rounded-br-md border border-line bg-paper-deep px-4 py-2.5 text-[15px] leading-relaxed text-ink">
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               </div>
             ) : (
               <div className="min-w-0">
-                <CitedMarkdown content={msg.content} className="text-[15px] leading-relaxed text-zinc-200" />
+                <CitedMarkdown content={msg.content} className="text-[15px] leading-relaxed" />
                 {msg.sources && msg.sources.length > 0 && <SourcesDisclosure sources={msg.sources} />}
                 <div className="mt-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <CopyButton text={msg.content} />
-                  <span className="text-[11px] text-zinc-500">{formatTime(msg.timestamp)}</span>
+                  <span className="text-[11px] text-ink-faint">{formatTime(msg.timestamp)}</span>
                 </div>
               </div>
             )}
@@ -77,12 +77,12 @@ export function MessageList({ messages, isTyping, showFollowups, onFollowup, bot
 
       {isTyping && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8 flex items-center gap-1.5">
-          <span className="text-sm text-zinc-400">Searching your materials</span>
+          <span className="text-sm text-ink-soft">Searching your materials</span>
           <span className="flex gap-1">
             {[0, 0.15, 0.3].map((delay) => (
               <span
                 key={delay}
-                className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-400/80"
+                className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent/80"
                 style={{ animationDelay: `${delay}s` }}
               />
             ))}
@@ -102,9 +102,9 @@ export function MessageList({ messages, isTyping, showFollowups, onFollowup, bot
             <button
               key={label}
               onClick={() => onFollowup(prompt)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[13px] text-zinc-300 transition-all hover:border-cyan-400/40 hover:bg-white/[0.06] hover:text-zinc-100"
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] text-ink-soft transition-all hover:border-accent-line hover:bg-accent-wash hover:text-accent-deep"
             >
-              <Icon className="h-3.5 w-3.5 text-cyan-400/80" />
+              <Icon className="h-3.5 w-3.5 text-ink-faint" />
               {label}
             </button>
           ))}

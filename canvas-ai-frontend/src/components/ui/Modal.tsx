@@ -71,13 +71,13 @@ export function Modal({ open, onClose, title, description, size = 'md', locked =
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
           <motion.div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-ink/30"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
             onClick={locked ? undefined : onClose}
           />
           <motion.div
             ref={panelRef}
-            className={cn('relative w-full rounded-xl bg-bg-overlay border border-border elev-3 flex flex-col max-h-[85vh]', sizeClass[size])}
+            className={cn('relative w-full rounded-xl bg-surface border border-line elev-3 flex flex-col max-h-[85vh]', sizeClass[size])}
             initial={{ opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
@@ -86,8 +86,8 @@ export function Modal({ open, onClose, title, description, size = 'md', locked =
             {(title || !locked) && (
               <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-1 flex-shrink-0">
                 <div className="min-w-0">
-                  {title && <h2 className="text-base font-semibold text-zinc-50">{title}</h2>}
-                  {description && <p className="text-sm text-zinc-400 mt-1">{description}</p>}
+                  {title && <h2 className="text-base font-semibold text-ink">{title}</h2>}
+                  {description && <p className="text-sm text-ink-soft mt-1">{description}</p>}
                 </div>
                 {!locked && (
                   <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close" className="-mr-2 -mt-1 px-2">
@@ -98,7 +98,7 @@ export function Modal({ open, onClose, title, description, size = 'md', locked =
             )}
             <div className="px-5 py-4 overflow-y-auto">{children}</div>
             {footer && (
-              <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-border-subtle flex-shrink-0">
+              <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-line flex-shrink-0">
                 {footer}
               </div>
             )}

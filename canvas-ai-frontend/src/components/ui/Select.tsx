@@ -88,13 +88,13 @@ export function Select({ value, options, onChange, placeholder, className, disab
         aria-label={ariaLabel}
         className={cn(
           'w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm text-left transition-all duration-150',
-          'bg-zinc-800/70 border text-zinc-100',
-          open ? 'border-cyan-400/60 ring-2 ring-cyan-400/20' : 'border-zinc-700 hover:border-zinc-600',
-          disabled && 'opacity-50 cursor-not-allowed',
+          'bg-surface border text-ink',
+          open ? 'border-accent ring-2 ring-accent/20' : 'border-line hover:border-line-strong',
+          disabled && 'opacity-50 cursor-not-allowed bg-paper-deep',
         )}
       >
-        <span className={cn('truncate', !selected && 'text-zinc-500')}>{selected?.label ?? placeholder ?? 'Select…'}</span>
-        <ChevronDown className={cn('w-4 h-4 flex-shrink-0 transition-transform duration-200', open ? 'rotate-180 text-cyan-400' : 'text-zinc-500')} />
+        <span className={cn('truncate', !selected && 'text-ink-faint')}>{selected?.label ?? placeholder ?? 'Select…'}</span>
+        <ChevronDown className={cn('w-4 h-4 flex-shrink-0 transition-transform duration-200', open ? 'rotate-180 text-accent' : 'text-ink-faint')} />
       </button>
 
       <AnimatePresence>
@@ -105,7 +105,7 @@ export function Select({ value, options, onChange, placeholder, className, disab
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.13, ease: 'easeOut' }}
-            className="absolute z-50 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-2xl shadow-black/60"
+            className="absolute z-50 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border border-line bg-surface p-1 elev-3"
           >
             {options.map((o, i) => {
               const isSel = o.value === value
@@ -118,17 +118,17 @@ export function Select({ value, options, onChange, placeholder, className, disab
                     className={cn(
                       'w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-md text-sm text-left transition-colors',
                       isSel
-                        ? 'text-cyan-200 bg-gradient-brand-soft'
+                        ? 'text-accent-deep bg-accent-wash'
                         : i === active
-                          ? 'bg-zinc-800 text-zinc-100'
-                          : 'text-zinc-300',
+                          ? 'bg-paper-deep text-ink'
+                          : 'text-ink-soft',
                     )}
                   >
                     <span className="min-w-0">
                       <span className="block truncate">{o.label}</span>
-                      {o.hint && <span className="block text-xs text-zinc-500 truncate">{o.hint}</span>}
+                      {o.hint && <span className="block text-xs text-ink-faint truncate">{o.hint}</span>}
                     </span>
-                    {isSel && <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />}
+                    {isSel && <Check className="w-4 h-4 text-accent flex-shrink-0" />}
                   </button>
                 </li>
               )

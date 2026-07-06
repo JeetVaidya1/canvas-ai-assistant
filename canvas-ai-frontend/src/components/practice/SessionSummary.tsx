@@ -39,11 +39,11 @@ export function SessionSummary({ practice, onModeChange }: SessionSummaryProps) 
       >
         <Card accent padding="lg">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-11 h-11 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0 glow-brand-sm">
-              <Trophy className="w-5 h-5 text-cyan-300" />
+            <div className="w-11 h-11 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
+              <Trophy className="w-5 h-5 text-accent" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-xl font-semibold text-zinc-50 mb-1">Practice complete</h2>
+              <h2 className="font-display text-xl font-semibold text-ink mb-1">Practice complete</h2>
               <div className="flex flex-wrap items-center gap-1.5">
                 <Badge tone="accent">{practice.selectedTopic}</Badge>
                 <Badge tone="neutral">{practice.difficulty}</Badge>
@@ -54,48 +54,49 @@ export function SessionSummary({ practice, onModeChange }: SessionSummaryProps) 
           {/* Score ring + stats */}
           <div className="flex flex-col sm:flex-row items-center gap-6 mb-6">
             <ProgressRing value={session.score} size={132} strokeWidth={10}>
-              <span className={cn('text-3xl font-bold leading-none', tone.text)}>
+              {/* One highlighter mark per page — behind the headline score figure. */}
+              <span className={cn('hl tnum text-3xl font-bold leading-none', tone.text)}>
                 {session.score}%
               </span>
-              <span className="text-xs text-zinc-500 mt-1">{tone.label}</span>
+              <span className="text-xs text-ink-faint mt-1">{tone.label}</span>
             </ProgressRing>
 
             <div className="grid grid-cols-2 gap-3 flex-1 w-full">
-              <div className="bg-white/[0.04] border border-white/10 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold mb-0.5 text-emerald-400">
+              <div className="bg-paper-deep border border-line rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold mb-0.5 text-success tnum">
                   {correctCount}/{session.problems.length}
                 </div>
-                <div className="text-xs text-zinc-500">Correct</div>
+                <div className="text-xs text-ink-faint">Correct</div>
               </div>
-              <div className="bg-white/[0.04] border border-white/10 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold mb-0.5 text-zinc-100 flex items-center justify-center gap-1.5">
-                  <Clock className="w-4 h-4 text-cyan-300" />
+              <div className="bg-paper-deep border border-line rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold mb-0.5 text-ink tnum flex items-center justify-center gap-1.5">
+                  <Clock className="w-4 h-4 text-ink-faint" />
                   {formatTime(practice.timeElapsed)}
                 </div>
-                <div className="text-xs text-zinc-500">Time</div>
+                <div className="text-xs text-ink-faint">Time</div>
               </div>
             </div>
           </div>
 
           {/* Verdict banner — semantic tones only */}
           {session.score >= 80 ? (
-            <div className="mb-6 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-              <p className="text-sm text-emerald-400">
+            <div className="mb-6 bg-success-wash border border-success/25 rounded-lg p-3 flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
+              <p className="text-sm text-success">
                 Strong mastery of {practice.selectedTopic}. Try harder difficulty or new topics.
               </p>
             </div>
           ) : session.score >= 60 ? (
-            <div className="mb-6 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-center gap-3">
-              <Target className="w-5 h-5 text-amber-400 flex-shrink-0" />
-              <p className="text-sm text-amber-400">
+            <div className="mb-6 bg-warning-wash border border-warning/25 rounded-lg p-3 flex items-center gap-3">
+              <Target className="w-5 h-5 text-warning flex-shrink-0" />
+              <p className="text-sm text-warning">
                 Good progress on {practice.selectedTopic}. A bit more practice will help.
               </p>
             </div>
           ) : (
-            <div className="mb-6 bg-rose-500/10 border border-rose-500/20 rounded-lg p-3 flex items-center gap-3">
-              <BookOpen className="w-5 h-5 text-rose-400 flex-shrink-0" />
-              <p className="text-sm text-rose-400">
+            <div className="mb-6 bg-danger-wash border border-danger/25 rounded-lg p-3 flex items-center gap-3">
+              <BookOpen className="w-5 h-5 text-danger flex-shrink-0" />
+              <p className="text-sm text-danger">
                 Review {practice.selectedTopic} and try easier problems first.
               </p>
             </div>

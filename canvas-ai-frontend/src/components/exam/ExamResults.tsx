@@ -1,7 +1,7 @@
 // Graded report: score ring, letter grade + time efficiency, per-concept
 // breakdown, and per-question AI-judge verdicts.
 import { motion } from 'motion/react'
-import { Lightbulb, RotateCcw, Target, Trophy } from 'lucide-react'
+import { Lightbulb, RotateCcw, Trophy } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -63,13 +63,12 @@ export function ExamResults({ results: r, onNewExam }: ExamResultsProps) {
   const topicRows = buildTopicRows(r, breakdown)
   const ringPct = Math.max(0, Math.min(100, r.percentage))
   const tone = scoreTone(ringPct)
-  const gradeTone = ringPct >= 70 ? 'success' : ringPct >= 40 ? 'warning' : 'danger'
 
   const stats = [
     { value: `${r.percentage}%`, label: 'Score', cls: tone.text },
-    { value: `${r.correctAnswers}/${r.totalQuestions}`, label: 'Correct', cls: 'text-emerald-400' },
-    { value: `${r.earnedPoints}/${r.totalPoints}`, label: 'Points', cls: 'text-zinc-100' },
-    { value: `${r.timeSpent}m`, label: 'Time', cls: 'text-zinc-100' },
+    { value: `${r.correctAnswers}/${r.totalQuestions}`, label: 'Correct', cls: 'text-success' },
+    { value: `${r.earnedPoints}/${r.totalPoints}`, label: 'Points', cls: 'text-ink' },
+    { value: `${r.timeSpent}m`, label: 'Time', cls: 'text-ink' },
   ]
 
   return (
@@ -81,35 +80,36 @@ export function ExamResults({ results: r, onNewExam }: ExamResultsProps) {
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="mb-6 text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gradient-brand mb-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint mb-1.5">
             Your graded report
           </p>
-          <h1 className="text-[28px] font-semibold tracking-tight text-zinc-50">{readinessLabel(r.percentage)}</h1>
+          <h1 className="font-display text-[28px] font-semibold tracking-tight text-ink">{readinessLabel(r.percentage)}</h1>
         </div>
 
-        <Card accent padding="lg">
+        <Card padding="lg">
           <div className="flex flex-col sm:flex-row items-center gap-7">
             {/* Big radial score — semantic scoreTone color */}
             <ProgressRing value={ringPct} size={156} strokeWidth={10}>
-              <span className={`text-4xl font-bold tracking-tight ${tone.text}`}>{r.percentage}%</span>
-              <span className="text-[10px] text-zinc-500 mt-0.5">Readiness</span>
+              <span className={`text-4xl font-bold tracking-tight tnum ${tone.text}`}>{r.percentage}%</span>
+              <span className="text-[10px] text-ink-faint mt-0.5">Readiness</span>
             </ProgressRing>
 
             <div className="flex-1 text-center sm:text-left">
               <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-2">
-                <Trophy className="w-4 h-4 text-cyan-300" />
-                <span className="text-sm font-semibold text-zinc-100">{readinessLabel(r.percentage)}</span>
+                <Trophy className="w-4 h-4 text-accent" />
+                <span className="text-sm font-semibold text-ink">{readinessLabel(r.percentage)}</span>
+                {/* Letter grade — serif display with the page's one highlighter mark */}
                 {r.letterGrade && (
-                  <Badge tone={gradeTone} className="!text-sm font-bold px-3 py-0.5">
+                  <span className="hl font-display text-2xl font-semibold leading-none text-ink px-1">
                     {r.letterGrade}
-                  </Badge>
+                  </span>
                 )}
               </div>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-ink-soft">
                 {r.correctAnswers} of {r.totalQuestions} correct &middot; {r.earnedPoints}/{r.totalPoints} points
               </p>
               {typeof r.timeEfficiency === 'string' && (
-                <p className="text-xs text-zinc-500 mt-1">{r.timeEfficiency}</p>
+                <p className="text-xs text-ink-faint mt-1">{r.timeEfficiency}</p>
               )}
               {/* Verdict tally */}
               <div className="mt-4 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
@@ -137,8 +137,8 @@ export function ExamResults({ results: r, onNewExam }: ExamResultsProps) {
             transition={{ duration: 0.3, delay: 0.05 * i }}
           >
             <Card padding="sm" className="text-center">
-              <div className={`text-2xl font-bold mb-0.5 ${s.cls}`}>{s.value}</div>
-              <div className="text-xs text-zinc-500">{s.label}</div>
+              <div className={`font-display text-2xl font-semibold tnum mb-0.5 ${s.cls}`}>{s.value}</div>
+              <div className="text-xs text-ink-faint">{s.label}</div>
             </Card>
           </motion.div>
         ))}
@@ -147,17 +147,17 @@ export function ExamResults({ results: r, onNewExam }: ExamResultsProps) {
       {/* Per-concept performance */}
       {topicRows.length > 0 && (
         <Card padding="md">
-          <div className="flex items-center gap-2 mb-3">
-            <Target className="w-4 h-4 text-cyan-300" />
-            <h3 className="text-sm font-semibold text-zinc-100">Performance by concept</h3>
+          <div className="section-head mb-3.5">
+            <span className="section-num">01</span>
+            <h3 className="text-sm font-semibold text-ink">Performance by concept</h3>
           </div>
           <div className="space-y-3">
             {topicRows.map((t) => (
               <div key={t.topic}>
                 <div className="flex items-center justify-between mb-1.5 text-xs">
-                  <span className="text-zinc-300 font-medium">{t.topic}</span>
-                  <span className="text-zinc-500 tabular-nums">
-                    {t.earned}/{t.possible} pts &middot; <span className="text-zinc-300">{t.pct}%</span>
+                  <span className="text-ink font-medium">{t.topic}</span>
+                  <span className="text-ink-faint tnum">
+                    {t.earned}/{t.possible} pts &middot; <span className="text-ink">{t.pct}%</span>
                   </span>
                 </div>
                 <ProgressBar value={t.pct} label={`${t.topic} score`} />
@@ -170,7 +170,10 @@ export function ExamResults({ results: r, onNewExam }: ExamResultsProps) {
       {/* Per-question AI-judge verdicts */}
       {breakdown.length > 0 && (
         <div className="space-y-2.5">
-          <h3 className="text-sm font-semibold text-zinc-100 px-1">Question-by-question review</h3>
+          <div className="section-head px-1 mb-3.5">
+            <span className="section-num">02</span>
+            <h3 className="text-sm font-semibold text-ink">Question-by-question review</h3>
+          </div>
           {breakdown.map((b, i) => {
             const v = verdictOf(b)
             const m = verdictMeta(v)
@@ -183,28 +186,37 @@ export function ExamResults({ results: r, onNewExam }: ExamResultsProps) {
                 className={`border rounded-xl p-4 ${m.tone}`}
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
-                  <Badge tone="neutral">Q{i + 1} &middot; {b.topic ?? 'General'}</Badge>
-                  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${m.text}`}>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="section-num">Question {String(i + 1).padStart(2, '0')}</span>
+                    <Badge tone="neutral">{b.topic ?? 'General'}</Badge>
+                  </span>
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold tnum ${m.text}`}>
                     <m.Icon className="w-3.5 h-3.5" />
                     {m.label} &middot; {b.pointsEarned ?? 0}/{b.points ?? 0} pts
                     {typeof b.timeSpent === 'number' ? ` · ${b.timeSpent}s` : ''}
                   </span>
                 </div>
-                <div className="text-sm text-zinc-100 mb-1.5 leading-relaxed">
+                <div className="text-sm text-ink mb-1.5 leading-relaxed">
                   <Markdown content={b.question} />
                 </div>
                 {b.userAnswer && (
-                  <p className="text-xs text-zinc-400 mb-1">
-                    <span className="text-zinc-500">Your answer: </span>{b.userAnswer}
+                  <p className="text-xs text-ink-soft mb-1">
+                    <span className="text-ink-faint">Your answer: </span>{b.userAnswer}
                   </p>
                 )}
-                {b.gradeReason && <p className="text-xs text-zinc-400 italic">{b.gradeReason}</p>}
+                {/* AI-judge explanation — typeset as prose on the sheet */}
+                {b.gradeReason && (
+                  <div className="text-xs italic text-ink-soft">
+                    <Markdown content={b.gradeReason} className="text-xs" />
+                  </div>
+                )}
                 {b.mistakeExplanation && (
-                  <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-500/[0.08] border border-amber-500/15 p-2.5">
-                    <Lightbulb className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-300/90">
-                      <span className="font-medium text-amber-300">Where it went wrong: </span>{b.mistakeExplanation}
-                    </p>
+                  <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-warning-wash border border-warning/25 p-2.5">
+                    <Lightbulb className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1 text-xs">
+                      <span className="block font-medium text-warning mb-0.5">Where it went wrong</span>
+                      <Markdown content={b.mistakeExplanation} className="text-xs" />
+                    </div>
                   </div>
                 )}
               </motion.div>

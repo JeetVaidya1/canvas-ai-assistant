@@ -6,10 +6,10 @@ import type { QuizSource } from '@/lib/api'
 export function SourceTag({ source, label }: { source: QuizSource; label?: string }) {
   if (!source?.doc_name) return null
   return (
-    <Badge tone="neutral" icon={<FileText className="text-cyan-400/80" />}>
-      {label && <span className="text-zinc-500">{label}</span>}
+    <Badge tone="neutral" icon={<FileText />}>
+      {label && <span className="text-ink-faint">{label}</span>}
       <span className="truncate max-w-[16rem]">{source.doc_name}</span>
-      {source.page ? <span className="text-zinc-500">p.{source.page}</span> : null}
+      {source.page ? <span className="text-ink-faint">p.{source.page}</span> : null}
     </Badge>
   )
 }

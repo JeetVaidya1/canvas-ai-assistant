@@ -2,11 +2,11 @@ import type { HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  /** Adds hover lift + indigo border glow (use for clickable cards). */
+  /** Hover lift for clickable cards. */
   interactive?: boolean
-  /** Adds a subtle indigo gradient hairline across the top. */
+  /** Kept for API compat — Paper & Ink cards have no accent hairline. */
   accent?: boolean
-  /** Resting elevation — layered shadow depth. Default 1. */
+  /** Resting elevation. Default 1. */
   elevation?: 0 | 1 | 2 | 3
   padding?: 'none' | 'sm' | 'md' | 'lg'
 }
@@ -19,28 +19,31 @@ const paddings = {
 }
 
 const elevations = {
-  0: '',
-  1: 'elev-1',
+  0: 'shadow-none',
+  1: '',
   2: 'elev-2',
   3: 'elev-3',
 }
 
+/** White paper sheet: hairline border + the faintest lift. */
 export function Card({
   interactive = false,
-  accent = false,
+  // `accent` intentionally consumed and ignored — Paper & Ink cards have no
+  // accent hairline, but callers still pass it (API compat).
+  accent,
   elevation = 1,
   padding = 'md',
   className,
   children,
   ...rest
 }: CardProps) {
+  void accent
   return (
     <div
       className={cn(
         'card-surface rounded-xl',
         elevations[elevation],
-        interactive && 'card-interactive cursor-pointer',
-        accent && 'accent-top',
+        interactive && 'card-interactive',
         paddings[padding],
         className,
       )}
@@ -51,7 +54,7 @@ export function Card({
   )
 }
 
-/** Consistent page header: gradient eyebrow + title + optional subtitle/actions. */
+/** Page header: serif display title + optional kicker/subtitle/actions. */
 interface PageHeaderProps {
   eyebrow?: string
   title: string
@@ -63,14 +66,12 @@ interface PageHeaderProps {
 export function PageHeader({ eyebrow, title, subtitle, actions, className }: PageHeaderProps) {
   return (
     <div className={cn('flex items-start justify-between gap-4', className)}>
-      <div>
+      <div className="min-w-0">
         {eyebrow && (
-          <p className="text-xs font-semibold uppercase tracking-widest text-gradient-brand mb-1.5">
-            {eyebrow}
-          </p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-ink-faint mb-1.5">{eyebrow}</p>
         )}
-        <h1 className="text-2xl font-semibold text-zinc-50 tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-zinc-400 mt-1">{subtitle}</p>}
+        <h1 className="font-display text-[1.75rem] leading-tight font-semibold text-ink">{title}</h1>
+        {subtitle && <p className="text-sm text-ink-soft mt-1.5">{subtitle}</p>}
       </div>
       {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
     </div>

@@ -38,8 +38,8 @@ export default function PracticePage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-4 h-14 border-b border-[#18181d] flex items-center justify-between flex-shrink-0 gap-4">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 pl-1.5">
+      <div className="px-4 h-14 border-b border-line flex items-center justify-between flex-shrink-0 gap-4">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-faint pl-1.5">
           {mode === 'quiz' ? 'Drill fast, learn faster' : 'Work it through, deeply'}
         </span>
         <SubTabs

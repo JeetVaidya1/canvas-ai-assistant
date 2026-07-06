@@ -13,9 +13,9 @@ interface ConfirmDialogProps {
 }
 
 /**
- * Confirmation dialog built on the Modal primitive. Danger variant renders a
- * rose destructive Button; cancel receives initial focus so Enter never
- * destroys anything by accident.
+ * Confirmation dialog built on the Modal primitive. Danger variant renders the
+ * destructive Button; cancel receives initial focus so Enter never destroys
+ * anything by accident.
  */
 export default function ConfirmDialog({
   open,
@@ -44,7 +44,7 @@ export default function ConfirmDialog({
         </>
       }
     >
-      <p className="text-sm text-zinc-400 leading-relaxed">{description}</p>
+      <p className="text-sm text-ink-soft leading-relaxed">{description}</p>
     </Modal>
   )
 }

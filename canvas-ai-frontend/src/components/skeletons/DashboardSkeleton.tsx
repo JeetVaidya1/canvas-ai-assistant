@@ -18,7 +18,7 @@ export default function DashboardSkeleton() {
       {/* Course card grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 space-y-3">
+          <div key={i} className="bg-paper-deep border border-line rounded-xl p-5 space-y-3">
             <Skeleton className="h-5 w-3/4" />
             <Skeleton className="h-3 w-1/2" />
           </div>

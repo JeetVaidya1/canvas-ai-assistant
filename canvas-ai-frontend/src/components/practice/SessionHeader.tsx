@@ -22,11 +22,11 @@ export function SessionHeader({ itemLabel, index, total, meta, right, progress }
     <div className="mb-6">
       <div className="mb-2.5 flex items-center justify-between">
         <div className="flex items-baseline gap-2">
-          <span className="text-sm font-semibold text-zinc-100">
-            {itemLabel} {index + 1}
-            <span className="text-zinc-500"> of {total}</span>
+          <span className="text-sm font-semibold text-ink">{itemLabel}</span>
+          <span className="section-num tnum">
+            {index + 1} of {total}
           </span>
-          {meta && <span className="hidden text-xs text-zinc-500 sm:inline">· {meta}</span>}
+          {meta && <span className="hidden text-xs text-ink-faint sm:inline">· {meta}</span>}
         </div>
         {right && <div className="flex items-center gap-3.5">{right}</div>}
       </div>

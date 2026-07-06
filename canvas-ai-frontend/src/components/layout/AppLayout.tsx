@@ -7,7 +7,7 @@ export default function AppLayout() {
   const location = useLocation()
 
   return (
-    <div className="flex h-screen text-zinc-50">
+    <div className="flex h-screen text-ink bg-paper">
       <AppSidebar />
       <div className="flex flex-col flex-1 min-w-0 min-h-0">
         <TopBar />

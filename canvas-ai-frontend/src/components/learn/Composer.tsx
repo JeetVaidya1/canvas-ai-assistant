@@ -44,8 +44,8 @@ export function Composer({ variant, value, onChange, onSend, sending, hasFiles, 
     <form
       onSubmit={handleSubmit}
       className={cn(
-        'relative flex w-full items-end gap-2 rounded-[20px] border border-white/12 bg-white/[0.03] p-2.5 shadow-lg transition-all',
-        'focus-within:border-cyan-400/60 focus-within:bg-white/[0.05] focus-within:glow-brand-sm',
+        'relative flex w-full items-end gap-2 rounded-2xl border border-line bg-surface p-2.5 elev-2 transition-all',
+        'focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20',
       )}
     >
       <textarea
@@ -56,7 +56,7 @@ export function Composer({ variant, value, onChange, onSend, sending, hasFiles, 
         rows={variant === 'hero' ? 2 : 1}
         autoFocus={variant === 'hero'}
         placeholder={hasFiles ? 'Ask anything about your course…' : 'Ask a question…'}
-        className="max-h-[200px] flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] text-zinc-100 placeholder-zinc-500 outline-none"
+        className="max-h-[200px] flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] text-ink placeholder-ink-faint outline-none"
       />
       <Button
         type="submit"

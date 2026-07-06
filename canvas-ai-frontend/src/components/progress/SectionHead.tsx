@@ -1,32 +1,26 @@
-import type { LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface SectionHeadProps {
-  icon: LucideIcon
+  /** Mono index for the numbered-syllabus motif, e.g. "02" → "02 — Concept map". */
+  num: string
   title: string
-  /** Icon chip surface classes — defaults to the cyan accent chip. */
-  chip?: string
-  /** Icon tint class — defaults to cyan. */
-  tint?: string
   hint?: string
+  className?: string
 }
 
-/** Section header used across the Progress tiles for a consistent hierarchy. */
-export function SectionHead({
-  icon: Icon,
-  title,
-  chip = 'bg-cyan-500/12 border-cyan-400/20',
-  tint = 'text-cyan-300',
-  hint,
-}: SectionHeadProps) {
+/**
+ * Numbered syllabus section header used across the Progress tiles — the
+ * Paper & Ink `.section-head` / `.section-num` motif for a consistent,
+ * report-card hierarchy.
+ */
+export function SectionHead({ num, title, hint, className }: SectionHeadProps) {
   return (
-    <div className="mb-5 flex items-start gap-2.5">
-      <div className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${chip}`}>
-        <Icon className={`w-5 h-5 ${tint}`} />
+    <div className={cn('mb-5', className)}>
+      <div className="section-head">
+        <span className="section-num">{num}</span>
+        <h2 className="text-base font-semibold text-ink tracking-tight leading-tight">{title}</h2>
       </div>
-      <div className="min-w-0">
-        <h2 className="text-base font-semibold text-zinc-50 tracking-tight leading-tight">{title}</h2>
-        {hint && <p className="text-xs text-zinc-400 mt-0.5">{hint}</p>}
-      </div>
+      {hint && <p className="text-xs text-ink-soft mt-1.5">{hint}</p>}
     </div>
   )
 }

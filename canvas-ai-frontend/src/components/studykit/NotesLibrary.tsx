@@ -17,9 +17,9 @@ function LibrarySkeleton() {
   return (
     <div className="space-y-2" aria-hidden>
       {[0, 1, 2].map((i) => (
-        <div key={i} className="animate-pulse rounded-xl border border-white/10 bg-white/[0.02] p-3">
-          <div className="h-3.5 w-2/3 rounded bg-white/[0.06]" />
-          <div className="mt-2.5 h-3 w-1/3 rounded bg-white/[0.04]" />
+        <div key={i} className="animate-pulse rounded-xl border border-line bg-surface p-3">
+          <div className="h-3.5 w-2/3 rounded bg-paper-deep" />
+          <div className="mt-2.5 h-3 w-1/3 rounded bg-paper-deep" />
         </div>
       ))}
     </div>
@@ -72,38 +72,38 @@ export default function NotesLibrary({ studio }: { studio: NotesStudio }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setLibraryOpen(false)}
-              className="absolute inset-0 z-30 bg-black/50 backdrop-blur-sm"
+              className="absolute inset-0 z-30 bg-ink/30"
             />
             <motion.aside
               initial={{ x: 380 }}
               animate={{ x: 0 }}
               exit={{ x: 380 }}
               transition={{ type: 'spring', stiffness: 320, damping: 34 }}
-              className="absolute inset-y-0 right-0 z-40 flex w-[380px] max-w-[88vw] flex-col border-l border-white/10 bg-[#0c0f18]"
+              className="absolute inset-y-0 right-0 z-40 flex w-[380px] max-w-[88vw] flex-col border-l border-line bg-paper elev-3"
             >
-              <div className="flex h-14 flex-shrink-0 items-center justify-between px-4">
-                <span className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-                  <Bookmark className="h-4 w-4 text-cyan-300" />
+              <div className="flex h-14 flex-shrink-0 items-center justify-between px-4 border-b border-line">
+                <span className="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <Bookmark className="h-4 w-4 text-accent" />
                   Library ({savedNotes.length})
                 </span>
                 <button
                   onClick={() => setLibraryOpen(false)}
-                  className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-zinc-100"
+                  className="rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-paper-deep hover:text-ink"
                   aria-label="Close library"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              <div className="flex-shrink-0 px-3 pb-3">
+              <div className="flex-shrink-0 px-3 py-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search your notes…"
-                    className="w-full rounded-lg border border-white/10 bg-white/[0.03] py-2 pl-10 pr-4 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25"
+                    className="w-full rounded-lg border border-line bg-surface py-2 pl-10 pr-4 text-sm text-ink placeholder-ink-faint outline-none transition-colors hover:border-line-strong focus:border-accent focus:ring-2 focus:ring-accent/20"
                   />
                 </div>
               </div>
@@ -141,17 +141,17 @@ export default function NotesLibrary({ studio }: { studio: NotesStudio }) {
                         className={cn(
                           'group cursor-pointer rounded-xl border p-3 transition-colors',
                           active
-                            ? 'border-cyan-400/30 bg-cyan-500/[0.08]'
-                            : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]',
+                            ? 'border-accent-line bg-accent-wash'
+                            : 'border-line bg-surface hover:border-line-strong hover:bg-surface-hover',
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-100">{note.title}</h3>
-                          <span className="flex-shrink-0 text-[11px] text-zinc-500">
+                          <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{note.title}</h3>
+                          <span className="flex-shrink-0 text-[11px] text-ink-faint">
                             {new Date(note.created_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="mt-1.5 flex items-center gap-3 text-[11px] text-zinc-400">
+                        <div className="mt-1.5 flex items-center gap-3 text-[11px] text-ink-soft">
                           <span className="inline-flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {note.reading_time}
@@ -161,7 +161,7 @@ export default function NotesLibrary({ studio }: { studio: NotesStudio }) {
                             {note.word_count} words
                           </span>
                           {cardsCount > 0 && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-brand-soft border border-cyan-400/20 px-1.5 py-0.5 text-cyan-300">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-marker-soft border border-marker px-1.5 py-0.5 text-ink tnum">
                               <Layers className="h-3 w-3" />
                               {cardsCount}
                             </span>
@@ -170,7 +170,7 @@ export default function NotesLibrary({ studio }: { studio: NotesStudio }) {
                         <div className="mt-2.5 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                           <button
                             onClick={(e) => { e.stopPropagation(); openNote(note) }}
-                            className="rounded-md p-1.5 text-cyan-300 transition-colors hover:bg-cyan-500/10"
+                            className="rounded-md p-1.5 text-accent transition-colors hover:bg-accent-wash"
                             title="Open note"
                             aria-label="Open note"
                           >
@@ -178,7 +178,7 @@ export default function NotesLibrary({ studio }: { studio: NotesStudio }) {
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); openCards(note) }}
-                            className="rounded-md p-1.5 text-cyan-300 transition-colors hover:bg-cyan-500/10"
+                            className="rounded-md p-1.5 text-accent transition-colors hover:bg-accent-wash"
                             title="Study flashcards"
                             aria-label="Study flashcards"
                           >
@@ -186,7 +186,7 @@ export default function NotesLibrary({ studio }: { studio: NotesStudio }) {
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); downloadNoteAsText(note) }}
-                            className="rounded-md p-1.5 text-emerald-400 transition-colors hover:bg-emerald-500/10"
+                            className="rounded-md p-1.5 text-success transition-colors hover:bg-success-wash"
                             title="Download note"
                             aria-label="Download note"
                           >
@@ -194,7 +194,7 @@ export default function NotesLibrary({ studio }: { studio: NotesStudio }) {
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(note.id) }}
-                            className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+                            className="rounded-md p-1.5 text-ink-faint transition-colors hover:bg-danger-wash hover:text-danger"
                             title="Delete note"
                             aria-label="Delete note"
                           >
@@ -216,7 +216,7 @@ export default function NotesLibrary({ studio }: { studio: NotesStudio }) {
         {savedCards.length > 0 ? (
           <div className="space-y-5">
             <FlashcardDeck cards={savedCards} />
-            <div className="border-t border-white/10 pt-4">
+            <div className="border-t border-line pt-4">
               <Flashcards cards={savedCards} courseId={courseId} userId={userId} />
             </div>
           </div>
@@ -229,7 +229,7 @@ export default function NotesLibrary({ studio }: { studio: NotesStudio }) {
         )}
       </Modal>
 
-      {/* Delete confirmation — Modal primitive with rose danger action */}
+      {/* Delete confirmation — Modal primitive with danger action */}
       <Modal
         open={!!deleteConfirmId}
         onClose={() => setDeleteConfirmId(null)}
@@ -247,7 +247,7 @@ export default function NotesLibrary({ studio }: { studio: NotesStudio }) {
           </>
         }
       >
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-ink-soft">
           The note and its embedded flashcards will be removed from your library.
         </p>
       </Modal>

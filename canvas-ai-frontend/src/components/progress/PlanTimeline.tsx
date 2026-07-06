@@ -16,9 +16,9 @@ type DayType = 'review' | 'new' | 'practice'
 type PlanDay = StudyPlan['days'][number]
 
 const TYPE_META: Record<DayType, { label: string; badge: 'accent' | 'warning' | 'success'; dot: string; icon: LucideIcon }> = {
-  new: { label: 'New', badge: 'accent', dot: 'bg-cyan-400', icon: Sparkles },
-  review: { label: 'Review', badge: 'warning', dot: 'bg-amber-400', icon: RefreshCw },
-  practice: { label: 'Practice', badge: 'success', dot: 'bg-emerald-400', icon: Dumbbell },
+  new: { label: 'New', badge: 'accent', dot: 'bg-accent', icon: Sparkles },
+  review: { label: 'Review', badge: 'warning', dot: 'bg-warning', icon: RefreshCw },
+  practice: { label: 'Practice', badge: 'success', dot: 'bg-success', icon: Dumbbell },
 }
 
 function formatDate(iso: string): { weekday: string; date: string } {
@@ -83,21 +83,21 @@ function TimelineDay({ day, index, total, doneTasks, onToggleTask }: TimelineDay
       {/* Rail + node */}
       <div className="relative flex flex-col items-center flex-shrink-0 w-9">
         {index < total - 1 && (
-          <span className="absolute top-9 bottom-[-1.25rem] w-px bg-white/[0.08]" />
+          <span className="absolute top-9 bottom-[-1.25rem] w-px bg-line-strong" />
         )}
         <div
           className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border ${
             today
-              ? 'border-cyan-400/50 bg-cyan-500/15 ring-2 ring-cyan-400/25'
+              ? 'border-accent-line bg-accent-wash ring-2 ring-accent/20'
               : past
-                ? 'border-white/10 bg-white/[0.03]'
-                : 'border-white/10 bg-[#19202f]'
+                ? 'border-line bg-paper-deep'
+                : 'border-line bg-surface'
           }`}
         >
           {today ? (
-            <Circle className="h-3.5 w-3.5 text-cyan-300 fill-cyan-300" />
+            <Circle className="h-3.5 w-3.5 text-accent fill-accent" />
           ) : past ? (
-            <CheckCircle2 className="h-4 w-4 text-zinc-500" />
+            <CheckCircle2 className="h-4 w-4 text-ink-faint" />
           ) : (
             <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
           )}
@@ -109,28 +109,28 @@ function TimelineDay({ day, index, total, doneTasks, onToggleTask }: TimelineDay
         padding="md"
         accent={today}
         className={`mb-5 flex-1 transition-colors ${
-          today ? 'ring-1 ring-cyan-400/30 border-cyan-400/30' : past ? 'opacity-70' : ''
+          today ? 'ring-1 ring-accent/25 border-accent-line' : past ? 'opacity-70' : ''
         }`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex items-center gap-2">
             {today && (
-              <span className="rounded-full bg-cyan-500/15 border border-cyan-400/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-200">
+              <span className="rounded-full bg-accent-wash border border-accent-line px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-deep">
                 Today
               </span>
             )}
-            <span className={`text-sm font-semibold ${today ? 'text-cyan-200' : 'text-zinc-100'}`}>
+            <span className={`font-mono text-[13px] font-semibold tracking-tight ${today ? 'text-accent-deep' : 'text-ink'}`}>
               {weekday} · {date}
             </span>
-            <span className="text-[11px] text-zinc-500">Day {index + 1}</span>
+            <span className="font-mono text-[11px] text-ink-faint">Day {index + 1}</span>
           </div>
           <Badge tone={meta.badge} icon={<Icon />} className="flex-shrink-0">
             {meta.label}
           </Badge>
         </div>
 
-        <div className="mt-2.5 flex items-center gap-1.5 text-xs text-zinc-400">
-          <Clock className="w-3.5 h-3.5 text-zinc-500" />
+        <div className="mt-2.5 flex items-center gap-1.5 text-xs text-ink-soft tnum">
+          <Clock className="w-3.5 h-3.5 text-ink-faint" />
           {day.duration_minutes} min focused study
         </div>
 
@@ -147,16 +147,16 @@ function TimelineDay({ day, index, total, doneTasks, onToggleTask }: TimelineDay
                   aria-pressed={done}
                   className={`w-full flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-left transition-colors ${
                     done
-                      ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
-                      : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.14] hover:bg-white/[0.04]'
+                      ? 'border-success/25 bg-success-wash'
+                      : 'border-line bg-surface hover:border-line-strong hover:bg-surface-hover'
                   }`}
                 >
                   {done ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success flex-shrink-0" />
                   ) : (
-                    <Circle className="h-3.5 w-3.5 text-zinc-600 flex-shrink-0" />
+                    <Circle className="h-3.5 w-3.5 text-ink-faint flex-shrink-0" />
                   )}
-                  <span className={`text-sm truncate ${done ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>
+                  <span className={`text-sm truncate ${done ? 'text-ink-faint line-through' : 'text-ink'}`}>
                     {topic}
                   </span>
                 </button>
@@ -181,7 +181,7 @@ export function PlanTimeline({ plan, doneTasks, onToggleTask }: PlanTimelineProp
     <div>
       <div className="flex flex-wrap items-center gap-3 mb-5 px-1">
         {(Object.keys(TYPE_META) as DayType[]).map((k) => (
-          <span key={k} className="inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
+          <span key={k} className="inline-flex items-center gap-1.5 text-[11px] text-ink-soft">
             <span className={`w-2 h-2 rounded-full ${TYPE_META[k].dot}`} />
             {TYPE_META[k].label}
           </span>

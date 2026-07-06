@@ -3,13 +3,13 @@ import type { InputHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'rea
 import { cn } from '@/lib/utils'
 
 const fieldBase =
-  'w-full bg-zinc-800/70 border rounded-lg text-zinc-100 placeholder-zinc-600 text-sm ' +
+  'w-full bg-surface border rounded-lg text-ink placeholder-ink-faint text-sm ' +
   'outline-none transition-colors focus:ring-2 ' +
-  'disabled:opacity-50 disabled:cursor-not-allowed'
+  'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-paper-deep'
 
 const fieldTone = {
-  normal: 'border-zinc-700 focus:border-cyan-400/60 focus:ring-cyan-400/20',
-  error: 'border-rose-500/60 focus:border-rose-400 focus:ring-rose-400/20',
+  normal: 'border-line hover:border-line-strong focus:border-accent focus:ring-accent/20',
+  error: 'border-danger/50 focus:border-danger focus:ring-danger/20',
 }
 
 interface FieldChromeProps {
@@ -25,15 +25,15 @@ function FieldChrome({ label, hint, error, id, children }: FieldChromeProps) {
   return (
     <div className="space-y-1.5">
       {label && (
-        <label htmlFor={id} className="block text-xs font-medium text-zinc-300">
+        <label htmlFor={id} className="block text-xs font-medium text-ink-soft">
           {label}
         </label>
       )}
       {children}
       {error ? (
-        <p className="text-xs text-rose-300" role="alert">{error}</p>
+        <p className="text-xs text-danger" role="alert">{error}</p>
       ) : hint ? (
-        <p className="text-xs text-zinc-500">{hint}</p>
+        <p className="text-xs text-ink-faint">{hint}</p>
       ) : null}
     </div>
   )
@@ -56,7 +56,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     <FieldChrome label={label} hint={hint} error={error} id={id}>
       <div className="relative">
         {leftIcon && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none [&>svg]:w-4 [&>svg]:h-4">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none [&>svg]:w-4 [&>svg]:h-4">
             {leftIcon}
           </span>
         )}

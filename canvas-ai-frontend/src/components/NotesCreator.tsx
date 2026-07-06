@@ -36,7 +36,6 @@ export default function NotesCreator({ courseId }: NotesCreatorProps) {
             size="sm"
             onClick={reset}
             leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
-            className="backdrop-blur"
           >
             <span className="hidden sm:inline">New</span>
           </Button>
@@ -46,11 +45,10 @@ export default function NotesCreator({ courseId }: NotesCreatorProps) {
           size="sm"
           onClick={() => setLibraryOpen(true)}
           leftIcon={<Bookmark className="h-3.5 w-3.5" />}
-          className="backdrop-blur"
         >
           <span className="hidden sm:inline">Library</span>
           {savedNotes.length > 0 && (
-            <span className="rounded-full bg-white/[0.1] px-1.5 text-[11px] text-zinc-400">
+            <span className="rounded-full bg-paper-deep border border-line px-1.5 text-[11px] text-ink-soft tnum">
               {savedNotes.length}
             </span>
           )}

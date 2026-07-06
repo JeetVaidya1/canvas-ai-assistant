@@ -34,21 +34,24 @@ Vindexa is an AI-powered study companion that transforms course materials into i
 - `noUnusedParameters` is ON: every function parameter must be used
 - Build command: `tsc -b && vite build` — TypeScript must pass before Vite builds
 
-## Styling Conventions — "Premium Dark" design system (Linear/Vercel)
+## Styling Conventions — "PAPER & INK" design system (editorial / textbook)
 
-The canonical token + utility source is `src/index.css` (read it first). Summary:
+The canonical token + utility source is `src/index.css` (read it first). This REPLACED the old dark navy+cyan system entirely — any `zinc-*`, `cyan-*`, `bg-gradient-brand`, glow, or glass class is LEGACY and must be migrated on sight.
 
-- **Canvas**: deep navy `#0a0c14` with a soft blue aurora on `body::before` (echoes the landing nebula). The app layout is transparent so the aurora shows — do NOT add opaque `bg-zinc-950` wrappers.
-- **Elevation ladder (surfaces)**: cards are SOLID navy `#111521` (via the `Card` component / `.card-surface`, NOT translucent). Elevated/nested surfaces use `bg-white/[0.04]` or `#19202f`; popovers/overlays `#1f2738`. Use `.elev-1/2/3` for layered-shadow depth.
-- **Borders**: `border-white/10`, `border-[#18181d]`, or `#21212a`.
-- **Accent**: CYAN → BLUE (matches the landing wordmark + CTA). Primary buttons use `.bg-gradient-brand` (cyan→blue, `#06b6d4`→`#3b82f6`). Accent text/icons `text-cyan-300`; active rings `ring-cyan-400/25`; gradient eyebrow text `.text-gradient-brand`. (Quick Quiz keeps an amber ⚡ identity; semantic = emerald/amber/rose.)
-- **Text contrast (important)**: titles/key content `text-zinc-50`/`text-zinc-100`; body `text-zinc-300`; secondary `text-zinc-400`; ONLY true hints `text-zinc-500`. Never use zinc-500/600 for primary or content text — that was the old "washed out" bug this rebuild fixed.
-- **Semantic colors**: success = emerald, warning = amber, danger = rose (use rose, not red).
-- **Font**: Inter via Google Fonts CDN. Headings use tight tracking (`-0.02em`).
-- **Border radius**: `rounded-lg`/`rounded-xl`.
-- **Primitives** (reuse, don't re-roll): `Button` + `Card`/`PageHeader` (`@/components/ui/Card`), `SubTabs`, `Select`, `Markdown`, `CountUp`, `FadeIn`.
-- **Decorative effects ARE used, tastefully**: gradient accents, subtle glow on primary actions, glass top bar (`.glass-bar`), motion v12 entrances. (This supersedes the old "no decorative effects" rule.)
-- **Wrapper page headers**: consolidated destinations (Learn/Practice/StudyKit/Progress) use a slim `h-14 border-b border-[#18181d]` bar with `SubTabs` — no redundant eyebrow+course-title block (the TopBar already shows page context).
+- **Canvas**: warm paper `#f7f5f1` (`bg-paper`); sidebar/wells `bg-paper-deep`; cards are WHITE sheets (`Card` / `.card-surface`: `bg-surface` + `border-line` hairline + faint shadow). Light-first; there is no dark mode.
+- **Text ladder**: `text-ink` (primary) / `text-ink-soft` (secondary) / `text-ink-faint` (hints only).
+- **Accent — ONE pen blue**: `bg-accent` `#2b4acb` for primary actions; `text-accent` / `text-accent-deep` for links & active states; `bg-accent-wash` + `border-accent-line` for tinted chips. NEVER gradients, NEVER glow, NEVER glass/backdrop-blur.
+- **Typography**: UI = Instrument Sans (default). Display = Newsreader serif via `.font-display` — page titles (PageHeader does this), hero numbers, brand moments. Mono = JetBrains Mono (`.section-num`, timers with `.tnum`).
+- **Signature motifs (use them — they carry the identity):**
+  - `.hl` — highlighter-yellow mark behind a key stat/phrase (1-2 per page max)
+  - `.section-head` + `.section-num` — numbered syllabus section headers ("01 — Learn")
+  - `.footnote-ref` — footnote-style citation chips for sources
+  - `Badge tone="marker"` — highlighter-toned label
+- **Semantic (muted, ink-like)**: success `#2f7d5c`, warning `#a8741a`, danger `#bb4444`, info `#3d6a8f`, each with a `-wash` bg token. Use `scoreTone()` from `@/lib/score` for readiness/mastery.
+- **Charts (recharts)**: ink `#211f1a` + accent `#2b4acb` series; gridlines `#e7e3d9`; tick text `#8d877b` 11px; tooltip = white card (`#ffffff` bg, `#e7e3d9` border, ink text); one subtle accent area fill max.
+- **Primitives (reuse, never re-roll)**: `Button` (primary/secondary/ghost/danger — flat, no ripple), `Card`/`PageHeader`, `SubTabs`, `Select`, `Badge`, `Input`/`Textarea`, `Modal`, `Tooltip`, `ProgressBar`/`ProgressRing`, `EmptyState`/`ErrorState`, `Markdown`, `BrandMark` (serif V on pen-blue square).
+- **Motion**: entrances ≤250ms (`.animate-fade-up`), no stagger chains, no whileInView theatrics. Indeterminate progress via `.animate-indeterminate` — never fake percentages.
+- **Focus**: `.focus-ring` (pen-blue on paper).
 
 ## File Structure
 
@@ -107,4 +110,4 @@ src/
 
 ## Design Philosophy
 
-World-class, deep-navy UI that matches the landing page: navy canvas with a soft blue aurora, a real elevation ladder, crisp high-contrast text, and a cyan→blue accent. The core study pages are STRUCTURALLY rebuilt, not restyled — Chat is the reference (center-first composer that docks on send, history as a slide-over, clean prose answers, collapsible sources, follow-up study chips); Notes is a center-first studio (topic prompt + style pills + collapsible sources, not a checkbox form); Practice setup is center-first and tactile. Generous spacing, confident type, subtle motion. Every surface should highlight what the backend can do (RAG citations, adaptive practice, concept graphs, readiness). Avoid flat low-contrast "AI slop" AND avoid recolor-only "rebuilds" — change layout + interaction, not just the palette.
+Paper & Ink: a digital study desk — warm paper, ink text, one pen-blue accent, a highlighter. Editorial/textbook character (serif display, numbered sections, footnote citations), density over decoration, zero gradients/glow/glass. Every surface still showcases the backend (RAG citations, adaptive practice, readiness).

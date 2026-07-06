@@ -44,12 +44,12 @@ export function QuizResults({ quiz, onModeChange }: QuizResultsProps) {
       >
         <Card accent>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-11 h-11 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0 glow-brand-sm">
-              <Trophy className="w-5 h-5 text-cyan-300" />
+            <div className="w-11 h-11 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
+              <Trophy className="w-5 h-5 text-accent" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-zinc-50 mb-0.5">{headline}</h2>
-              <p className="text-sm text-zinc-400">
+              <h2 className="font-display text-xl font-semibold text-ink mb-0.5">{headline}</h2>
+              <p className="text-sm text-ink-soft">
                 {quiz.selectedTopic} &middot; {quiz.difficulty}
               </p>
             </div>
@@ -58,23 +58,24 @@ export function QuizResults({ quiz, onModeChange }: QuizResultsProps) {
           {/* Score ring + stats */}
           <div className="flex flex-col sm:flex-row items-center gap-6 mb-6">
             <ProgressRing value={scorePct} size={132} strokeWidth={10}>
-              <span className={cn('text-3xl font-bold leading-none', tone.text)}>{scorePct}%</span>
-              <span className="text-xs text-zinc-500 mt-1">{tone.label}</span>
+              {/* One highlighter mark per page — behind the headline score figure. */}
+              <span className={cn('hl tnum text-3xl font-bold leading-none', tone.text)}>{scorePct}%</span>
+              <span className="text-xs text-ink-faint mt-1">{tone.label}</span>
             </ProgressRing>
 
             <div className="grid grid-cols-2 gap-3 flex-1 w-full">
-              <div className="bg-white/[0.04] border border-white/10 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold mb-0.5 text-emerald-400">
+              <div className="bg-paper-deep border border-line rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold mb-0.5 text-success tnum">
                   {result.score.correct}/{result.score.total}
                 </div>
-                <div className="text-xs text-zinc-500">Correct</div>
+                <div className="text-xs text-ink-faint">Correct</div>
               </div>
-              <div className="bg-white/[0.04] border border-white/10 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold mb-0.5 text-zinc-100 flex items-center justify-center gap-1.5">
-                  <Clock className="w-4 h-4 text-cyan-300" />
+              <div className="bg-paper-deep border border-line rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold mb-0.5 text-ink tnum flex items-center justify-center gap-1.5">
+                  <Clock className="w-4 h-4 text-ink-faint" />
                   {formatTime(quiz.timeElapsed)}
                 </div>
-                <div className="text-xs text-zinc-500">Time</div>
+                <div className="text-xs text-ink-faint">Time</div>
               </div>
             </div>
           </div>
@@ -82,13 +83,13 @@ export function QuizResults({ quiz, onModeChange }: QuizResultsProps) {
           {/* By-topic breakdown */}
           {sortedTopics.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-zinc-300 mb-3">Breakdown by topic</h3>
+              <h3 className="text-sm font-medium text-ink mb-3">Breakdown by topic</h3>
               <div className="space-y-2.5">
                 {sortedTopics.map((t) => (
                   <div key={t.topic}>
                     <div className="flex items-center justify-between mb-1 text-sm">
-                      <span className="text-zinc-300 truncate pr-3">{t.topic}</span>
-                      <span className="text-zinc-500 flex-shrink-0">
+                      <span className="text-ink-soft truncate pr-3">{t.topic}</span>
+                      <span className="text-ink-faint tnum flex-shrink-0">
                         {t.correct}/{t.total} &middot; {t.pct}%
                       </span>
                     </div>
@@ -101,11 +102,11 @@ export function QuizResults({ quiz, onModeChange }: QuizResultsProps) {
 
           {/* Weak areas */}
           {result.weak_areas.length > 0 && (
-            <div className="mb-6 bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+            <div className="mb-6 bg-warning-wash border border-warning/25 rounded-lg p-4">
               <div className="flex items-start gap-2.5">
-                <Target className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <Target className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-medium text-amber-400 mb-1.5">Worth another look</h4>
+                  <h4 className="text-sm font-medium text-warning mb-1.5">Worth another look</h4>
                   <div className="flex flex-wrap gap-1.5">
                     {result.weak_areas.map((area) => (
                       <Badge key={area} tone="warning">

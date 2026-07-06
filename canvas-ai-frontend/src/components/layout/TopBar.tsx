@@ -40,30 +40,30 @@ export default function TopBar() {
   const initial = (displayName || 'U').charAt(0).toUpperCase()
 
   return (
-    <div className="h-14 flex items-center justify-between px-6 glass-bar">
+    <div className="h-14 flex items-center justify-between px-6 top-bar">
       <div className="flex items-center gap-1.5 min-w-0">
         {courseCrumb && (
           <>
             <button
               onClick={() => navigate(courseCrumb!.path)}
-              className="max-w-[220px] truncate text-sm text-zinc-400 transition-colors hover:text-zinc-100"
+              className="max-w-[220px] truncate text-sm text-ink-soft transition-colors hover:text-ink"
             >
               {courseCrumb.title}
             </button>
-            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-zinc-500" />
+            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-ink-faint" />
           </>
         )}
-        <span className="truncate text-sm font-semibold text-zinc-100 tracking-tight">{pageTitle}</span>
+        <span className="truncate text-sm font-semibold text-ink tracking-tight">{pageTitle}</span>
       </div>
       <div className="flex items-center gap-2.5">
         <button
           onClick={() => navigate('/settings')}
-          className="p-2 text-zinc-500 hover:text-cyan-300 hover:bg-white/[0.05] rounded-lg transition-colors"
+          className="p-2 text-ink-faint hover:text-accent hover:bg-line/40 rounded-lg transition-colors"
           aria-label="Settings"
         >
           <Settings className="w-4 h-4" />
         </button>
-        <div className="w-8 h-8 rounded-full bg-gradient-brand flex items-center justify-center text-xs font-semibold text-white glow-brand-sm ring-1 ring-white/10">
+        <div className="w-8 h-8 rounded-full bg-ink flex items-center justify-center text-xs font-semibold text-paper">
           {initial}
         </div>
       </div>

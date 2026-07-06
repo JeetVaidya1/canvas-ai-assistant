@@ -19,8 +19,8 @@ const sideClass = {
 }
 
 /**
- * Lightweight CSS-positioned tooltip for icon buttons and truncated labels.
- * For rich content use a popover, not this.
+ * Lightweight tooltip: ink chip on paper (dark chip for contrast — the one
+ * deliberate dark element in the system, like pencil on a sticky label).
  */
 export function Tooltip({ content, side = 'top', delay = 300, className, children }: TooltipProps) {
   const [visible, setVisible] = useState(false)
@@ -40,7 +40,7 @@ export function Tooltip({ content, side = 'top', delay = 300, className, childre
         <span
           role="tooltip"
           className={cn(
-            'absolute z-50 px-2 py-1 rounded-md bg-bg-overlay border border-border text-[11px] text-zinc-200 whitespace-nowrap elev-2 pointer-events-none',
+            'absolute z-50 px-2 py-1 rounded-md bg-ink text-paper text-[11px] whitespace-nowrap elev-2 pointer-events-none',
             sideClass[side],
             className,
           )}

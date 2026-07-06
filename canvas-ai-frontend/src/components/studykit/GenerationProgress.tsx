@@ -18,17 +18,16 @@ interface GenerationProgressProps {
  */
 export function GenerationProgress({ stage, fileCount }: GenerationProgressProps) {
   return (
-    <Card accent padding="lg" className="glow-brand">
+    <Card padding="lg">
       <div className="mx-auto max-w-md py-8 text-center">
         <div className="relative mx-auto mb-6 h-16 w-16">
-          <div className="absolute inset-0 animate-pulse rounded-full bg-gradient-brand opacity-20 blur-xl" />
-          <div className="absolute inset-0 animate-spin rounded-full border-4 border-cyan-400/15 border-t-cyan-400" />
+          <div className="absolute inset-0 animate-spin rounded-full border-4 border-accent/15 border-t-accent" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <Sparkles className="h-6 w-6 text-cyan-300" />
+            <Sparkles className="h-6 w-6 text-accent" />
           </div>
         </div>
-        <h3 className="text-lg font-semibold text-zinc-100">Crafting your study kit</h3>
-        <p className="mt-1 text-xs text-zinc-500">
+        <h3 className="font-display text-lg font-semibold text-ink">Crafting your study kit</h3>
+        <p className="mt-1 text-xs text-ink-faint">
           Grounded in {fileCount} source file{fileCount === 1 ? '' : 's'}
         </p>
 
@@ -47,9 +46,9 @@ export function GenerationProgress({ stage, fileCount }: GenerationProgressProps
                 <span
                   className={cn(
                     'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border',
-                    done && 'border-emerald-400/40 bg-emerald-500/15 text-emerald-300',
-                    active && 'border-cyan-400/40 bg-cyan-500/10 text-cyan-300',
-                    !done && !active && 'border-white/10 text-zinc-600',
+                    done && 'border-success/30 bg-success-wash text-success',
+                    active && 'border-accent-line bg-accent-wash text-accent',
+                    !done && !active && 'border-line text-ink-faint',
                   )}
                 >
                   <AnimatePresence mode="wait" initial={false}>
@@ -66,7 +65,7 @@ export function GenerationProgress({ stage, fileCount }: GenerationProgressProps
                     )}
                   </AnimatePresence>
                 </span>
-                <span className={cn(done ? 'text-zinc-400' : active ? 'text-zinc-100' : 'text-zinc-500')}>
+                <span className={cn(done ? 'text-ink-soft' : active ? 'text-ink' : 'text-ink-faint')}>
                   {label}
                 </span>
               </motion.li>

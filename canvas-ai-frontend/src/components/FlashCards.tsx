@@ -26,12 +26,12 @@ const STUDY_MODE_OPTIONS = [
 
 type GradeVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
-// SM-2 recall grades surfaced as four buttons.
+// SM-2 recall grades surfaced as four buttons — semantic ink text on wash tints.
 const GRADES: { label: string; grade: number; variant: GradeVariant; className: string }[] = [
-  { label: 'Again', grade: 1, variant: 'secondary', className: '!bg-rose-500/15 !border-rose-400/30 !text-rose-200 hover:!bg-rose-500/25' },
-  { label: 'Hard', grade: 3, variant: 'secondary', className: '!bg-amber-500/15 !border-amber-400/30 !text-amber-200 hover:!bg-amber-500/25' },
-  { label: 'Good', grade: 4, variant: 'secondary', className: '!bg-cyan-500/15 !border-cyan-400/30 !text-cyan-200 hover:!bg-cyan-500/25' },
-  { label: 'Easy', grade: 5, variant: 'secondary', className: '!bg-emerald-500/15 !border-emerald-400/30 !text-emerald-200 hover:!bg-emerald-500/25' },
+  { label: 'Again', grade: 1, variant: 'secondary', className: '!bg-danger-wash !border-danger/25 !text-danger hover:!border-danger/50' },
+  { label: 'Hard', grade: 3, variant: 'secondary', className: '!bg-warning-wash !border-warning/25 !text-warning hover:!border-warning/50' },
+  { label: 'Good', grade: 4, variant: 'secondary', className: '!bg-accent-wash !border-accent-line !text-accent-deep hover:!border-accent/50' },
+  { label: 'Easy', grade: 5, variant: 'secondary', className: '!bg-success-wash !border-success/25 !text-success hover:!border-success/50' },
 ]
 
 function downloadCSV(cards: Flashcard[]) {
@@ -155,10 +155,10 @@ export default function Flashcards({
   if (!cards?.length) return null
 
   return (
-    <Card accent padding="lg">
+    <Card padding="lg">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div className="flex items-center gap-2.5">
-          <h3 className="text-lg font-semibold text-zinc-50">{title}</h3>
+          <h3 className="text-lg font-semibold text-ink">{title}</h3>
           <Badge tone="neutral">{cards.length} card{cards.length === 1 ? '' : 's'}</Badge>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -235,48 +235,48 @@ export default function Flashcards({
               key={idx}
               className="group relative perspective"
             >
-              {/* Card */}
-              <div className="card-surface accent-top relative h-44 w-full transition-transform duration-500 [transform-style:preserve-3d] rounded-xl p-4 hover:border-cyan-400/30"
+              {/* Card — white index-card sheet with hairline border */}
+              <div className="card-surface relative h-44 w-full transition-transform duration-500 [transform-style:preserve-3d] rounded-xl p-4 hover:border-line-strong"
                    style={{ transform: (studyMode==='all' && flipped) ? 'rotateY(180deg)' : 'none' }}
                    onClick={() => studyMode==='all' && setShowBack(s => ({...s, [idx]: !s[idx]}))}
               >
                 {/* Front */}
                 <div className="absolute inset-0 p-4 backface-hidden">
-                  <div className="text-xs font-semibold tracking-wide text-gradient-brand mb-1.5">Question</div>
-                  <div className="text-zinc-50 font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
+                  <div className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint mb-1.5">Question</div>
+                  <div className="text-ink font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
                   {studyMode==='all' && (
-                    <div className="absolute bottom-3 right-3 text-xs text-zinc-500">Click to flip</div>
+                    <div className="absolute bottom-3 right-3 text-xs text-ink-faint">Click to flip</div>
                   )}
                 </div>
 
                 {/* Back (answer) */}
                 <div className="absolute inset-0 p-4 rotate-y-180 backface-hidden">
-                  <div className="text-xs font-semibold tracking-wide text-gradient-brand mb-1.5">Answer</div>
-                  <div className="text-zinc-50 leading-snug overflow-hidden max-h-32"><Markdown content={a} /></div>
+                  <div className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-accent-deep mb-1.5">Answer</div>
+                  <div className="text-ink leading-snug overflow-hidden max-h-32"><Markdown content={a} /></div>
                 </div>
               </div>
 
               {/* Hide-answers mode: show only prompts */}
               {studyMode==='hide-answers' && (
-                <div className="absolute inset-0 rounded-xl border border-dashed border-white/15 bg-white/[0.04] p-4">
-                  <div className="text-xs font-semibold tracking-wide text-zinc-400 mb-1.5">Prompt</div>
-                  <div className="text-zinc-200 font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
+                <div className="absolute inset-0 rounded-xl border border-dashed border-line-strong bg-surface p-4">
+                  <div className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint mb-1.5">Prompt</div>
+                  <div className="text-ink font-medium leading-snug overflow-hidden max-h-32"><Markdown content={q} /></div>
                 </div>
               )}
 
               {/* Typing practice mode */}
               {studyMode==='typing' && (
-                <div className="absolute inset-0 rounded-xl border border-cyan-400/30 bg-gradient-brand-soft p-4 flex flex-col">
-                  <div className="text-xs font-semibold tracking-wide text-cyan-300 mb-1.5">Type your answer</div>
+                <div className="absolute inset-0 rounded-xl border border-accent-line bg-accent-wash p-4 flex flex-col">
+                  <div className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-accent-deep mb-1.5">Type your answer</div>
                   <textarea
-                    className="flex-1 resize-none rounded-lg bg-white/[0.04] border border-cyan-400/30 px-3 py-2 text-sm text-zinc-50 outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/25 transition-colors"
+                    className="flex-1 resize-none rounded-lg bg-surface border border-line px-3 py-2 text-sm text-ink placeholder-ink-faint outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors"
                     value={typingAnswers[idx] || ''}
                     onChange={e => setTypingAnswers(s => ({...s, [idx]: e.target.value}))}
                     placeholder="Write your answer here…"
                   />
                   {typingAnswers[idx] && (
-                    <div className="mt-2 text-xs text-zinc-400">
-                      Correct answer: <span className="text-zinc-50">{a}</span>
+                    <div className="mt-2 text-xs text-ink-soft">
+                      Correct answer: <span className="text-ink font-medium">{a}</span>
                     </div>
                   )}
                 </div>
@@ -309,8 +309,8 @@ function SrReview({
 }) {
   if (loading) {
     return (
-      <div className="text-center py-12 text-zinc-400">
-        <div className="w-8 h-8 border-2 border-white/10 border-t-cyan-400 rounded-full animate-spin mx-auto mb-3" />
+      <div className="text-center py-12 text-ink-soft">
+        <div className="w-8 h-8 border-2 border-line border-t-accent rounded-full animate-spin mx-auto mb-3" />
         Loading your due cards…
       </div>
     )
@@ -321,11 +321,11 @@ function SrReview({
   if (deck.length === 0 || index >= deck.length) {
     return (
       <div className="text-center py-12">
-        <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-        <p className="text-emerald-400 font-medium">
+        <CheckCircle className="w-12 h-12 text-success mx-auto mb-3" />
+        <p className="text-success font-medium">
           {deck.length === 0 ? 'No cards due right now' : 'All caught up!'}
         </p>
-        <p className="text-zinc-500 text-sm mb-4">
+        <p className="text-ink-faint text-sm mb-4">
           {deck.length === 0
             ? 'Save cards to your deck, then come back when they’re due.'
             : `You reviewed ${deck.length} card${deck.length === 1 ? '' : 's'}.`}
@@ -340,25 +340,25 @@ function SrReview({
   const card = deck[index]
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 mb-2 text-xs text-zinc-500">
-        <span>Card {index + 1} of {deck.length} due</span>
+      <div className="flex items-center justify-between gap-3 mb-2 text-xs text-ink-faint">
+        <span className="tnum">Card {index + 1} of {deck.length} due</span>
         <Badge tone="warning">{deck.length - index} left</Badge>
       </div>
       {/* Session progress — completed reviews out of the due snapshot. */}
       <ProgressBar
         value={(index / deck.length) * 100}
-        color="#22d3ee"
+        color="#2b4acb"
         label="Review session progress"
         className="mb-4"
       />
-      <Card accent padding="lg" className="min-h-44">
-        <div className="text-xs font-semibold tracking-wide text-gradient-brand mb-1.5">Question</div>
-        <div className="text-zinc-50 font-medium leading-snug mb-4"><Markdown content={card.q} /></div>
+      <Card padding="lg" className="min-h-44">
+        <div className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint mb-1.5">Question</div>
+        <div className="text-ink font-medium leading-snug mb-4"><Markdown content={card.q} /></div>
         {revealed && (
           <>
-            <div className="border-t border-white/10 my-3" />
-            <div className="text-xs font-semibold tracking-wide text-gradient-brand mb-1.5">Answer</div>
-            <div className="text-zinc-200 leading-snug"><Markdown content={card.a} /></div>
+            <div className="border-t border-line my-3" />
+            <div className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-accent-deep mb-1.5">Answer</div>
+            <div className="text-ink leading-snug"><Markdown content={card.a} /></div>
           </>
         )}
       </Card>

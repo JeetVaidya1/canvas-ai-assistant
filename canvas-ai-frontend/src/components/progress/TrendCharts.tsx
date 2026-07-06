@@ -9,24 +9,27 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts'
-import { Calendar, Target } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 import type { LearningAnalytics } from '@/lib/api'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/States'
 import { SectionHead } from './SectionHead'
 
-/** Disciplined chart palette — series stay cyan/blue; grid + axis stay quiet. */
-const SERIES_CYAN = '#22d3ee'
-const SERIES_BLUE = '#3b82f6'
-const GRID_COLOR = '#1f2738'
-const TICK_STYLE = { fill: '#71717a', fontSize: 11 } // zinc-500, 11px
+/** Paper & Ink chart palette — accent (primary series) + ink (secondary);
+ *  grid/axis and ticks stay recessive on the white card. */
+const SERIES_ACCENT = '#2b4acb'
+const SERIES_INK = '#211f1a'
+const GRID_COLOR = '#e7e3d9'
+const TICK_STYLE = { fill: '#8d877b', fontSize: 11 } // ink-faint, 11px
 
+// Tooltip = white card: paper sheet, hairline border, ink text.
 const TOOLTIP_STYLE = {
-  background: '#1f2738',
-  border: '1px solid #252e42',
+  background: '#ffffff',
+  border: '1px solid #e7e3d9',
   borderRadius: 8,
   fontSize: 12,
-  color: '#f4f4f5', // zinc-100
+  color: '#211f1a',
+  boxShadow: '0 2px 8px rgba(33, 31, 26, 0.08)',
 }
 
 const CHART_HEIGHT = 220
@@ -44,8 +47,8 @@ interface TrendChartsProps {
 }
 
 /**
- * Study-time + confidence trends. One subtle area fill (study time) is the
- * only gradient allowed in charts; confidence stays a plain blue line.
+ * Study-time + confidence trends. Study time carries the page's single
+ * low-opacity accent area fill; confidence stays a plain ink line.
  */
 export function TrendCharts({ analytics }: TrendChartsProps) {
   const trend = analytics.study_time_trend
@@ -53,7 +56,7 @@ export function TrendCharts({ analytics }: TrendChartsProps) {
   if (trend.length === 0) {
     return (
       <Card padding="lg">
-        <SectionHead icon={Calendar} title="Study activity" />
+        <SectionHead num="06" title="Study activity" />
         <EmptyState
           icon={<Calendar />}
           title="Study to see your trend"
@@ -75,16 +78,10 @@ export function TrendCharts({ analytics }: TrendChartsProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card padding="lg">
-        <SectionHead icon={Calendar} title="Study time" />
+        <SectionHead num="06" title="Study time" />
         <div style={{ height: CHART_HEIGHT }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={timeData} margin={{ left: 0, right: 16, top: 8, bottom: 4 }}>
-              <defs>
-                <linearGradient id="studyTimeFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={SERIES_CYAN} stopOpacity={0.22} />
-                  <stop offset="100%" stopColor={SERIES_CYAN} stopOpacity={0} />
-                </linearGradient>
-              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
               <XAxis dataKey="date" tick={TICK_STYLE} stroke={GRID_COLOR} />
               <YAxis tick={TICK_STYLE} stroke={GRID_COLOR} />
@@ -95,10 +92,11 @@ export function TrendCharts({ analytics }: TrendChartsProps) {
               <Area
                 type="monotone"
                 dataKey="minutes"
-                stroke={SERIES_CYAN}
+                stroke={SERIES_ACCENT}
                 strokeWidth={2}
-                fill="url(#studyTimeFill)"
-                dot={{ r: 3, fill: SERIES_CYAN }}
+                fill={SERIES_ACCENT}
+                fillOpacity={0.1}
+                dot={{ r: 3, fill: SERIES_ACCENT }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -106,7 +104,7 @@ export function TrendCharts({ analytics }: TrendChartsProps) {
       </Card>
 
       <Card padding="lg">
-        <SectionHead icon={Target} title="Confidence over time" chip="bg-blue-500/12 border-blue-400/20" tint="text-sky-300" />
+        <SectionHead num="07" title="Confidence over time" />
         <div style={{ height: CHART_HEIGHT }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={confData} margin={{ left: 0, right: 16, top: 8, bottom: 4 }}>
@@ -120,9 +118,9 @@ export function TrendCharts({ analytics }: TrendChartsProps) {
               <Line
                 type="monotone"
                 dataKey="confidence"
-                stroke={SERIES_BLUE}
+                stroke={SERIES_INK}
                 strokeWidth={2}
-                dot={{ r: 3, fill: SERIES_BLUE }}
+                dot={{ r: 3, fill: SERIES_INK }}
               />
             </LineChart>
           </ResponsiveContainer>

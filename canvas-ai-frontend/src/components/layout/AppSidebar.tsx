@@ -16,6 +16,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { BrandMark } from '@/components/ui/BrandMark'
 import { useCourses } from '@/hooks/useCourses'
 import { usePrefetch } from '@/hooks/usePrefetch'
 import { useAuth } from '@/lib/auth'
@@ -74,28 +75,28 @@ export default function AppSidebar() {
     else if (path === '/progress') prefetchProgress(targetCourseId)
   }
 
-  // One accent treatment for every active nav item: cyan tint fill + cyan text.
-  const activeClass = 'bg-cyan-500/10 text-cyan-100'
-  const idleClass = 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]'
+  // One active treatment everywhere: raised white sheet + pen-blue text.
+  const activeClass = 'bg-surface text-accent-deep border border-line shadow-[0_1px_2px_rgba(33,31,26,0.05)]'
+  const idleClass = 'text-ink-soft hover:text-ink hover:bg-line/40 border border-transparent'
 
   return (
     <aside
-      className={`flex flex-col bg-[#0a0a0d] border-r border-[#18181d] transition-all duration-300 ${
+      className={`flex flex-col bg-paper-deep border-r border-line transition-all duration-300 ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >
       {/* Logo */}
       <div className="h-14 flex items-center px-4 gap-2.5">
-        <img src="/favicon-32x32.png" alt="Vindexa" className="w-7 h-7 rounded-lg flex-shrink-0" />
+        <BrandMark className="w-7 h-7 flex-shrink-0" />
         {!collapsed && (
-          <span className="text-[17px] font-semibold text-gradient-brand tracking-tight">Vindexa</span>
+          <span className="font-display text-[19px] font-semibold text-ink tracking-tight">Vindexa</span>
         )}
       </div>
 
       {/* Course list */}
       <div className="flex-1 overflow-y-auto py-2">
         {!collapsed && (
-          <div className="px-4 mb-1.5 text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.16em]">
+          <div className="px-4 mb-1.5 text-[10px] font-medium text-ink-faint uppercase tracking-[0.14em]">
             Courses
           </div>
         )}
@@ -115,7 +116,7 @@ export default function AppSidebar() {
                       }`
                     }
                   >
-                    <GraduationCap className={`w-4 h-4 flex-shrink-0 ${isActiveCourse ? 'text-cyan-300' : ''}`} />
+                    <GraduationCap className="w-4 h-4 flex-shrink-0" />
                     {!collapsed && (
                       <span className="truncate">{course.title}</span>
                     )}
@@ -124,7 +125,7 @@ export default function AppSidebar() {
 
                 {/* Course sub-navigation — six intent-based destinations */}
                 {isActiveCourse && !collapsed && (
-                  <div className="mt-1 mb-1.5 ml-[1.35rem] pl-3 border-l border-[#1e1e24] space-y-0.5">
+                  <div className="mt-1 mb-1.5 ml-[1.35rem] pl-3 border-l border-line-strong space-y-0.5">
                     {courseSubNav.map((item) => {
                       const fullPath = `/course/${course.course_id}${item.path}`
                       const isItemActive = item.path === ''
@@ -139,10 +140,10 @@ export default function AppSidebar() {
                           className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] font-medium transition-all ${
                             isItemActive
                               ? activeClass
-                              : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.03]'
+                              : 'text-ink-faint hover:text-ink hover:bg-line/40 border border-transparent'
                           }`}
                         >
-                          <item.icon className={`w-3.5 h-3.5 flex-shrink-0 ${isItemActive ? 'text-cyan-300' : ''}`} />
+                          <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
                           <span>{item.label}</span>
                         </NavLink>
                       )
@@ -153,7 +154,7 @@ export default function AppSidebar() {
             )
           })}
           {(!courses || courses.length === 0) && !collapsed && (
-            <div className="px-3 py-4 text-sm text-zinc-500 text-center">
+            <div className="px-3 py-4 text-sm text-ink-faint text-center">
               No courses yet
             </div>
           )}
@@ -161,7 +162,7 @@ export default function AppSidebar() {
       </div>
 
       {/* Bottom links */}
-      <div className="border-t border-[#18181d] py-2.5 px-2 space-y-0.5">
+      <div className="border-t border-line py-2.5 px-2 space-y-0.5">
         <CollapsedTip label="Dashboard" show={collapsed}>
           <NavLink
             to="/dashboard"
@@ -192,7 +193,7 @@ export default function AppSidebar() {
         <CollapsedTip label="Sign out" show={collapsed}>
           <button
             onClick={() => { void signOut() }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-ink-soft hover:text-ink hover:bg-line/40 transition-colors"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
             {!collapsed && <span>Sign out</span>}
@@ -208,7 +209,7 @@ export default function AppSidebar() {
           localStorage.setItem('vindexa_sidebar_collapsed', String(next))
         }}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="h-9 flex items-center justify-center border-t border-[#18181d] text-zinc-500 hover:text-zinc-300 transition-colors"
+        className="h-9 flex items-center justify-center border-t border-line text-ink-faint hover:text-ink transition-colors"
       >
         {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>

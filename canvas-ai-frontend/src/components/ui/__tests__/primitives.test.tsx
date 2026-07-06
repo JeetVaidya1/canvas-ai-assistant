@@ -11,7 +11,7 @@ describe('Badge', () => {
     render(<Badge tone="danger">3 overdue</Badge>)
     const el = screen.getByText('3 overdue')
     expect(el).toBeInTheDocument()
-    expect(el.className).toContain('text-rose-300')
+    expect(el.className).toContain('text-danger')
   })
 })
 

@@ -17,7 +17,7 @@ export default function CourseOverviewSkeleton() {
       </div>
 
       {/* Files section */}
-      <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-xl p-5 space-y-3">
+      <div className="card-surface rounded-xl p-5 space-y-3">
         <Skeleton className="h-4 w-20 mb-4" />
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-10 w-full" />

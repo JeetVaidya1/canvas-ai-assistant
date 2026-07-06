@@ -4,19 +4,19 @@ import { cn } from '@/lib/utils'
 import type { OptionRowState } from './types'
 
 const rowStyles: Record<OptionRowState, string> = {
-  idle: 'border-zinc-700 text-zinc-200 hover:border-cyan-400/40 hover:bg-cyan-400/5',
-  selected: 'border-transparent bg-gradient-brand-soft text-cyan-200 ring-2 ring-cyan-400/40',
-  correct: 'border-emerald-500/70 bg-emerald-500/10 text-emerald-300',
-  incorrect: 'border-rose-500/70 bg-rose-500/10 text-rose-300',
-  dimmed: 'border-zinc-700/60 bg-zinc-800/40 text-zinc-500',
+  idle: 'border-line bg-surface text-ink hover:border-accent-line hover:bg-accent-wash/50',
+  selected: 'border-accent bg-accent-wash text-accent-deep ring-1 ring-inset ring-accent/25',
+  correct: 'border-success/40 bg-success-wash text-success',
+  incorrect: 'border-danger/40 bg-danger-wash text-danger',
+  dimmed: 'border-line bg-paper-deep text-ink-faint',
 }
 
 const letterStyles: Record<OptionRowState, string> = {
-  idle: 'bg-zinc-700 text-zinc-400',
-  selected: 'bg-cyan-500 text-white',
-  correct: 'bg-emerald-500 text-white',
-  incorrect: 'bg-rose-500 text-white',
-  dimmed: 'bg-zinc-700 text-zinc-400',
+  idle: 'bg-paper-deep text-ink-soft border border-line',
+  selected: 'bg-accent text-white',
+  correct: 'bg-success text-white',
+  incorrect: 'bg-danger text-white',
+  dimmed: 'bg-line text-ink-faint',
 }
 
 interface OptionRowProps {
@@ -41,7 +41,7 @@ export function OptionRow({ letter, text, state, revealed, onSelect }: OptionRow
       aria-pressed={state === 'selected'}
       className={cn(
         'w-full p-4 border rounded-xl text-left transition-all text-[15px] disabled:cursor-default outline-none',
-        'focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0c14]',
+        'focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
         rowStyles[state],
       )}
     >

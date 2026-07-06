@@ -13,11 +13,11 @@ import { Card, PageHeader } from '@/components/ui/Card'
 import { Select } from '@/components/ui/Select'
 
 const inputClass =
-  'w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 ' +
-  'focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 outline-none text-sm transition-colors'
+  'w-full px-3 py-2 bg-surface border border-line rounded-lg text-ink placeholder-ink-faint ' +
+  'hover:border-line-strong focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none text-sm transition-colors'
 
 const sectionIconClass =
-  'w-10 h-10 rounded-xl bg-gradient-brand-soft border border-cyan-400/15 flex items-center justify-center flex-shrink-0'
+  'w-10 h-10 rounded-xl bg-paper-deep border border-line flex items-center justify-center flex-shrink-0'
 
 type ExportKind = 'notes' | 'anki' | 'ical'
 
@@ -88,15 +88,15 @@ export default function SettingsPage() {
       <Card padding="md" className="space-y-4">
         <div className="flex items-center gap-3">
           <div className={sectionIconClass}>
-            <User className="w-5 h-5 text-cyan-300" />
+            <User className="w-5 h-5 text-ink-soft" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-zinc-100">Account</h2>
-            {user?.email && <p className="text-xs text-zinc-500 mt-0.5">{user.email}</p>}
+            <h2 className="text-sm font-semibold text-ink">Account</h2>
+            {user?.email && <p className="text-xs text-ink-faint mt-0.5">{user.email}</p>}
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-brand flex items-center justify-center text-lg font-semibold text-white flex-shrink-0 glow-brand-sm">
+          <div className="w-12 h-12 rounded-full bg-ink flex items-center justify-center font-display text-lg font-semibold text-paper flex-shrink-0">
             {initial}
           </div>
           <div className="flex-1 space-y-2">
@@ -121,11 +121,11 @@ export default function SettingsPage() {
       <Card padding="md" className="space-y-4">
         <div className="flex items-center gap-3">
           <div className={sectionIconClass}>
-            <Download className="w-5 h-5 text-cyan-300" />
+            <Download className="w-5 h-5 text-ink-soft" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-zinc-100">Export your work</h2>
-            <p className="text-xs text-zinc-500 mt-0.5">Take your notes, flashcards and study plan anywhere.</p>
+            <h2 className="text-sm font-semibold text-ink">Export your work</h2>
+            <p className="text-xs text-ink-faint mt-0.5">Take your notes, flashcards and study plan anywhere.</p>
           </div>
         </div>
         <Select
@@ -158,11 +158,11 @@ export default function SettingsPage() {
       <Card padding="md" className="space-y-3">
         <div className="flex items-center gap-3">
           <div className={sectionIconClass}>
-            <Link2 className="w-5 h-5 text-cyan-300" />
+            <Link2 className="w-5 h-5 text-ink-soft" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-zinc-100">Canvas LMS & integrations</h2>
-            <p className="text-xs text-zinc-500 mt-0.5">
+            <h2 className="text-sm font-semibold text-ink">Canvas LMS & integrations</h2>
+            <p className="text-xs text-ink-faint mt-0.5">
               Imports are per-course: open a course → Materials → Integrations to pull in your syllabus, files and exam dates.
             </p>
           </div>
@@ -172,8 +172,8 @@ export default function SettingsPage() {
       {/* Sign out */}
       <Card padding="md" className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-100">Sign out</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">You can sign back in any time — your courses stay put.</p>
+          <h2 className="text-sm font-semibold text-ink">Sign out</h2>
+          <p className="text-xs text-ink-faint mt-0.5">You can sign back in any time — your courses stay put.</p>
         </div>
         <Button variant="secondary" leftIcon={<LogOut className="w-4 h-4" />} onClick={handleSignOut}>
           Sign out

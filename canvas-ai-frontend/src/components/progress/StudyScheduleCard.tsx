@@ -1,4 +1,3 @@
-import { Calendar } from 'lucide-react'
 import type { LearningAnalytics } from '@/lib/api'
 import { Card } from '@/components/ui/Card'
 import { SectionHead } from './SectionHead'
@@ -33,13 +32,13 @@ export function StudyScheduleCard({ analytics }: StudyScheduleCardProps) {
   ]
 
   return (
-    <Card accent padding="lg">
-      <SectionHead icon={Calendar} title="Suggested study schedule" />
+    <Card padding="lg">
+      <SectionHead num="08" title="Suggested study schedule" />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {items.map((item) => (
-          <div key={item.heading} className="bg-white/[0.04] rounded-lg p-4 border border-white/10">
-            <h3 className="text-xs font-semibold text-gradient-brand mb-2">{item.heading}</h3>
-            <p className="text-sm text-zinc-300">{item.body}</p>
+          <div key={item.heading} className="bg-paper-deep rounded-lg p-4 border border-line">
+            <h3 className="text-xs font-semibold text-accent-deep mb-2">{item.heading}</h3>
+            <p className="text-sm text-ink-soft">{item.body}</p>
           </div>
         ))}
       </div>

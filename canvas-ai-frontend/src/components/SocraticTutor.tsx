@@ -79,12 +79,12 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
             className="max-w-2xl mx-auto text-center py-12"
           >
             <div className="relative w-16 h-16 mx-auto mb-6">
-              <BrandMark className="absolute inset-0 h-full w-full glow-brand" />
+              <BrandMark className="absolute inset-0 h-full w-full" />
             </div>
-            <h3 className="text-xl font-semibold text-zinc-50 tracking-tight mb-3">
+            <h3 className="font-display text-2xl font-semibold text-ink mb-3">
               I'll guide you — not hand you the answer
             </h3>
-            <p className="text-sm text-zinc-400 leading-relaxed mb-7 max-w-md mx-auto">
+            <p className="text-sm text-ink-soft leading-relaxed mb-7 max-w-md mx-auto">
               Tell me what you're working on or stuck on. I'll ask the right questions until the idea
               becomes yours.
             </p>
@@ -98,10 +98,10 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
                   transition={{ delay: 0.15 + i * 0.08, duration: 0.3 }}
                   className="flex items-center gap-3 rounded-xl card-surface px-4 py-2.5"
                 >
-                  <span className="w-7 h-7 rounded-lg bg-gradient-brand-soft border border-cyan-400/20 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-3.5 h-3.5 text-cyan-300" />
+                  <span className="w-7 h-7 rounded-lg bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-3.5 h-3.5 text-accent" />
                   </span>
-                  <span className="text-sm text-zinc-300">{text}</span>
+                  <span className="text-sm text-ink-soft">{text}</span>
                 </motion.div>
               ))}
             </div>
@@ -111,7 +111,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
                 <button
                   key={s}
                   onClick={() => setInput(s)}
-                  className="rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-[13px] text-zinc-300 transition-all hover:border-cyan-400/40 hover:bg-white/[0.06] hover:text-zinc-100"
+                  className="rounded-full border border-line bg-surface px-3.5 py-1.5 text-[13px] text-ink-soft transition-all hover:border-accent-line hover:bg-accent-wash hover:text-accent-deep"
                 >
                   {s}
                 </button>
@@ -130,29 +130,29 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
                   className={`flex items-start gap-3 ${t.role === 'user' ? 'flex-row-reverse' : ''}`}
                 >
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border ${
                       t.role === 'user'
-                        ? 'bg-zinc-700'
-                        : 'bg-gradient-brand-soft border border-cyan-400/20 glow-brand-sm'
+                        ? 'bg-paper-deep border-line'
+                        : 'bg-accent-wash border-accent-line'
                     }`}
                   >
                     {t.role === 'user' ? (
-                      <User className="w-4 h-4 text-zinc-300" />
+                      <User className="w-4 h-4 text-ink-soft" />
                     ) : (
-                      <Compass className="w-4 h-4 text-cyan-300" />
+                      <Compass className="w-4 h-4 text-accent" />
                     )}
                   </div>
                   <div className={`max-w-[85%] ${t.role === 'user' ? 'text-right' : ''}`}>
                     {t.role === 'assistant' && (
-                      <p className="text-[11px] font-medium tracking-wider text-cyan-400/70 mb-1 ml-1">
+                      <p className="text-[11px] font-medium tracking-wider text-ink-faint mb-1 ml-1">
                         Tutor
                       </p>
                     )}
                     <div
                       className={`inline-block px-4 py-3 rounded-2xl ${
                         t.role === 'user'
-                          ? 'bg-gradient-brand text-white glow-brand-sm rounded-tr-sm'
-                          : 'card-surface text-zinc-200 rounded-tl-sm'
+                          ? 'bg-paper-deep border border-line text-ink rounded-tr-sm'
+                          : 'card-surface rounded-tl-sm'
                       }`}
                     >
                       {t.role === 'user' ? (
@@ -172,15 +172,15 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-start gap-3"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-brand-soft border border-cyan-400/20 glow-brand-sm flex items-center justify-center">
-                  <Compass className="w-4 h-4 text-cyan-300" />
+                <div className="w-8 h-8 rounded-full bg-accent-wash border border-accent-line flex items-center justify-center">
+                  <Compass className="w-4 h-4 text-accent" />
                 </div>
                 <div className="card-surface rounded-2xl rounded-tl-sm px-4 py-3.5">
                   <div className="flex space-x-1.5">
                     {[0, 0.15, 0.3].map((d) => (
                       <motion.span
                         key={d}
-                        className="w-2 h-2 bg-cyan-400/70 rounded-full"
+                        className="w-2 h-2 bg-accent/70 rounded-full"
                         animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
                         transition={{ duration: 0.9, repeat: Infinity, delay: d }}
                       />
@@ -205,7 +205,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
 
       <form onSubmit={send} className="flex-shrink-0 w-full px-5 pb-4 pt-2">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-end gap-2 rounded-2xl card-surface p-2 focus-within:border-cyan-400/50 transition-colors">
+          <div className="flex items-end gap-2 rounded-2xl card-surface p-2 focus-within:border-accent transition-colors">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -218,7 +218,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
               placeholder="What are you working on?"
               disabled={thinking}
               rows={1}
-              className="flex-1 resize-none bg-transparent px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none max-h-32"
+              className="flex-1 resize-none bg-transparent px-3 py-2 text-sm text-ink placeholder-ink-faint outline-none max-h-32"
             />
             <Button
               type="submit"
@@ -230,7 +230,7 @@ export default function SocraticTutor({ courseId }: SocraticTutorProps) {
               {!thinking && <Send className="w-4 h-4" />}
             </Button>
           </div>
-          <p className="text-[11px] text-zinc-500 text-center mt-2">
+          <p className="text-[11px] text-ink-faint text-center mt-2">
             Enter to send · Shift+Enter for a new line
           </p>
         </div>

@@ -36,12 +36,12 @@ export default function CourseOverview() {
       />
 
       <Card padding="md" className="space-y-4">
-        <h2 className="text-sm font-semibold text-zinc-200">Add materials</h2>
+        <h2 className="text-sm font-semibold text-ink">Add materials</h2>
         <UploadZone courseId={courseId} prominent={!hasFiles} />
       </Card>
 
       <Card padding="md" className="space-y-4">
-        <h2 className="text-sm font-semibold text-zinc-200">Indexed files</h2>
+        <h2 className="text-sm font-semibold text-ink">Indexed files</h2>
         <FileList courseId={courseId} />
       </Card>
 

@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'motion/react'
 import {
   MessageCircle,
   GraduationCap,
@@ -81,36 +80,39 @@ const BENEFITS = [
   'Your files stay yours — scoped to your account',
 ]
 
-const sectionReveal = {
-  initial: { opacity: 0, y: 12 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: '-80px' },
-  transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const },
+/** Numbered syllabus header — the editorial section treatment. */
+function SectionHead({ num, title }: { num: string; title: string }) {
+  return (
+    <div className="section-head mb-10">
+      <span className="section-num">{num}</span>
+      <h2 className="font-display text-2xl md:text-3xl font-semibold text-ink tracking-tight">{title}</h2>
+    </div>
+  )
 }
 
-/** DOM-built product preview — always crisp, always current with the brand. */
+/** DOM-built product preview — a white sheet with paper window chrome. */
 function ProductPreview() {
   return (
-    <div className="relative mx-auto max-w-4xl rounded-2xl border border-border bg-bg-card elev-3 overflow-hidden text-left">
+    <div className="relative mx-auto max-w-4xl rounded-2xl border border-line bg-surface elev-3 overflow-hidden text-left">
       {/* Window chrome */}
-      <div className="flex items-center gap-1.5 px-4 h-9 border-b border-border-subtle bg-bg-subtle">
-        <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
-        <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
-        <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
-        <span className="ml-3 text-[11px] text-zinc-500 truncate">Data Structures · Learn</span>
+      <div className="flex items-center gap-1.5 px-4 h-9 border-b border-line bg-paper-deep">
+        <span className="w-2.5 h-2.5 rounded-full bg-line-strong" />
+        <span className="w-2.5 h-2.5 rounded-full bg-line-strong" />
+        <span className="w-2.5 h-2.5 rounded-full bg-line-strong" />
+        <span className="ml-3 text-[11px] text-ink-faint truncate">Data Structures · Learn</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-[1fr_220px]">
         {/* Chat pane */}
         <div className="p-5 sm:p-6 space-y-4 min-w-0">
           <div className="flex justify-end">
-            <div className="rounded-xl rounded-br-sm bg-white/[0.06] border border-white/10 px-3.5 py-2 text-sm text-zinc-200 max-w-[85%]">
+            <div className="rounded-xl rounded-br-sm bg-paper-deep border border-line px-3.5 py-2 text-sm text-ink max-w-[85%]">
               When should I use Dijkstra instead of A*?
             </div>
           </div>
           <div className="max-w-[92%]">
-            <p className="text-sm text-zinc-300 leading-relaxed">
+            <p className="text-sm text-ink-soft leading-relaxed">
               Use Dijkstra when you have no admissible heuristic or need shortest paths to
-              <span className="text-zinc-100 font-medium"> every</span> node; A* wins when a good heuristic
+              <span className="text-ink font-medium"> every</span> node; A* wins when a good heuristic
               (like straight-line distance) can steer the search toward a single goal…
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
@@ -120,21 +122,21 @@ function ProductPreview() {
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
             {['Quiz me on this', 'Show a worked example'].map((chip) => (
-              <span key={chip} className="text-xs text-zinc-400 border border-border rounded-full px-3 py-1">
+              <span key={chip} className="text-xs text-ink-faint border border-line rounded-full px-3 py-1">
                 {chip}
               </span>
             ))}
           </div>
         </div>
         {/* Readiness rail */}
-        <div className="border-t md:border-t-0 md:border-l border-border-subtle p-5 bg-bg-subtle/60">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 mb-3">Exam readiness</p>
+        <div className="border-t md:border-t-0 md:border-l border-line p-5 bg-paper">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint mb-3">Exam readiness</p>
           <div className="flex md:flex-col items-center md:items-start gap-4">
             <ProgressRing value={72} size={84} strokeWidth={7}>
-              <span className="text-lg font-bold text-emerald-300">72%</span>
+              <span className="text-lg font-semibold text-success tnum">72%</span>
             </ProgressRing>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Focus next</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint">Focus next</p>
               <div className="flex flex-wrap gap-1.5">
                 <Badge tone="warning">AVL rotations</Badge>
                 <Badge tone="warning">Graph traversal</Badge>
@@ -152,13 +154,13 @@ export default function LandingPage() {
   const toLogin = () => navigate('/login')
 
   return (
-    <div className="relative w-full text-zinc-50">
-      {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-bar">
+    <div className="relative w-full min-h-screen bg-paper text-ink">
+      {/* Nav — solid paper, hairline below */}
+      <nav className="fixed top-0 left-0 right-0 z-50 top-bar">
         <div className="flex items-center justify-between px-6 h-14 max-w-6xl mx-auto">
           <div className="flex items-center gap-2.5">
             <BrandMark className="w-7 h-7" />
-            <span className="text-base font-semibold tracking-tight">Vindexa</span>
+            <span className="font-display text-lg font-semibold text-ink tracking-tight">Vindexa</span>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={toLogin}>Sign in</Button>
@@ -168,18 +170,18 @@ export default function LandingPage() {
       </nav>
 
       {/* ===== HERO ===== */}
-      <section className="px-6 pt-36 pb-20 sm:pt-44">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight leading-[1.05] animate-hero-fade-up">
+      <section className="px-6 pt-32 pb-20 sm:pt-40">
+        <div className="max-w-3xl mx-auto text-center animate-fade-up">
+          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight leading-[1.08] text-ink">
             Your course materials,
             <br />
-            turned into a <span className="text-gradient-brand">study system</span>
+            turned into a <span className="hl">study system</span>
           </h1>
-          <p className="mt-6 text-lg text-zinc-400 leading-relaxed max-w-2xl mx-auto animate-hero-fade-up hero-delay-200">
+          <p className="mt-6 text-lg text-ink-soft leading-relaxed max-w-2xl mx-auto">
             Vindexa indexes your slides, readings and syllabus — then answers with page-level
             citations, drills your weak topics, and tells you when you’re ready for the exam.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-9 animate-hero-fade-up hero-delay-400">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-9">
             <Button size="lg" onClick={toLogin} rightIcon={<ArrowRight className="w-4 h-4" />}>
               Start free
             </Button>
@@ -192,117 +194,96 @@ export default function LandingPage() {
             </Button>
           </div>
         </div>
-        <div className="mt-16 px-0 sm:px-6 animate-hero-fade-up hero-delay-600">
+        <div className="mt-16 px-0 sm:px-6 animate-fade-up">
           <ProductPreview />
         </div>
       </section>
 
       {/* ===== HOW IT WORKS ===== */}
-      <section id="how-it-works" className="py-24 px-6">
+      <section id="how-it-works" className="py-20 px-6">
         <div className="max-w-5xl mx-auto">
-          <motion.div {...sectionReveal} className="text-center mb-14">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gradient-brand mb-3">How it works</p>
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">From file dump to study plan</h2>
-          </motion.div>
+          <SectionHead num="01" title="From file dump to study plan" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {STEPS.map((step, i) => (
-              <motion.div
-                key={step.number}
-                {...sectionReveal}
-                transition={{ ...sectionReveal.transition, delay: i * 0.07 }}
-                className="relative p-6 rounded-xl card-surface accent-top"
-              >
-                <span className="text-[3.5rem] font-black text-white/[0.04] absolute top-3 right-5 leading-none select-none">
+            {STEPS.map((step) => (
+              <div key={step.number} className="relative p-6 rounded-xl card-surface">
+                <span className="font-mono text-[2.75rem] text-line-strong absolute top-3 right-5 leading-none select-none">
                   {step.number}
                 </span>
-                <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center mb-5">
-                  <step.icon className="w-5 h-5 text-cyan-300" />
+                <div className="w-10 h-10 rounded-lg bg-paper-deep border border-line flex items-center justify-center mb-5">
+                  <step.icon className="w-5 h-5 text-ink-soft" />
                 </div>
-                <h3 className="text-base font-semibold text-zinc-50 mb-2">{step.title}</h3>
-                <p className="text-sm text-zinc-400 leading-relaxed">{step.description}</p>
-              </motion.div>
+                <h3 className="text-base font-semibold text-ink mb-2">{step.title}</h3>
+                <p className="text-sm text-ink-soft leading-relaxed">{step.description}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* ===== FEATURES ===== */}
-      <section className="py-24 px-6">
+      <section className="py-20 px-6">
         <div className="max-w-5xl mx-auto">
-          <motion.div {...sectionReveal} className="text-center mb-14">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gradient-brand mb-3">Features</p>
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">One connected system</h2>
-            <p className="mt-4 text-zinc-400 text-base max-w-lg mx-auto">
-              Every tool feeds the next: chat surfaces gaps, practice targets them, review locks them in.
-            </p>
-          </motion.div>
+          <SectionHead num="02" title="One connected system" />
+          <p className="text-ink-soft text-base max-w-lg -mt-6 mb-10">
+            Every tool feeds the next: chat surfaces gaps, practice targets them, review locks them in.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map((feature, i) => (
-              <motion.div
-                key={feature.title}
-                {...sectionReveal}
-                transition={{ ...sectionReveal.transition, delay: (i % 3) * 0.06 }}
-                className="group p-6 rounded-xl card-surface card-interactive"
-              >
-                <feature.icon className="w-5 h-5 text-zinc-500 group-hover:text-cyan-300 transition-colors mb-4" />
-                <h3 className="text-sm font-semibold text-zinc-50 mb-2">{feature.title}</h3>
-                <p className="text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
-              </motion.div>
+            {FEATURES.map((feature) => (
+              <div key={feature.title} className="group p-6 rounded-xl card-surface card-interactive">
+                <feature.icon className="w-5 h-5 text-ink-soft group-hover:text-accent transition-colors mb-4" />
+                <h3 className="text-sm font-semibold text-ink mb-2">{feature.title}</h3>
+                <p className="text-sm text-ink-soft leading-relaxed">{feature.description}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* ===== WHY ===== */}
-      <section className="py-24 px-6">
-        <div className="max-w-4xl mx-auto">
+      <section className="py-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <SectionHead num="03" title="Built for how students actually study" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <motion.div {...sectionReveal}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gradient-brand mb-3">Why Vindexa</p>
-              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-                Built for how students actually study
-              </h2>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Generic AI tools answer from the open internet and forget you between sessions.
-                Vindexa is grounded in your specific course and remembers every answer you get
-                wrong — so the system always knows your weakest topic, and so do you.
-              </p>
-            </motion.div>
-            <motion.div {...sectionReveal} transition={{ ...sectionReveal.transition, delay: 0.08 }} className="space-y-3">
+            <p className="text-ink-soft text-sm leading-relaxed">
+              Generic AI tools answer from the open internet and forget you between sessions.
+              Vindexa is grounded in your specific course and remembers every answer you get
+              wrong — so the system always knows your weakest topic, and so do you.
+            </p>
+            <div className="space-y-3">
               {BENEFITS.map((benefit) => (
                 <div key={benefit} className="flex items-start gap-3 p-3.5 rounded-xl card-surface">
-                  <CheckCircle className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-zinc-300">{benefit}</span>
+                  <CheckCircle className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-ink">{benefit}</span>
                 </div>
               ))}
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ===== CTA ===== */}
-      <section className="py-28 px-6">
-        <motion.div {...sectionReveal} className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
+      <section className="py-24 px-6">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="font-display text-3xl md:text-4xl font-semibold tracking-tight text-ink mb-4">
             Know exactly what to study next
           </h2>
-          <p className="text-zinc-400 mb-9 text-base">
+          <p className="text-ink-soft mb-9 text-base">
             Create a course, add your materials, and ask your first question in under two minutes.
           </p>
           <Button size="lg" onClick={toLogin} rightIcon={<ArrowRight className="w-4 h-4" />}>
             Start free
           </Button>
-        </motion.div>
+        </div>
       </section>
 
       {/* ===== FOOTER ===== */}
-      <footer className="border-t border-border-subtle py-8">
+      <footer className="border-t border-line py-8">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <BrandMark className="w-5 h-5 opacity-50" />
-            <span className="text-xs text-zinc-500">Vindexa</span>
+            <BrandMark className="w-5 h-5 opacity-60" />
+            <span className="text-xs text-ink-faint">Vindexa</span>
           </div>
-          <span className="text-xs text-zinc-600">Grounded in your materials. Nothing else.</span>
+          <span className="text-xs text-ink-faint">Grounded in your materials. Nothing else.</span>
         </div>
       </footer>
     </div>

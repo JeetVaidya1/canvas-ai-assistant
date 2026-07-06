@@ -24,7 +24,7 @@ export function PastPaperPanel({ uploading, analysisSummary, onUpload, disabled 
   const pickFile = () => fileRef.current?.click()
 
   return (
-    <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03]">
+    <div className="mt-5 card-surface rounded-xl">
       <input
         ref={fileRef}
         type="file"
@@ -59,7 +59,7 @@ export function PastPaperPanel({ uploading, analysisSummary, onUpload, disabled 
         />
       ) : (
         <div className="p-5 text-center">
-          <h3 className="text-sm font-semibold text-zinc-100 mb-2.5">Past paper analysis</h3>
+          <h3 className="text-sm font-semibold text-ink mb-2.5">Past paper analysis</h3>
           {analysisSummary.status === 'success' ? (
             <Badge tone="success" icon={<CheckCircle />}>
               {analysisSummary.questions_found ?? 0} questions found

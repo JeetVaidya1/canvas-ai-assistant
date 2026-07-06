@@ -48,24 +48,24 @@ export function verdictMeta(v: Verdict): VerdictMeta {
     case 'correct':
       return {
         label: 'Correct',
-        tone: 'border-emerald-500/25 bg-emerald-500/[0.06]',
-        text: 'text-emerald-400',
+        tone: 'border-success/25 bg-success-wash',
+        text: 'text-success',
         badgeTone: 'success',
         Icon: CheckCircle,
       }
     case 'partial':
       return {
         label: 'Partial',
-        tone: 'border-amber-500/25 bg-amber-500/[0.06]',
-        text: 'text-amber-400',
+        tone: 'border-warning/25 bg-warning-wash',
+        text: 'text-warning',
         badgeTone: 'warning',
         Icon: CircleDot,
       }
     default:
       return {
         label: 'Incorrect',
-        tone: 'border-rose-500/25 bg-rose-500/[0.06]',
-        text: 'text-rose-400',
+        tone: 'border-danger/25 bg-danger-wash',
+        text: 'text-danger',
         badgeTone: 'danger',
         Icon: XCircle,
       }
