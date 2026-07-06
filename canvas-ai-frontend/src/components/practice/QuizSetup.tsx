@@ -1,20 +1,32 @@
-import { Zap } from 'lucide-react'
+import { Timer } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { useQuizInProgress } from '@/hooks/useQuizInProgress'
 import { SetupShell, FieldLabel } from './SetupShell'
 import { DifficultyTiles } from './DifficultyTiles'
 import { CountSelector } from './CountSelector'
 import { TopicField } from './TopicField'
+import { ResumeQuizList } from './ResumeQuizList'
 import { QUIZ_DIFFICULTIES, QUIZ_COUNTS, WHOLE_COURSE } from './constants'
 import type { QuizController } from './useQuizRun'
 
 /** Center-first Quick Quiz setup: difficulty tiles, count, topic, one CTA. */
 export function QuizSetup({ quiz }: { quiz: QuizController }) {
   const { topics } = quiz
+  const inProgress = useQuizInProgress(quiz.courseId || undefined)
   return (
     <SetupShell
       title="Set up your quiz drill"
       subtitle="Rapid multiple-choice, graded the instant you answer. Pick your focus and go."
     >
+      {/* Unfinished drills first — resuming beats regenerating. Errors/loading
+          stay silent here: the setup form is always the honest fallback. */}
+      <ResumeQuizList
+        sessions={inProgress.sessions}
+        resuming={quiz.loading}
+        onResume={(session) => void quiz.restoreQuiz(session.quiz_id, session.topic)}
+        onDismiss={inProgress.dismiss}
+      />
+
       <div className="mb-6">
         <FieldLabel center>Difficulty</FieldLabel>
         <DifficultyTiles
@@ -60,7 +72,7 @@ export function QuizSetup({ quiz }: { quiz: QuizController }) {
         disabled={quiz.loading || topics.loading || !quiz.selectedTopic || !quiz.courseId}
         loading={quiz.loading}
         size="lg"
-        leftIcon={<Zap className="h-4 w-4" />}
+        leftIcon={<Timer className="h-4 w-4" />}
         className="w-full !py-3.5 !text-base"
       >
         {quiz.loading ? 'Generating your drill…' : 'Start drill'}

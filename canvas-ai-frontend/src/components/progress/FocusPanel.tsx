@@ -1,4 +1,4 @@
-import { AlertCircle, Award, Zap } from 'lucide-react'
+import { AlertCircle, Award, Target } from 'lucide-react'
 import type { LearningAnalytics } from '@/lib/api'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/States'
@@ -41,7 +41,7 @@ export function FocusPanel({ analytics }: FocusPanelProps) {
         <SectionHead num="05" title="Recommendations" />
         {analytics.study_recommendations.length === 0 ? (
           <EmptyState
-            icon={<Zap />}
+            icon={<Target />}
             title="No recommendations yet"
             description="Study a bit more and we’ll suggest your next moves."
             className="py-6"
@@ -51,7 +51,7 @@ export function FocusPanel({ analytics }: FocusPanelProps) {
             {analytics.study_recommendations.map((rec) => (
               <div key={rec} className="bg-accent-wash border border-accent-line rounded-lg p-3">
                 <div className="flex items-start gap-2">
-                  <Zap className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+                  <Target className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
                   <p className="text-ink text-sm">{rec}</p>
                 </div>
               </div>

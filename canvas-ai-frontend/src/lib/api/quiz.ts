@@ -150,6 +150,50 @@ export async function submitQuizAnswer(
   return apiFetch(`/quiz/${encodeURIComponent(quizId)}/answer`, { method: 'POST', body: form })
 }
 
+/** One non-completed quiz the user can resume (newest first, max 3). */
+export interface QuizInProgressSession {
+  quiz_id: string
+  /** Null when the drill targeted the whole course. */
+  topic: string | null
+  difficulty: string
+  num_requested: number
+  num_answered: number
+  num_available: number
+  generation_status: QuizGenerationStatus
+  /** ISO timestamp of when the quiz was started. */
+  created_at: string
+}
+
+export interface QuizInProgressResponse {
+  sessions: QuizInProgressSession[]
+}
+
+/** GET /quiz/in-progress — resumable quizzes for a course (max 3, newest first). */
+export async function getInProgressQuizzes(courseId: string): Promise<QuizInProgressResponse> {
+  return apiFetch(`/quiz/in-progress?course_id=${encodeURIComponent(courseId)}`, {
+    method: 'GET',
+  })
+}
+
+/** One previously graded answer, as stored server-side. */
+export interface QuizStoredResponse {
+  question_id: string
+  /** Selected option letter 'A'–'D'. */
+  selected: string
+  is_correct: boolean
+  confidence: QuizConfidence | null
+}
+
+export interface QuizResponsesResponse {
+  quiz_id: string
+  responses: QuizStoredResponse[]
+}
+
+/** GET /quiz/{id}/responses — every answer already submitted for a quiz. */
+export async function getQuizResponses(quizId: string): Promise<QuizResponsesResponse> {
+  return apiFetch(`/quiz/${encodeURIComponent(quizId)}/responses`, { method: 'GET' })
+}
+
 export async function submitQuiz(
   quizId: string,
   userId: string = 'anonymous'

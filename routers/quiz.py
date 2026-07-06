@@ -168,6 +168,45 @@ async def generate_quiz_endpoint(
     return result
 
 
+# NOTE: static path — declared before the /quiz/{quiz_id}/... routes so it can
+# never be captured by a dynamic segment.
+@router.get("/quiz/in-progress")
+async def in_progress_quizzes_endpoint(
+    course_id: str = "",
+    user_id: str = Depends(current_user_id),
+):
+    """Resume everywhere: the user's unfinished quizzes in a course.
+
+    Returns up to 3 sessions, newest first, each with answered/available
+    counts so the client can render "Resume (4/10)" style entries.
+    """
+    clean_course_id = (course_id or "").strip()
+    if not clean_course_id:
+        raise HTTPException(400, detail="Course ID is required")
+
+    try:
+        sessions = quiz_engine.get_in_progress_quizzes(clean_course_id, user_id)
+    except Exception:
+        logger.exception("In-progress quiz lookup failed")
+        raise HTTPException(500, detail="Couldn't fetch in-progress quizzes")
+    return {"sessions": sessions}
+
+
+@router.get("/quiz/{quiz_id}/responses")
+async def quiz_responses_endpoint(
+    quiz_id: str,
+    user_id: str = Depends(current_user_id),
+):
+    """Saved answers (latest per question) for resuming a quiz mid-session."""
+    try:
+        return quiz_engine.get_quiz_responses(quiz_id, user_id)
+    except KeyError:
+        raise HTTPException(404, detail="Quiz not found")
+    except Exception:
+        logger.exception("Quiz responses fetch failed")
+        raise HTTPException(500, detail="Couldn't fetch quiz responses")
+
+
 @router.get("/quiz/{quiz_id}/questions")
 async def quiz_questions_endpoint(
     quiz_id: str,

@@ -1,4 +1,4 @@
-import type { Readiness } from '@/lib/api'
+import type { QuizInProgressSession, Readiness } from '@/lib/api'
 import type { CourseTopic } from '@/lib/api/topics'
 
 /** One row of the Today checklist. */
@@ -86,9 +86,23 @@ export function buildTodayPlan(input: {
   topics: readonly CourseTopic[] | undefined
   recentPage: string | null
   hasFiles: boolean
+  /** Resumable quizzes (newest first, dismissed ids already filtered out). */
+  quizSessions?: readonly QuizInProgressSession[]
 }): TodayPlan {
-  const { dueCount, readiness, topics, recentPage, hasFiles } = input
+  const { dueCount, readiness, topics, recentPage, hasFiles, quizSessions } = input
   const items: TodayItem[] = []
+
+  // An unfinished drill outranks everything — finishing beats starting over.
+  const resumable = quizSessions?.[0]
+  if (resumable) {
+    items.push({
+      key: 'finish-drill',
+      label: `Finish your drill — ${resumable.num_answered}/${resumable.num_available} answered`,
+      detail: resumable.topic ?? 'General drill',
+      etaMin: Math.max(2, resumable.num_available - resumable.num_answered),
+      to: `practice?resume=${encodeURIComponent(resumable.quiz_id)}`,
+    })
+  }
 
   if (dueCount !== null && dueCount > 0) {
     items.push({

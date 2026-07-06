@@ -1,6 +1,6 @@
 // src/components/AnalyticsDashboard.tsx
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Sparkles } from 'lucide-react'
+import { BarChart3, Play, RefreshCw } from 'lucide-react'
 import type { LearningAnalytics } from '@/lib/api'
 import { useLearningAnalytics, useConceptGraph } from '@/hooks/useAnalytics'
 import { useCourseTopics } from '@/hooks/useCourseTopics'
@@ -80,11 +80,11 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
       <div className="max-w-6xl mx-auto p-6">
         <Card accent padding="lg" elevation={2}>
           <EmptyState
-            icon={<Sparkles />}
+            icon={<BarChart3 />}
             title="Your analytics build as you study"
             description="Take a quick quiz to start — your readiness score, topic mastery and study trends will grow from there."
             action={
-              <Button onClick={() => navigate(`/course/${courseId}/practice`)} leftIcon={<Sparkles className="w-4 h-4" />}>
+              <Button onClick={() => navigate(`/course/${courseId}/practice`)} leftIcon={<Play className="w-4 h-4" />}>
                 Take a quick quiz
               </Button>
             }

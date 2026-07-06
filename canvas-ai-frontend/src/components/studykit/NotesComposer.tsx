@@ -1,7 +1,7 @@
 // src/components/studykit/NotesComposer.tsx — center-first studio: topic prompt + style pills + collapsible sources
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ChevronDown, FileText, Sparkles } from 'lucide-react'
+import { ChevronDown, FileText, PenLine } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -55,7 +55,7 @@ export default function NotesComposer({ studio }: { studio: NotesStudio }) {
           )}
         >
           <span className="pl-3 pr-1 text-accent">
-            <Sparkles className="h-5 w-5" />
+            <PenLine className="h-5 w-5" />
           </span>
           <input
             type="text"
@@ -171,7 +171,7 @@ export default function NotesComposer({ studio }: { studio: NotesStudio }) {
           onClick={() => void generate()}
           loading={loading}
           disabled={loading || noFiles || !courseId}
-          leftIcon={<Sparkles className="w-5 h-5" />}
+          leftIcon={<PenLine className="w-5 h-5" />}
           className="mt-5 w-full"
         >
           {loading ? 'Generating…' : 'Generate notes'}

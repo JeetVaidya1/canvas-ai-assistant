@@ -5,14 +5,13 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Textarea } from '@/components/ui/Input'
 import { ErrorState } from '@/components/ui/States'
+import { BrandMark } from '@/components/ui/BrandMark'
 import {
-  Brain,
   Copy,
   AlertCircle,
   Clock,
-  Lightbulb,
   Target,
-  Zap,
+  Timer,
   HelpCircle,
   FileText,
   TrendingUp,
@@ -145,7 +144,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
-              <Brain className="w-5 h-5 text-accent" />
+              <FileText className="w-5 h-5 text-accent" />
             </div>
             <div>
               <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-ink-faint mb-0.5">Answer Helper</p>
@@ -196,9 +195,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
 
                 {/* AI Response */}
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
-                    <Brain className="w-4 h-4 text-accent" />
-                  </div>
+                  <BrandMark className="w-8 h-8 flex-shrink-0" />
                   <div className="flex-1">
                     {conv.response.status === 'success' ? (
                       <div className="space-y-4">
@@ -236,7 +233,6 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                         {/* Explanation */}
                         <div>
                           <div className="flex items-center gap-2 mb-3">
-                            <Lightbulb className="w-5 h-5 text-warning" />
                             <span className="font-semibold text-ink">Explanation</span>
                           </div>
                           <div className="bg-paper-deep border border-line rounded-lg p-4">
@@ -283,7 +279,6 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
                         {conv.response.study_tips.length > 0 && (
                           <div>
                             <div className="flex items-center gap-2 mb-3">
-                              <Lightbulb className="w-4 h-4 text-warning" />
                               <span className="font-semibold text-ink">Study Tips</span>
                             </div>
                             <div className="space-y-2">
@@ -347,7 +342,7 @@ export default function QuizAssistant({ courseId, sessionId, onQuizSubmit }: Qui
               size="lg"
               disabled={loading || !question.trim() || !courseId}
               loading={loading}
-              leftIcon={<Zap className="w-5 h-5" />}
+              leftIcon={<Timer className="w-5 h-5" />}
             >
               {loading ? 'Analyzing...' : conversations.length > 0 ? 'Ask Another' : 'Get Answer'}
             </Button>

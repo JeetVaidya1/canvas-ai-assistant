@@ -49,14 +49,17 @@ export function MistakeList({ mistakes }: MistakeListProps) {
               </span>
               <span className="min-w-0 text-ink-soft">{optionText(m.question, m.selectedLetter)}</span>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="w-24 flex-shrink-0 text-xs font-medium text-success">
-                Correct &middot; {m.result.correct_answer}
-              </span>
-              <span className="min-w-0 text-ink-soft">
-                {optionText(m.question, m.result.correct_answer)}
-              </span>
-            </div>
+            {/* Restored (resumed-quiz) answers may not know the correct letter. */}
+            {m.result.correct_answer && (
+              <div className="flex items-baseline gap-2">
+                <span className="w-24 flex-shrink-0 text-xs font-medium text-success">
+                  Correct &middot; {m.result.correct_answer}
+                </span>
+                <span className="min-w-0 text-ink-soft">
+                  {optionText(m.question, m.result.correct_answer)}
+                </span>
+              </div>
+            )}
           </div>
 
           {m.result.explanation && (

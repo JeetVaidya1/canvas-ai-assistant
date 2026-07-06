@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Shuffle, RotateCcw, Download, Save, Brain, CheckCircle } from 'lucide-react'
+import { Shuffle, RotateCcw, Download, Save, Play, CheckCircle } from 'lucide-react'
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -204,7 +204,7 @@ export default function Flashcards({
                 variant={studyMode === 'sr' ? 'primary' : 'secondary'}
                 size="sm"
                 onClick={() => (studyMode === 'sr' ? setStudyMode('all') : enterSrMode())}
-                leftIcon={<Brain className="w-4 h-4" />}
+                leftIcon={<Play className="w-4 h-4" />}
               >
                 Review
               </Button>

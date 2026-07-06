@@ -94,7 +94,10 @@ export default function JoinClassPanel() {
             </Button>
           </div>
           {results.length === 0 ? (
-            <p className="text-xs text-ink-faint py-2">No published classes match yet.</p>
+            <p className="text-xs text-ink-soft py-2">
+              No published classes match. If a classmate shared a code with you, enter it above — or publish your
+              own course from its Materials page so others can join.
+            </p>
           ) : (
             results.map((c) => (
               <Card

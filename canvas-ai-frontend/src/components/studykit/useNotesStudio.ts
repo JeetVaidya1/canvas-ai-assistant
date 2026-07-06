@@ -1,7 +1,8 @@
 // src/components/studykit/useNotesStudio.ts — all Study Kit state + server interactions
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { generateNotes, type NotesResponse, type SavedNote } from '@/lib/api'
-import { showError } from '@/lib/toast'
+import { showError, showInfo } from '@/lib/toast'
+import { noteDraftKey, readJson, removeKey, writeJson } from '@/lib/resumeKeys'
 import { useUser } from '@/hooks/useUser'
 import { useCourseFiles } from '@/hooks/useCourseFiles'
 import { useNotesLibrary, useSaveNote, useDeleteNote } from '@/hooks/useNotesLibrary'
@@ -11,6 +12,31 @@ import {
   type Flashcard,
   type NoteStyle,
 } from './noteUtils'
+
+/** Debounce for writing the composer draft to localStorage. */
+const DRAFT_SAVE_MS = 500
+
+const NOTE_STYLE_VALUES: readonly NoteStyle[] = ['detailed', 'summary', 'outline']
+
+interface NoteDraft {
+  topic: string
+  style: NoteStyle
+  files: string[]
+}
+
+/** Shape-check stored draft data — never trust localStorage contents. */
+function parseNoteDraft(raw: unknown): NoteDraft | null {
+  if (!raw || typeof raw !== 'object') return null
+  const candidate = raw as Record<string, unknown>
+  if (typeof candidate.topic !== 'string') return null
+  if (!NOTE_STYLE_VALUES.includes(candidate.style as NoteStyle)) return null
+  if (!Array.isArray(candidate.files)) return null
+  return {
+    topic: candidate.topic,
+    style: candidate.style as NoteStyle,
+    files: candidate.files.filter((f): f is string => typeof f === 'string'),
+  }
+}
 
 /**
  * Single source of truth for the Notes studio. All server data flows through
@@ -51,6 +77,40 @@ export function useNotesStudio(courseId: string) {
     setFlashcards([])
     setLibraryOpen(false)
   }, [courseId])
+
+  // Restore a persisted composer draft once per course. Runs after the reset
+  // effect above (declaration order), so restore wins on mount/course switch.
+  const draftReadyRef = useRef(false)
+  useEffect(() => {
+    draftReadyRef.current = false
+    if (!courseId) return
+    const draft = parseNoteDraft(readJson(noteDraftKey(courseId)))
+    if (draft && (draft.topic.trim() || draft.style !== 'detailed' || draft.files.length > 0)) {
+      setTopic(draft.topic)
+      setNoteStyle(draft.style)
+      if (draft.files.length > 0) setSelectedFiles(draft.files)
+      showInfo('Draft restored')
+    }
+    // Only start persisting once restore had its chance (avoids clobbering).
+    draftReadyRef.current = true
+  }, [courseId])
+
+  // Persist the composer draft (debounced). An empty composer clears the key
+  // so stale drafts never linger. File selection alone is not persisted — it
+  // auto-fills to "all files" and would create junk drafts for everyone.
+  useEffect(() => {
+    if (!courseId || !draftReadyRef.current) return
+    const key = noteDraftKey(courseId)
+    const timer = setTimeout(() => {
+      if (topic.trim() || noteStyle !== 'detailed') {
+        const draft: NoteDraft = { topic, style: noteStyle, files: [...selectedFiles] }
+        writeJson(key, draft)
+      } else {
+        removeKey(key)
+      }
+    }, DRAFT_SAVE_MS)
+    return () => clearTimeout(timer)
+  }, [courseId, topic, noteStyle, selectedFiles])
 
   // Default to ALL files selected so the common path needs zero file-clicks.
   // Only auto-fill when nothing is selected yet (don't clobber a viewed note's set).
@@ -97,6 +157,8 @@ export function useNotesStudio(courseId: string) {
         : parseFlashcardsFromText(notes)
       setFlashcards(fc || [])
       setCurrentNoteId(undefined)
+      // Generation succeeded — the draft served its purpose.
+      removeKey(noteDraftKey(courseId))
     } catch (error: unknown) {
       console.error('Failed to generate notes:', error)
       const msg = error instanceof Error ? error.message : 'Failed to generate notes. Please try again.'

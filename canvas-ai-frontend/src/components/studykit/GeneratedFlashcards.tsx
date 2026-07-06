@@ -1,7 +1,7 @@
 // src/components/studykit/GeneratedFlashcards.tsx — the auto-generated deck: flip cards + spaced repetition entry
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { BookOpen, Brain, ChevronLeft, ChevronRight, Layers, Sparkles } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight, Layers } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -27,7 +27,7 @@ function FlipCard({ card, flipped, onFlip }: { card: Flashcard; flipped: boolean
         {/* Front — Question: white index-card sheet */}
         <div className="absolute inset-0 [backface-visibility:hidden] rounded-2xl card-surface p-7 flex flex-col">
           <div className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
-            <Brain className="w-3.5 h-3.5" /> Question
+            Question
           </div>
           <div className="flex-1 flex items-center justify-center text-center px-2">
             <p className="text-lg font-medium text-ink leading-relaxed">{card.q}</p>
@@ -37,7 +37,7 @@ function FlipCard({ card, flipped, onFlip }: { card: Flashcard; flipped: boolean
         {/* Back — Answer: pen-blue-washed sheet */}
         <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl bg-accent-wash border border-accent-line p-7 flex flex-col">
           <div className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-accent-deep">
-            <Sparkles className="w-3.5 h-3.5" /> Answer
+            Answer
           </div>
           <div className="flex-1 flex items-center justify-center text-center overflow-auto px-2">
             <div className="text-sm text-ink max-w-none">

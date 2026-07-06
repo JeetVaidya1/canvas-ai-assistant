@@ -1,4 +1,4 @@
-import { Map as MapIcon, RefreshCw, Sparkles } from 'lucide-react'
+import { Map as MapIcon, RefreshCw } from 'lucide-react'
 import type { CourseTopic } from '@/lib/api/topics'
 import { useCourseTopics, useRebuildCourseTopics } from '@/hooks/useCourseTopics'
 import { showError } from '@/lib/toast'
@@ -103,12 +103,12 @@ export default function CourseBrief({ courseId, hasFiles }: CourseBriefProps) {
         />
       ) : !hasTopics ? (
         <EmptyState
-          icon={<Sparkles />}
+          icon={<MapIcon />}
           title="Your course map is ready to build"
           description="Vindexa reads your files and distills them into the topics that drive quizzes, mastery and reviews."
           className="py-8"
           action={
-            <Button onClick={handleRebuild} loading={rebuild.isPending} leftIcon={<Sparkles className="w-4 h-4" />}>
+            <Button onClick={handleRebuild} loading={rebuild.isPending} leftIcon={<RefreshCw className="w-4 h-4" />}>
               Generate topics
             </Button>
           }

@@ -1,4 +1,4 @@
-import { Flame, BookOpen, Target, Brain, type LucideIcon } from 'lucide-react'
+import { CalendarDays, BookOpen, Target, BarChart3, type LucideIcon } from 'lucide-react'
 import type { LearningAnalytics } from '@/lib/api'
 import { Card } from '@/components/ui/Card'
 import CountUp from '@/components/ui/CountUp'
@@ -40,7 +40,7 @@ export function StatStrip({ analytics }: StatStripProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <StatTile
-        icon={Flame}
+        icon={CalendarDays}
         label="Study streak"
         value={analytics.study_streak}
         unit="days"
@@ -59,7 +59,7 @@ export function StatStrip({ analytics }: StatStripProps) {
         unit="score"
       />
       <StatTile
-        icon={Brain}
+        icon={BarChart3}
         label="Topics studied"
         value={analytics.topics_progress.length}
         unit="concepts"

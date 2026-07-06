@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { Trophy, Clock, CheckCircle, Target, BookOpen, RotateCcw, Brain } from 'lucide-react'
+import { Trophy, Clock, CheckCircle, Target, BookOpen, RotateCcw, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -106,7 +106,7 @@ export function SessionSummary({ practice, onModeChange }: SessionSummaryProps) 
             <Button onClick={practice.resetSession} leftIcon={<RotateCcw className="w-4 h-4" />}>
               Practice again
             </Button>
-            <Button variant="secondary" onClick={goAnalytics} leftIcon={<Brain className="w-4 h-4" />}>
+            <Button variant="secondary" onClick={goAnalytics} leftIcon={<BarChart3 className="w-4 h-4" />}>
               View analytics
             </Button>
           </div>

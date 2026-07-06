@@ -7,6 +7,8 @@ import {
 import { BrandMark } from '@/components/ui/BrandMark'
 import { useCourses, useDeleteCourse } from '@/hooks/useCourses'
 import { useRecentActivity } from '@/hooks/useRecentActivity'
+import { useQuizInProgress } from '@/hooks/useQuizInProgress'
+import { timeAgo, timeAgoIso } from '@/lib/relativeTime'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DashboardSkeleton from '@/components/skeletons/DashboardSkeleton'
 import JoinClassPanel from '@/components/JoinClassPanel'
@@ -16,22 +18,13 @@ import DueStrip from '@/components/home/DueStrip'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/States'
+import { CoachMarks } from '@/components/onboarding/CoachMarks'
 
 function getGreeting() {
   const hour = new Date().getHours()
   if (hour < 12) return 'Good morning'
   if (hour < 18) return 'Good afternoon'
   return 'Good evening'
-}
-
-function timeAgo(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000)
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
 }
 
 // Icon + tint per destination, so "continue studying" cards read at a glance.
@@ -54,6 +47,11 @@ export default function Dashboard() {
   const { data: courses, isLoading: coursesLoading } = useCourses()
   const deleteCourse = useDeleteCourse()
   const recentActivity = useRecentActivity()
+  // In-progress quiz drills for the most recently visited course — the minimal
+  // cross-course scope: one request, and it targets where the user last worked.
+  const recentCourseId = recentActivity[0]?.courseId
+  const quizInProgress = useQuizInProgress(recentCourseId)
+  const resumeQuizzes = quizInProgress.sessions
 
   const [showCreate, setShowCreate] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
@@ -77,6 +75,8 @@ export default function Dashboard() {
     })
     .filter(Boolean) as Array<{ courseId: string; page: string; timestamp: number; courseTitle: string }>
 
+  const showContinue = recentWithNames.length > 0 || resumeQuizzes.length > 0
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-9 space-y-9">
       {/* Header: greeting + primary action */}
@@ -96,10 +96,34 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Continue studying */}
-      {recentWithNames.length > 0 && (
+      {showContinue && (
         <div className="space-y-3.5">
           <h2 className="text-[11px] font-medium text-ink-faint uppercase tracking-[0.14em]">Continue studying</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Unfinished quiz drills lead — resuming beats starting over */}
+            {resumeQuizzes.map((s) => (
+              <Card
+                key={s.quiz_id}
+                interactive padding="sm"
+                onClick={() =>
+                  navigate(`/course/${recentCourseId}/practice?resume=${encodeURIComponent(s.quiz_id)}`)
+                }
+                className="flex items-center gap-3 group h-full"
+              >
+                <div className="w-9 h-9 rounded-lg border flex items-center justify-center flex-shrink-0 text-accent bg-accent-wash border-accent-line">
+                  <Target className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-ink truncate">
+                    Finish your drill — {s.num_answered}/{s.num_available}
+                  </div>
+                  <div className="text-xs text-ink-faint mt-0.5 truncate">
+                    {s.topic ?? 'General drill'}{timeAgoIso(s.created_at) ? ` · ${timeAgoIso(s.created_at)}` : ''}
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-ink-faint group-hover:text-accent group-hover:translate-x-0.5 flex-shrink-0 transition-all" />
+              </Card>
+            ))}
             {recentWithNames.map((entry) => {
               const m = pageMeta(entry.page)
               return (
@@ -156,6 +180,8 @@ export default function Dashboard() {
 
       {/* Shared classes — secondary, lives below your own courses */}
       <JoinClassPanel />
+
+      <CoachMarks page="dashboard" />
 
       <CreateCourseModal open={showCreate} onClose={() => setShowCreate(false)} />
 

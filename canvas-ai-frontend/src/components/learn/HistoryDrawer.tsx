@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { GraduationCap, Plus, Trash2, X } from 'lucide-react'
+import { BookOpen, Plus, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import ErrorInline from '@/components/shared/ErrorInline'
@@ -112,7 +112,7 @@ export function HistoryDrawer({
             </div>
             <div className="border-t border-line p-3">
               <div className="flex items-center gap-2 text-xs text-ink-faint">
-                <GraduationCap className="h-3.5 w-3.5" />
+                <BookOpen className="h-3.5 w-3.5" />
                 {courseTitle} · {fileCount > 0 ? `${fileCount} files` : 'no files'}
               </div>
             </div>

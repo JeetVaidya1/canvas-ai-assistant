@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Download, Github, Upload, ChevronDown, Sparkles, GraduationCap, Users, Copy } from 'lucide-react'
+import { Download, Github, Upload, ChevronDown, BookOpen, Users, Copy } from 'lucide-react'
 import { exportCourseMarkdown, githubPush, githubImport, getContextPack, importCanvasLms, publishCourse } from '@/lib/api'
 import { useUser } from '@/hooks/useUser'
 import { useShareInfo } from '@/hooks/useShareInfo'
@@ -187,7 +187,6 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
             <Button
               onClick={() => void handleCopyContext()}
               loading={busy === 'context'}
-              leftIcon={<Sparkles className="w-4 h-4" />}
             >
               {busy === 'context' ? 'Building…' : 'Copy study context for AI'}
             </Button>
@@ -254,7 +253,7 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
 
           <div className="space-y-2 border-t border-line pt-4">
             <label className="block text-xs font-medium text-ink-soft flex items-center gap-1.5">
-              <GraduationCap className="w-3.5 h-3.5 text-accent" /> Import from Canvas LMS
+              <BookOpen className="w-3.5 h-3.5 text-accent" /> Import from Canvas LMS
             </label>
             <div className="grid grid-cols-2 gap-2">
               <input
@@ -281,7 +280,7 @@ export default function IntegrationsPanel({ courseId }: IntegrationsPanelProps) 
               variant="secondary"
               onClick={() => void handleCanvasImport()}
               loading={busy === 'canvas'}
-              leftIcon={<GraduationCap className="w-4 h-4" />}
+              leftIcon={<BookOpen className="w-4 h-4" />}
             >
               {busy === 'canvas' ? 'Importing…' : 'Import syllabus, materials & exam dates'}
             </Button>

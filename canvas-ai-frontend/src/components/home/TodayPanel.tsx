@@ -35,7 +35,7 @@ export default function TodayPanel({
   const primaryKey = items.find((i) => !i.done)?.key
 
   return (
-    <Card padding="none" elevation={2}>
+    <Card padding="none" elevation={2} data-tour="today-panel">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-5 pb-4 border-b border-line">
         <h2 className="font-display text-xl font-semibold text-ink">Today</h2>
         <p className="text-sm text-ink-soft min-w-0">

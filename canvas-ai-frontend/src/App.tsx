@@ -6,6 +6,10 @@ import ErrorBoundary from '@/components/shared/ErrorBoundary'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
+const PricingPage = lazy(() => import('@/pages/PricingPage'))
+const TermsPage = lazy(() => import('@/pages/TermsPage'))
+const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'))
+const HelpPage = lazy(() => import('@/pages/HelpPage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const CourseHome = lazy(() => import('@/pages/CourseHome'))
@@ -46,6 +50,10 @@ export default function App() {
       <div className="relative z-10">
       <Routes>
         <Route path="/" element={<Suspense fallback={<PageFallback />}><LandingPage /></Suspense>} />
+        <Route path="/pricing" element={<Suspense fallback={<PageFallback />}><PricingPage /></Suspense>} />
+        <Route path="/terms" element={<Suspense fallback={<PageFallback />}><TermsPage /></Suspense>} />
+        <Route path="/privacy" element={<Suspense fallback={<PageFallback />}><PrivacyPage /></Suspense>} />
+        <Route path="/help" element={<Suspense fallback={<PageFallback />}><HelpPage /></Suspense>} />
         <Route path="/login" element={<Suspense fallback={<PageFallback />}><LoginPage /></Suspense>} />
         <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Send, User, Compass, MessageCircleQuestion, Sparkles } from 'lucide-react'
+import { Send, User, Compass, MessageCircleQuestion, Check } from 'lucide-react'
 import { BrandMark } from '@/components/ui/BrandMark'
 import { Markdown } from '@/components/ui/Markdown'
 import { Button } from '@/components/ui/Button'
@@ -21,7 +21,7 @@ const STARTERS = [
 const PROMISES = [
   { icon: MessageCircleQuestion, text: 'I ask questions instead of handing you answers' },
   { icon: Compass, text: 'Every nudge is grounded in your course materials' },
-  { icon: Sparkles, text: "We stop when it clicks — not before" },
+  { icon: Check, text: "We stop when it clicks — not before" },
 ] as const
 
 export default function SocraticTutor({ courseId }: SocraticTutorProps) {

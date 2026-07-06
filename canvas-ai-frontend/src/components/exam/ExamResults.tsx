@@ -1,7 +1,7 @@
 // Graded report: score ring, letter grade + time efficiency, per-concept
 // breakdown, and per-question AI-judge verdicts.
 import { motion } from 'motion/react'
-import { Lightbulb, RotateCcw, Trophy } from 'lucide-react'
+import { RotateCcw, Trophy } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -212,7 +212,6 @@ export function ExamResults({ results: r, onNewExam }: ExamResultsProps) {
                 )}
                 {b.mistakeExplanation && (
                   <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-warning-wash border border-warning/25 p-2.5">
-                    <Lightbulb className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1 text-xs">
                       <span className="block font-medium text-warning mb-0.5">Where it went wrong</span>
                       <Markdown content={b.mistakeExplanation} className="text-xs" />

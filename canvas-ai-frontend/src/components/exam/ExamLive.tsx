@@ -10,7 +10,6 @@ import {
   Eye,
   Flag,
   LayoutGrid,
-  Lightbulb,
   Pause,
   Play,
   Timer,
@@ -210,7 +209,6 @@ export function ExamLive({ exam }: ExamLiveProps) {
                   disabled={exam.hinting || !exam.courseId}
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft hover:text-warning disabled:opacity-50 transition-colors"
                 >
-                  <Lightbulb className="w-3.5 h-3.5" />
                   {exam.hinting ? 'Getting hint…' : 'Get hint'}
                 </button>
                 <span className="text-ink-faint">·</span>
