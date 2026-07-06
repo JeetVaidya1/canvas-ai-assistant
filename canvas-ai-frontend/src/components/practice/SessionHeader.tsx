@@ -10,6 +10,8 @@ interface SessionHeaderProps {
   total: number
   /** Muted context after the counter, e.g. "Topic · difficulty". */
   meta?: string
+  /** Honest availability note while more items stream in, e.g. "6 ready". */
+  availability?: string | null
   /** Right-aligned live counters (correct count, timer). */
   right?: ReactNode
   /** 0–100 completion through the session. */
@@ -17,7 +19,7 @@ interface SessionHeaderProps {
 }
 
 /** Slim in-session progress strip: "Question N of M" + meta + counters + ProgressBar. */
-export function SessionHeader({ itemLabel, index, total, meta, right, progress }: SessionHeaderProps) {
+export function SessionHeader({ itemLabel, index, total, meta, availability, right, progress }: SessionHeaderProps) {
   return (
     <div className="mb-6">
       <div className="mb-2.5 flex items-center justify-between">
@@ -26,6 +28,7 @@ export function SessionHeader({ itemLabel, index, total, meta, right, progress }
           <span className="section-num tnum">
             {index + 1} of {total}
           </span>
+          {availability && <span className="text-xs text-ink-faint tnum">· {availability}</span>}
           {meta && <span className="hidden text-xs text-ink-faint sm:inline">· {meta}</span>}
         </div>
         {right && <div className="flex items-center gap-3.5">{right}</div>}

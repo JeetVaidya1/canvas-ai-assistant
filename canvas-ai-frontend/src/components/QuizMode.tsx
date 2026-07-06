@@ -7,17 +7,19 @@ import type { ModeChangeHandler } from '@/components/practice/types'
 interface QuizModeProps {
   courseId: string
   userId: string
+  /** Kept for API compatibility with PracticePage; the debrief routes directly. */
   onModeChange?: ModeChangeHandler
 }
 
 /**
  * Quick Quiz — thin composition over the practice feature folder:
- * setup → active run → results. All state lives in useQuizRun.
+ * setup → fast-start run (questions stream in behind the session) → debrief.
+ * All state lives in useQuizRun.
  */
-export default function QuizMode({ courseId, userId, onModeChange }: QuizModeProps) {
+export default function QuizMode({ courseId, userId }: QuizModeProps) {
   const quiz = useQuizRun(courseId, userId)
 
+  if (quiz.result) return <QuizResults quiz={quiz} />
   if (!quiz.run) return <QuizSetup quiz={quiz} />
-  if (quiz.result) return <QuizResults quiz={quiz} onModeChange={onModeChange} />
   return <QuizSession quiz={quiz} />
 }

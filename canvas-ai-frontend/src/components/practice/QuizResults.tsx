@@ -1,136 +1,123 @@
 import { motion } from 'motion/react'
-import { Trophy, Clock, RotateCcw, BookOpen, Brain, Target } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, CheckCircle, Info, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
-import { ProgressRing, ProgressBar } from '@/components/ui/Progress'
-import { scoreTone } from '@/lib/score'
-import { cn } from '@/lib/utils'
-import { formatTime } from './format'
-import type { ModeChangeHandler } from './types'
+import { ScorePanel } from './debrief/ScorePanel'
+import { CalibrationPanel } from './debrief/CalibrationPanel'
+import { TopicBreakdown } from './debrief/TopicBreakdown'
+import { MistakeList } from './debrief/MistakeList'
 import type { QuizController } from './useQuizRun'
 
-interface QuizResultsProps {
-  quiz: QuizController
-  onModeChange?: ModeChangeHandler
+/** Numbered syllabus-style header for one debrief section. */
+function SectionHead({ num, title }: { num: string; title: string }) {
+  return (
+    <div className="section-head mb-4">
+      <span className="section-num">{num}</span>
+      <h3 className="text-sm font-semibold text-ink">{title}</h3>
+    </div>
+  )
 }
 
-/** Quiz summary: semantic score ring, per-topic breakdown, weak-area chips, next actions. */
-export function QuizResults({ quiz, onModeChange }: QuizResultsProps) {
+/**
+ * Quiz debrief — a working document, not a trophy screen: score, confidence
+ * calibration, per-topic accuracy, every mistake replayed with its source,
+ * and one clear next action.
+ */
+export function QuizResults({ quiz }: { quiz: QuizController }) {
+  const navigate = useNavigate()
   const result = quiz.result
   if (!result) return null
 
-  const scorePct = result.score.pct
-  const tone = scoreTone(scorePct)
-  const sortedTopics = [...result.by_topic].sort((a, b) => a.pct - b.pct)
-  const headline =
-    scorePct >= 85 ? 'Outstanding work' : scorePct >= 60 ? 'Solid effort' : 'Good start — keep going'
+  const run = quiz.run
+  const mistakes = run?.answers.filter((a) => !a.result.is_correct) ?? []
+  const perfect = result.score.correct === result.score.total && result.score.total > 0
+  const shortfall =
+    run && run.generationStatus === 'partial' && run.questions.length < run.numRequested
+      ? run.questions.length
+      : null
 
-  const goPractice = () =>
-    onModeChange
-      ? onModeChange('practice')
-      : window.dispatchEvent(new CustomEvent('navigateToPractice'))
-  const goAnalytics = () =>
-    onModeChange
-      ? onModeChange('analytics')
-      : window.dispatchEvent(new CustomEvent('navigateToAnalytics'))
+  // Weakest ground first: backend's weak areas, else the lowest-scoring topic.
+  const sortedTopics = [...result.by_topic].sort((a, b) => a.pct - b.pct)
+  const weakTopic = result.weak_areas[0] ?? sortedTopics.find((t) => t.pct < 100)?.topic ?? null
 
   return (
-    <div className="max-w-3xl mx-auto px-5 py-8">
+    <div className="mx-auto max-w-3xl px-5 py-8">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
+        className="space-y-5"
       >
-        <Card accent>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-11 h-11 rounded-xl bg-accent-wash border border-accent-line flex items-center justify-center flex-shrink-0">
-              <Trophy className="w-5 h-5 text-accent" />
-            </div>
-            <div>
-              <h2 className="font-display text-xl font-semibold text-ink mb-0.5">{headline}</h2>
-              <p className="text-sm text-ink-soft">
-                {quiz.selectedTopic} &middot; {quiz.difficulty}
-              </p>
-            </div>
+        <div>
+          <h2 className="font-display text-2xl font-semibold text-ink">Debrief</h2>
+          <p className="mt-0.5 text-sm text-ink-soft">
+            {run?.topicLabel ?? quiz.selectedTopic} &middot; {quiz.difficulty}
+          </p>
+        </div>
+
+        {shortfall !== null && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-info/25 bg-info-wash p-3.5">
+            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-info" />
+            <p className="text-sm text-ink-soft">
+              We could only write {shortfall} question{shortfall === 1 ? '' : 's'} this time — your
+              score covers what you answered.
+            </p>
           </div>
+        )}
 
-          {/* Score ring + stats */}
-          <div className="flex flex-col sm:flex-row items-center gap-6 mb-6">
-            <ProgressRing value={scorePct} size={132} strokeWidth={10}>
-              {/* One highlighter mark per page — behind the headline score figure. */}
-              <span className={cn('hl tnum text-3xl font-bold leading-none', tone.text)}>{scorePct}%</span>
-              <span className="text-xs text-ink-faint mt-1">{tone.label}</span>
-            </ProgressRing>
-
-            <div className="grid grid-cols-2 gap-3 flex-1 w-full">
-              <div className="bg-paper-deep border border-line rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold mb-0.5 text-success tnum">
-                  {result.score.correct}/{result.score.total}
-                </div>
-                <div className="text-xs text-ink-faint">Correct</div>
-              </div>
-              <div className="bg-paper-deep border border-line rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold mb-0.5 text-ink tnum flex items-center justify-center gap-1.5">
-                  <Clock className="w-4 h-4 text-ink-faint" />
-                  {formatTime(quiz.timeElapsed)}
-                </div>
-                <div className="text-xs text-ink-faint">Time</div>
-              </div>
-            </div>
-          </div>
-
-          {/* By-topic breakdown */}
-          {sortedTopics.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-ink mb-3">Breakdown by topic</h3>
-              <div className="space-y-2.5">
-                {sortedTopics.map((t) => (
-                  <div key={t.topic}>
-                    <div className="flex items-center justify-between mb-1 text-sm">
-                      <span className="text-ink-soft truncate pr-3">{t.topic}</span>
-                      <span className="text-ink-faint tnum flex-shrink-0">
-                        {t.correct}/{t.total} &middot; {t.pct}%
-                      </span>
-                    </div>
-                    <ProgressBar value={t.pct} className="h-2" label={`${t.topic} score`} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Weak areas */}
-          {result.weak_areas.length > 0 && (
-            <div className="mb-6 bg-warning-wash border border-warning/25 rounded-lg p-4">
-              <div className="flex items-start gap-2.5">
-                <Target className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-medium text-warning mb-1.5">Worth another look</h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {result.weak_areas.map((area) => (
-                      <Badge key={area} tone="warning">
-                        {area}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={quiz.resetQuiz} leftIcon={<RotateCcw className="w-4 h-4" />}>
-              Drill again
-            </Button>
-            <Button variant="secondary" onClick={goPractice} leftIcon={<BookOpen className="w-4 h-4" />}>
-              Practice weak areas
-            </Button>
-            <Button variant="secondary" onClick={goAnalytics} leftIcon={<Brain className="w-4 h-4" />}>
-              View analytics
-            </Button>
-          </div>
+        <Card padding="lg">
+          <SectionHead num="01" title="Score" />
+          <ScorePanel
+            pct={result.score.pct}
+            correct={result.score.correct}
+            total={result.score.total}
+            timeElapsed={quiz.timeElapsed}
+          />
         </Card>
+
+        <Card padding="lg">
+          <SectionHead num="02" title="Calibration" />
+          <CalibrationPanel calibration={result.calibration} />
+        </Card>
+
+        {result.by_topic.length > 0 && (
+          <Card padding="lg">
+            <SectionHead num="03" title="By topic" />
+            <TopicBreakdown byTopic={result.by_topic} />
+          </Card>
+        )}
+
+        {(mistakes.length > 0 || perfect) && (
+          <Card padding="lg">
+            <SectionHead num="04" title="Mistakes" />
+            {perfect ? (
+              <p className="flex items-center gap-2 text-sm text-success">
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                Clean sheet — nothing to review from this run.
+              </p>
+            ) : (
+              <MistakeList mistakes={mistakes} />
+            )}
+          </Card>
+        )}
+
+        <div className="flex flex-wrap gap-3">
+          <Button
+            onClick={() => void quiz.startQuiz(weakTopic ?? undefined)}
+            loading={quiz.loading}
+            leftIcon={<RotateCcw className="h-4 w-4" />}
+          >
+            {quiz.loading ? 'Generating…' : weakTopic ? 'Drill weak areas again' : 'Drill again'}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => void navigate(`/course/${quiz.courseId}`)}
+            leftIcon={<ArrowLeft className="h-4 w-4" />}
+          >
+            Back to course
+          </Button>
+        </div>
       </motion.div>
     </div>
   )

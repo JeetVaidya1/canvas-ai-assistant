@@ -1,4 +1,10 @@
-import type { PracticeProblem, QuizAnswerResult, QuizQuestion } from '@/lib/api'
+import type {
+  PracticeProblem,
+  QuizAnswerResult,
+  QuizConfidence,
+  QuizGenerationStatus,
+  QuizQuestion,
+} from '@/lib/api'
 import type { SelectOption } from '@/components/ui/Select'
 
 /** Navigation callback shared by both practice surfaces. */
@@ -15,15 +21,35 @@ export interface DifficultyOption<T extends string = string> {
   hint: string
 }
 
-/** In-flight quiz drill (one generated quiz, answered question by question). */
+/** One graded answer, kept client-side so the debrief can replay mistakes. */
+export interface AnsweredQuestion {
+  question: QuizQuestion
+  selectedLetter: string
+  confidence: QuizConfidence | null
+  result: QuizAnswerResult
+}
+
+/**
+ * In-flight quiz drill. The run starts as soon as the first ~3 questions land;
+ * `questions` grows in the background while `generationStatus === 'generating'`.
+ */
 export interface QuizRunState {
   quizId: string
+  /** Every question available so far, in server order (q1..qN, stable ids). */
   questions: QuizQuestion[]
+  /** How many the user asked for — the honest denominator while generating. */
+  numRequested: number
+  generationStatus: QuizGenerationStatus
+  /** What this run targets (snapshotted at start; survives setup edits). */
+  topicLabel: string
   currentIndex: number
   selectedLetter: string
+  /** Optional confidence tap for the current question (omitted if null). */
+  confidence: QuizConfidence | null
   feedback: QuizAnswerResult | null
   questionStart: number
   correctCount: number
+  answers: AnsweredQuestion[]
 }
 
 /** In-flight problem-set session (graded client-side at the end). */

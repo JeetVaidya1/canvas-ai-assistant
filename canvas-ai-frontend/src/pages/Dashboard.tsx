@@ -12,6 +12,7 @@ import DashboardSkeleton from '@/components/skeletons/DashboardSkeleton'
 import JoinClassPanel from '@/components/JoinClassPanel'
 import CreateCourseModal from '@/components/CreateCourseModal'
 import CourseCard from '@/components/CourseCard'
+import DueStrip from '@/components/home/DueStrip'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/States'
@@ -136,6 +137,8 @@ export default function Dashboard() {
         </Card>
       ) : (
         <div className="space-y-3.5">
+          {/* Cross-course review chips — renders only when something is due */}
+          <DueStrip courses={courses} />
           <h2 className="text-[11px] font-medium text-ink-faint uppercase tracking-[0.14em]">Your courses</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
             {courses.map((course) => (

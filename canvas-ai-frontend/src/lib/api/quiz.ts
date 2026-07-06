@@ -46,10 +46,29 @@ export interface QuizQuestion {
   source: QuizSource
 }
 
+/** Lifecycle of background question generation for a quiz. */
+export type QuizGenerationStatus = 'ready' | 'generating' | 'partial'
+
+/** Self-reported confidence tapped before submitting an answer. */
+export type QuizConfidence = 'sure' | 'thinkso' | 'guessing'
+
 export interface GeneratedQuiz {
   quiz_id: string
   difficulty: string
   topic: string | null
+  /** How many questions the user asked for. */
+  num_requested: number
+  /** How many questions are available right now (grows while generating). */
+  num_questions: number
+  generation_status: QuizGenerationStatus
+  questions: QuizQuestion[]
+}
+
+/** GET /quiz/{id}/questions — everything generated so far, ordered q1..qN. */
+export interface QuizQuestionsResponse {
+  quiz_id: string
+  generation_status: QuizGenerationStatus
+  num_requested: number
   num_questions: number
   questions: QuizQuestion[]
 }
@@ -71,10 +90,26 @@ export interface QuizTopicScore {
   pct: number
 }
 
+/** One confidence bucket in the calibration read-out. */
+export interface QuizCalibrationBucket {
+  n: number
+  correct: number
+}
+
+export interface QuizCalibration {
+  sure: QuizCalibrationBucket
+  thinkso: QuizCalibrationBucket
+  guessing: QuizCalibrationBucket
+  /** Answers marked "sure" that were wrong — priority reviews. */
+  confident_wrong: number
+}
+
 export interface QuizResult {
   score: { correct: number; total: number; pct: number }
   by_topic: QuizTopicScore[]
   weak_areas: string[]
+  /** Present on v3 backends; older responses may omit it. */
+  calibration?: QuizCalibration
 }
 
 export async function generateQuiz(
@@ -88,8 +123,14 @@ export async function generateQuiz(
   if (topic) form.append('topic', topic)
   form.append('difficulty', difficulty)
   form.append('num_questions', String(numQuestions))
-  // Generation is slow (retrieval + reranker + LLM); allow a generous timeout.
+  // Fast-start: the backend returns immediately with the first ~3 questions and
+  // keeps writing the rest in the background (poll getQuizQuestions for those).
   return apiFetch('/quiz/generate', { method: 'POST', body: form }, 120_000)
+}
+
+/** Everything generated so far for a quiz — poll while generation_status === 'generating'. */
+export async function getQuizQuestions(quizId: string): Promise<QuizQuestionsResponse> {
+  return apiFetch(`/quiz/${encodeURIComponent(quizId)}/questions`, { method: 'GET' })
 }
 
 export async function submitQuizAnswer(
@@ -97,13 +138,15 @@ export async function submitQuizAnswer(
   questionId: string,
   selected: string,
   timeTaken: number,
-  userId: string = 'anonymous'
+  userId: string = 'anonymous',
+  confidence?: QuizConfidence
 ): Promise<QuizAnswerResult> {
   const form = new FormData()
   form.append('question_id', questionId)
   form.append('selected', selected)
   form.append('time_taken', String(timeTaken))
   form.append('user_id', userId)
+  if (confidence) form.append('confidence', confidence)
   return apiFetch(`/quiz/${encodeURIComponent(quizId)}/answer`, { method: 'POST', body: form })
 }
 
