@@ -1,4 +1,5 @@
 # learning_analytics.py - FIXED VERSION with proper imports
+import logging
 import os
 import time
 from datetime import datetime, timedelta
@@ -6,10 +7,17 @@ from typing import Dict, List, Any
 from supabase import create_client
 from dotenv import load_dotenv
 
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# How many recent interactions feed streak/total-questions/avg-confidence.
+# 50 truncated real activity (one 10-question quiz + chat could push older
+# days out of the window and zero the streak); 500 covers weeks of heavy use.
+INTERACTIONS_WINDOW = 500
 
 class LearningAnalyticsEngine:
     """Track student progress and identify learning patterns"""
@@ -36,8 +44,9 @@ class LearningAnalyticsEngine:
             self.update_learning_progress(user_id, course_id, question, confidence)
             
             return True
-        except Exception as e:
-            print(f"Failed to track interaction: {e}")
+        except Exception:
+            logger.warning("Failed to track interaction (user=%s course=%s type=%s)",
+                           user_id, course_id, question_type, exc_info=True)
             return False
     
     def track_practice_session(self, user_id: str, course_id: str, topic: str,
@@ -62,8 +71,9 @@ class LearningAnalyticsEngine:
             }).execute()
             self.update_learning_progress(user_id, course_id, topic, confidence, topic=topic)
             return True
-        except Exception as e:
-            print(f"Failed to track practice session: {e}")
+        except Exception:
+            logger.warning("Failed to track practice session (user=%s course=%s topic=%s)",
+                           user_id, course_id, topic, exc_info=True)
             return False
 
     def get_study_time_trend(self, user_id: str, course_id: str, days: int = 30) -> List[Dict[str, Any]]:
@@ -122,8 +132,9 @@ class LearningAnalyticsEngine:
                     "avg_confidence": round(b["conf_sum"] / q, 2) if q else 0.0,
                 })
             return trend
-        except Exception as e:
-            print(f"Failed to compute study time trend: {e}")
+        except Exception:
+            logger.warning("Failed to compute study time trend (user=%s course=%s)",
+                           user_id, course_id, exc_info=True)
             return []
 
     def track_quiz_answer(self, user_id: str, course_id: str, concept: str,
@@ -148,8 +159,9 @@ class LearningAnalyticsEngine:
             }).execute()
             self.update_learning_progress(user_id, course_id, question, confidence, topic=concept)
             return True
-        except Exception as e:
-            print(f"Failed to track quiz answer: {e}")
+        except Exception:
+            logger.warning("Failed to track quiz answer (user=%s course=%s concept=%s)",
+                           user_id, course_id, concept, exc_info=True)
             return False
 
     def update_learning_progress(self, user_id: str, course_id: str,
@@ -192,9 +204,10 @@ class LearningAnalyticsEngine:
                     "last_reviewed": datetime.utcnow().isoformat(),
                     "review_count": 1
                 }).execute()
-                
-        except Exception as e:
-            print(f"Failed to update progress: {e}")
+
+        except Exception:
+            logger.warning("Failed to update learning progress (user=%s course=%s topic=%s)",
+                           user_id, course_id, topic, exc_info=True)
     
     def extract_topic(self, question: str) -> str:
         """Extract main topic from question - can be enhanced with NLP"""
@@ -230,7 +243,7 @@ class LearningAnalyticsEngine:
                 .eq("user_id", user_id) \
                 .eq("course_id", course_id) \
                 .order("timestamp", desc=True) \
-                .limit(50) \
+                .limit(INTERACTIONS_WINDOW) \
                 .execute()
             
             # Calculate analytics
@@ -245,9 +258,10 @@ class LearningAnalyticsEngine:
             }
             
             return analytics
-            
-        except Exception as e:
-            print(f"Failed to get analytics: {e}")
+
+        except Exception:
+            logger.warning("Failed to get learning analytics (user=%s course=%s)",
+                           user_id, course_id, exc_info=True)
             return {}
     
     def calculate_topic_progress(self, progress_data: List[Dict]) -> List[Dict]:
@@ -286,30 +300,39 @@ class LearningAnalyticsEngine:
         return recommendations[:5]  # Limit to 5 recommendations
     
     def calculate_study_streak(self, interactions: List[Dict]) -> int:
-        """Calculate consecutive days of study"""
+        """Consecutive days of study, with a one-day grace window.
+
+        A streak survives if the most recent activity was today OR yesterday
+        (so it doesn't read 0 at breakfast before you've studied), then counts
+        consecutive days back from that anchor. Future-dated rows (clock skew)
+        are ignored.
+        """
         if not interactions:
             return 0
-            
-        # Sort by date
+
+        today = datetime.now().date()
         dates = set()
         for interaction in interactions:
-            date = datetime.fromisoformat(interaction["timestamp"]).date()
-            dates.add(date)
-        
-        sorted_dates = sorted(dates, reverse=True)
+            day = datetime.fromisoformat(interaction["timestamp"]).date()
+            if day <= today:  # ignore future-dated rows
+                dates.add(day)
+        if not dates:
+            return 0
 
-        # Count consecutive days ending today. A streak requires studying today;
-        # step the expected day back by exactly one each time (the previous
-        # version subtracted the running streak count, under-counting 3+ day runs).
+        sorted_dates = sorted(dates, reverse=True)
+        anchor = sorted_dates[0]
+        if anchor not in (today, today - timedelta(days=1)):
+            return 0  # last activity older than yesterday: streak is broken
+
+        # Count consecutive days back from the anchor, stepping one day at a time.
         streak = 0
-        expected = datetime.now().date()
+        expected = anchor
         for day in sorted_dates:
             if day == expected:
                 streak += 1
                 expected = expected - timedelta(days=1)
             else:
-                # First gap (or a future-dated day) ends the streak.
-                break
+                break  # first gap ends the streak
 
         return streak
     

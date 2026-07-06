@@ -132,7 +132,12 @@ async def validate_course_for_practice(course_id: str) -> dict:
         }
 
 async def get_intelligent_fallback_topics(course_id: str) -> list:
-    """Generate intelligent fallback topics based on available course info"""
+    """LAST-RESORT fallback topics only.
+
+    Course Brain (course_brain.get_topics) is the primary topic source; this
+    is used solely when a course truly has no synthesizable content or the
+    Brain is unavailable.
+    """
     try:
         # Try to get course title for subject hints
         course_info = supabase.table("courses").select("title").eq("course_id", course_id).execute()

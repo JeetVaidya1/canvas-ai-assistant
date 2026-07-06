@@ -1,20 +1,24 @@
-"""Concept prerequisite graph — a per-course DAG of what must be learned before what.
+"""Concept prerequisite graph — derived from Course Brain topics.
 
-Extracted once from the course material via guaranteed-schema tool use and cached
-in ``concept_graphs``. Overlaid with the student's mastery, it answers the
-question generic tools can't: *"you keep failing X because you never mastered its
-prerequisite Y."*
+V3: the graph is no longer an ad-hoc LLM extraction. Nodes are the course's
+``course_topics`` rows and edges come from their ``prereq_slugs``, so the
+graph, quiz topics, mastery, readiness, and planner all share ONE topic
+taxonomy. Overlaid with the student's mastery it answers *"you keep failing X
+because you never mastered its prerequisite Y."*
+
+Response shapes are unchanged from the stored-graph era:
+``{"concepts": [...], "edges": [{"prerequisite", "concept"}]}`` for the raw
+graph and ``{"concepts": nodes, "edges", "blockers", "exists"}`` annotated.
 """
 from __future__ import annotations
 
 import os
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional, Sequence
 
 from dotenv import load_dotenv
 from supabase import create_client
 
-from providers import structured_call
+import course_brain
 
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -23,78 +27,32 @@ _supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 WEAK_THRESHOLD = 0.6
 
-CONCEPT_GRAPH_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "concepts": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "The course's key concepts (8-20), foundational first.",
-        },
-        "edges": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "prerequisite": {"type": "string", "description": "Concept that must be understood first."},
-                    "concept": {"type": "string", "description": "Concept that depends on the prerequisite."},
-                },
-                "required": ["prerequisite", "concept"],
-            },
-            "description": "Directed prerequisite edges (prerequisite -> concept). Keep it a DAG.",
-        },
-    },
-    "required": ["concepts", "edges"],
-}
 
-
-def _course_sample(course_id: str) -> str:
-    try:
-        from deps import exam_generator
-        return exam_generator.get_course_content_sample(course_id) or ""
-    except Exception as e:  # noqa: BLE001
-        print(f"concept-graph content sample failed: {e}")
-        return ""
+def _graph_from_topics(topics: Sequence[course_brain.Topic]) -> Dict[str, Any]:
+    """Nodes = topic names (teaching order); edges = prereq_slugs, as names."""
+    name_by_slug = {t.slug: t.name for t in topics}
+    concepts = [t.name for t in topics]
+    edges = [
+        {"prerequisite": name_by_slug[pre], "concept": t.name}
+        for t in topics
+        for pre in t.prereq_slugs
+        if pre in name_by_slug and name_by_slug[pre] != t.name
+    ]
+    return {"concepts": concepts, "edges": edges}
 
 
 def build_graph(course_id: str) -> Dict[str, Any]:
-    """Extract and persist the prerequisite graph for a course."""
-    context = _course_sample(course_id)
-    prompt = (
-        "From the course materials below, build a concept prerequisite graph.\n"
-        "- List the key concepts (8-20), foundational ones first.\n"
-        "- Add directed edges prerequisite -> concept where one concept must be "
-        "understood before another. Keep it acyclic. Only include edges grounded "
-        "in the material.\n\n"
-        f"COURSE MATERIALS:\n{context[:6000]}"
-    )
-    out = structured_call(
-        [{"role": "user", "content": prompt}],
-        schema=CONCEPT_GRAPH_SCHEMA,
-        tool_name="concept_graph",
-        model=os.getenv("MODEL_COMPLEX"),
-        max_tokens=1500,
-    )
-    concepts = [str(c).strip() for c in (out.get("concepts") or []) if str(c).strip()]
-    edges = [
-        {"prerequisite": str(e["prerequisite"]).strip(), "concept": str(e["concept"]).strip()}
-        for e in (out.get("edges") or [])
-        if e.get("prerequisite") and e.get("concept")
-        and str(e["prerequisite"]).strip() != str(e["concept"]).strip()
-    ]
-    graph = {"concepts": concepts, "edges": edges}
-
-    _supabase.table("concept_graphs").upsert({
-        "course_id": course_id,
-        "graph": graph,
-        "created_at": datetime.utcnow().isoformat(),
-    }).execute()
-    return graph
+    """(Re)build the graph by re-synthesizing the Course Brain topics."""
+    topics = course_brain.synthesize_topics(course_id)
+    if not topics:
+        raise RuntimeError(f"No course content to build a concept graph for {course_id}")
+    return _graph_from_topics(topics)
 
 
 def get_graph(course_id: str) -> Optional[Dict[str, Any]]:
-    resp = _supabase.table("concept_graphs").select("graph").eq("course_id", course_id).limit(1).execute()
-    return resp.data[0]["graph"] if resp.data else None
+    """Return the graph derived from stored course topics, or None if absent."""
+    topics = course_brain.get_topics(course_id, auto_generate=False)
+    return _graph_from_topics(topics) if topics else None
 
 
 def _mastery_map(course_id: str, user_id: str) -> Dict[str, float]:
@@ -105,13 +63,8 @@ def _mastery_map(course_id: str, user_id: str) -> Dict[str, float]:
 
 
 def _match(concept: str, mastery: Dict[str, float]) -> Optional[float]:
-    c = concept.strip().lower()
-    if c in mastery:
-        return mastery[c]
-    for k, v in mastery.items():
-        if k and (k in c or c in k):
-            return v
-    return None
+    """Bridge legacy mastery labels onto Course Brain concept names."""
+    return course_brain.match_mastery(concept, mastery)
 
 
 def graph_with_mastery(course_id: str, user_id: str) -> Dict[str, Any]:
@@ -152,3 +105,4 @@ def graph_with_mastery(course_id: str, user_id: str) -> Dict[str, Any]:
     # Strongest signal first: lowest prerequisite mastery.
     blockers.sort(key=lambda b: b["prerequisite_pct"])
     return {"concepts": nodes, "edges": graph.get("edges", []), "blockers": blockers, "exists": True}
+

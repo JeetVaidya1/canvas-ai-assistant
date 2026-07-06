@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Form, HTTPException, Depends
+from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Depends
 import json
 from datetime import datetime
 
@@ -42,8 +42,33 @@ def _require_owned_session(session_id: str, user_id: str) -> dict:
     return rows[0]
 
 
+def _track_chat_interaction(user_id: str, course_id: str, question: str, answer: str) -> None:
+    """Fire-and-forget analytics write for a successful chat answer.
+
+    Runs on BackgroundTasks AFTER the response is sent; feeds user_interactions
+    + learning_progress so chat activity counts toward streak/questions/topics.
+    Every failure is logged and swallowed — tracking can never affect a
+    response the user already received.
+    """
+    try:
+        from deps import analytics_engine
+        analytics_engine.track_interaction(
+            user_id=user_id,
+            course_id=course_id,
+            question=question,
+            answer=(answer or "")[:500],
+            confidence=0.5,  # neutral: chat has no right/wrong signal
+            response_time=0,
+            question_type="chat",
+        )
+    except Exception:  # noqa: BLE001
+        logger.warning("Chat interaction tracking failed (user=%s course=%s)",
+                       user_id, course_id, exc_info=True)
+
+
 @router.post("/ask", dependencies=[Depends(ai_rate_limit)])
 async def ask_endpoint(
+    background_tasks: BackgroundTasks,
     question: str = Form(...),
     course_id: str = Form(...),
     session_id: str | None = Form(None),
@@ -110,6 +135,10 @@ async def ask_endpoint(
         logger.exception("Couldn't save answer")
         raise HTTPException(500, detail="Couldn't save answer")
 
+    # 5) Count this exchange toward mastery/streak analytics AFTER the response
+    # is sent (fire-and-forget; failures are logged inside the helper).
+    background_tasks.add_task(_track_chat_interaction, user_id, course_id, question, answer)
+
     return {
         "session_id": session_id,
         "question": question,
@@ -119,6 +148,7 @@ async def ask_endpoint(
 
 @router.post("/ask/stream", dependencies=[Depends(ai_rate_limit)])
 async def ask_stream_endpoint(
+    background_tasks: BackgroundTasks,
     question: str = Form(...),
     course_id: str = Form(...),
     session_id: str | None = Form(None),
@@ -185,6 +215,12 @@ async def ask_stream_endpoint(
             }).execute()
         except Exception as e:
             logger.exception("Couldn't save streamed answer for session %s", session_id)
+        # Track the exchange only when we actually produced an answer. Tasks
+        # added mid-stream still run AFTER the response completes (FastAPI
+        # attaches the injected BackgroundTasks to the StreamingResponse).
+        if answer:
+            background_tasks.add_task(
+                _track_chat_interaction, user_id, course_id, question, answer)
         yield f"data: {json.dumps({'done': True, 'session_id': session_id})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

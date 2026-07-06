@@ -117,9 +117,10 @@ interface ConceptGraphMapProps {
 }
 
 /**
- * Concept prerequisite graph — layered SVG node/edge map on paper. Mastery is
- * colored via the app-wide semantic scoreTone. Product differentiator: wide,
- * prominent tile with a legend and "fix the foundation first" blockers.
+ * Course map — layered SVG node/edge map on paper, derived server-side from
+ * Course Brain topic prerequisites (course_topics). Mastery is colored via
+ * the app-wide semantic scoreTone. Product differentiator: wide, prominent
+ * tile with a legend and "fix the foundation first" blockers.
  */
 export function ConceptGraphMap({ graph, isError, onRetry }: ConceptGraphMapProps) {
   const layout = useMemo(() => (graph ? layoutGraph(graph) : null), [graph])
@@ -130,8 +131,8 @@ export function ConceptGraphMap({ graph, isError, onRetry }: ConceptGraphMapProp
       <div className="flex items-start justify-between gap-3">
         <SectionHead
           num="02"
-          title="Concept map"
-          hint="How concepts build on each other — fix the upstream gaps first"
+          title="Course map"
+          hint="How your course's topics build on each other — fix the upstream gaps first"
           className="flex-1"
         />
         {hasData && (
@@ -147,12 +148,12 @@ export function ConceptGraphMap({ graph, isError, onRetry }: ConceptGraphMapProp
       </div>
 
       {isError ? (
-        <ErrorState compact title="Couldn't load your concept map." onRetry={onRetry} />
+        <ErrorState compact title="Couldn't load your course map." onRetry={onRetry} />
       ) : !hasData || !layout || layout.positioned.length === 0 ? (
         <EmptyState
           icon={<Network />}
-          title="Concept map not built yet"
-          description="Study a few topics — we’ll map how your concepts depend on each other."
+          title="Course map not built yet"
+          description="Add materials — Vindexa maps how your course’s topics depend on each other."
         />
       ) : (
         <div className="overflow-x-auto -mx-2 px-2">

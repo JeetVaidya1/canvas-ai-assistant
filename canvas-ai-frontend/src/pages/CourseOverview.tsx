@@ -5,12 +5,15 @@ import { useCourseFiles } from '@/hooks/useCourseFiles'
 import CourseOverviewSkeleton from '@/components/skeletons/CourseOverviewSkeleton'
 import UploadZone from '@/components/materials/UploadZone'
 import FileList from '@/components/materials/FileList'
+import CourseBrief from '@/components/materials/CourseBrief'
 import { Card, PageHeader } from '@/components/ui/Card'
 
 /**
- * Materials — the course's source of truth. Upload zone first (it powers
- * everything), then the indexed files, then integrations. Integrations are
- * always visible: Canvas import matters most when the course is still empty.
+ * Materials — the course's source of truth, in two columns on desktop:
+ * LEFT the inputs (upload zone + indexed files), RIGHT the output — the
+ * Course Brief showing what Vindexa understood from those files. On small
+ * screens the Brief stacks under the files. Integrations sit below,
+ * full-width: Canvas import matters most when the course is still empty.
  */
 export default function CourseOverview() {
   const { courseId } = useParams<{ courseId: string }>()
@@ -24,7 +27,7 @@ export default function CourseOverview() {
   const hasFiles = fileCount > 0
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
       <PageHeader
         eyebrow="Materials"
         title={course.title}
@@ -35,15 +38,23 @@ export default function CourseOverview() {
         }
       />
 
-      <Card padding="md" className="space-y-4">
-        <h2 className="text-sm font-semibold text-ink">Add materials</h2>
-        <UploadZone courseId={courseId} prominent={!hasFiles} />
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="space-y-6 min-w-0">
+          <Card padding="md" className="space-y-4">
+            <h2 className="text-sm font-semibold text-ink">Add materials</h2>
+            <UploadZone courseId={courseId} prominent={!hasFiles} />
+          </Card>
 
-      <Card padding="md" className="space-y-4">
-        <h2 className="text-sm font-semibold text-ink">Indexed files</h2>
-        <FileList courseId={courseId} />
-      </Card>
+          <Card padding="md" className="space-y-4">
+            <h2 className="text-sm font-semibold text-ink">Indexed files</h2>
+            <FileList courseId={courseId} />
+          </Card>
+        </div>
+
+        <div className="min-w-0">
+          <CourseBrief courseId={courseId} hasFiles={hasFiles} />
+        </div>
+      </div>
 
       <IntegrationsPanel courseId={courseId} />
     </div>

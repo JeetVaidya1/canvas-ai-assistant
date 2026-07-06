@@ -54,10 +54,10 @@ def _course_title(course_id: str) -> str:
 
 
 def _extract_topics(course_id: str) -> List[str]:
-    """Reuse the practice generator's topic extraction for consistency."""
+    """Course Brain topics keep the planner consistent with every other feature."""
     try:
-        from deps import practice_generator
-        topics = practice_generator.extract_topics_from_course(course_id)
+        import course_brain
+        topics = course_brain.topic_names(course_id, auto_generate=True)
         return [t for t in (topics or []) if isinstance(t, str) and t.strip()][:15]
     except Exception as e:  # noqa: BLE001
         print(f"Planner topic extraction failed: {e}")

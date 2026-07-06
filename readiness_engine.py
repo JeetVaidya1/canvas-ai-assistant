@@ -14,6 +14,8 @@ from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from supabase import create_client
 
+import course_brain
+
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -50,14 +52,8 @@ def _tested_topic_weights(course_id: str) -> Dict[str, float]:
 
 
 def _match_mastery(topic: str, mastery: Dict[str, float]) -> Optional[float]:
-    """Best mastery match for a topic name (exact, then substring either way)."""
-    t = topic.strip().lower()
-    if t in mastery:
-        return mastery[t]
-    for k, v in mastery.items():
-        if k and (k in t or t in k):
-            return v
-    return None
+    """Best mastery match for a topic name (Course Brain label bridging)."""
+    return course_brain.match_mastery(topic, mastery)
 
 
 def get_readiness(course_id: str, user_id: str) -> Dict[str, Any]:
@@ -67,12 +63,13 @@ def get_readiness(course_id: str, user_id: str) -> Dict[str, Any]:
     has_past_papers = bool(weights)
 
     if not weights:
-        # No past papers — equal-weight the course's extracted topics.
+        # No past papers — equal-weight the course's Course Brain topics.
         try:
-            from deps import practice_generator
-            topics = practice_generator.extract_topics_from_course(course_id) or []
+            topics = course_brain.topic_names(course_id, auto_generate=True)
         except Exception as e:  # noqa: BLE001
             print(f"Readiness topic fallback failed: {e}")
+            topics = []
+        if not topics:
             topics = list({k for k in mastery})
         weights = {t: 1.0 for t in topics if t}
 

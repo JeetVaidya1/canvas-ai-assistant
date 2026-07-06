@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Sparkles } from 'lucide-react'
 import type { LearningAnalytics } from '@/lib/api'
 import { useLearningAnalytics, useConceptGraph } from '@/hooks/useAnalytics'
+import { useCourseTopics } from '@/hooks/useCourseTopics'
 import { useReadiness } from '@/hooks/useReadiness'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -43,6 +44,8 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
   const analyticsQuery = useLearningAnalytics(courseId, userId)
   const readinessQuery = useReadiness(courseId, userId)
   const graphQuery = useConceptGraph(courseId, userId)
+  // Course Brain topics re-key the mastery list onto clean names (non-blocking).
+  const topicsQuery = useCourseTopics(courseId)
 
   const analytics = analyticsQuery.data ?? null
   const readiness = readinessQuery.data ?? null
@@ -130,7 +133,7 @@ export default function AnalyticsDashboard({ courseId, userId }: AnalyticsDashbo
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-        <TopicMasteryList readiness={readiness} />
+        <TopicMasteryList readiness={readiness} topics={topicsQuery.data?.topics} courseId={courseId} />
         <FocusPanel analytics={analytics} />
       </div>
 

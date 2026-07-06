@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Form, HTTPException, Depends
+from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Depends
 from datetime import datetime
 
 from auth import current_user_id
@@ -124,17 +124,24 @@ async def quiz_assist_endpoint(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Quiz runner: generate -> answer one-at-a-time -> submit (Phase 3)
+# Quiz runner: generate (two-phase) -> answer one-at-a-time -> submit
 # ─────────────────────────────────────────────────────────────────────────────
 @router.post("/quiz/generate", dependencies=[Depends(ai_rate_limit)])
 async def generate_quiz_endpoint(
+    background_tasks: BackgroundTasks,
     course_id: str = Form(...),
     topic: str | None = Form(None),
     num_questions: int = Form(10),
     difficulty: str = Form("medium"),
+    user_id: str = Depends(current_user_id),
 ):
-    """Generate a grounded MCQ quiz and persist it. Returns quiz_id + questions
-    (without the answer key)."""
+    """Two-phase quiz generation (fast start).
+
+    Returns immediately with the session + the first few questions (never the
+    answer key). If more questions were requested, generation_status is
+    'generating' and the remainder is written by a background task — clients
+    poll GET /quiz/{quiz_id}/questions until it reads 'ready' (or 'partial').
+    """
     if not course_id:
         raise HTTPException(400, detail="Course ID is required")
 
@@ -148,30 +155,75 @@ async def generate_quiz_endpoint(
     clean_topic = (topic or "").strip() or None
 
     try:
-        return quiz_engine.generate_quiz(course_id, clean_topic, num_questions, difficulty)
-    except Exception as e:
-        print(f"Quiz generation failed: {e}")
+        result = quiz_engine.generate_quiz(
+            course_id, clean_topic, num_questions, difficulty, user_id=user_id,
+        )
+    except Exception:
         logger.exception("Quiz generation failed")
         raise HTTPException(500, detail="Quiz generation failed")
+
+    background_spec = result.pop("_background", None)
+    if background_spec:
+        background_tasks.add_task(quiz_engine.generate_remaining_questions, **background_spec)
+    return result
+
+
+@router.get("/quiz/{quiz_id}/questions")
+async def quiz_questions_endpoint(
+    quiz_id: str,
+    user_id: str = Depends(current_user_id),
+):
+    """Sanitized questions (no answer key) + generation progress.
+
+    Poll while generation_status == 'generating'; stop on 'ready' or 'partial'.
+    """
+    try:
+        return quiz_engine.get_quiz_questions(quiz_id, user_id)
+    except KeyError:
+        raise HTTPException(404, detail="Quiz not found")
+    except Exception:
+        logger.exception("Quiz questions fetch failed")
+        raise HTTPException(500, detail="Couldn't fetch quiz questions")
 
 
 @router.post("/quiz/{quiz_id}/answer")
 async def answer_quiz_endpoint(
     quiz_id: str,
+    background_tasks: BackgroundTasks,
     question_id: str = Form(...),
     selected: str = Form(...),
     time_taken: float = Form(0.0),
+    confidence: str | None = Form(None),
     user_id: str = Depends(current_user_id),
 ):
-    """Grade one answer; returns correctness + explanation + source."""
+    """Grade one answer; returns correctness + explanation + source.
+
+    ``confidence`` is the optional pre-reveal tap ('sure'|'thinkso'|'guessing'),
+    stored for the end-of-quiz calibration read-out. Wrong answers get their
+    grounded mistake explanation + review seeding in the background so grading
+    latency is identical for right and wrong answers.
+    """
+    clean_confidence = (confidence or "").strip().lower() or None
+    if clean_confidence is not None and clean_confidence not in quiz_engine.CONFIDENCE_LEVELS:
+        raise HTTPException(
+            400, detail="confidence must be one of: sure, thinkso, guessing")
+
     try:
-        return quiz_engine.grade_answer(quiz_id, question_id, selected, time_taken, user_id)
+        result = quiz_engine.grade_answer(
+            quiz_id, question_id, selected, time_taken, user_id,
+            confidence=clean_confidence,
+        )
     except KeyError as e:
         raise HTTPException(404, detail=str(e))
-    except Exception as e:
-        print(f"Quiz answer grading failed: {e}")
+    except Exception:
         logger.exception("Grading failed")
         raise HTTPException(500, detail="Grading failed")
+
+    if not result.get("is_correct"):
+        background_tasks.add_task(
+            quiz_engine.followup_wrong_answer, quiz_id, question_id, selected, user_id,
+        )
+    return result
 
 
 @router.post("/quiz/{quiz_id}/submit")
@@ -179,11 +231,11 @@ async def submit_quiz_endpoint(
     quiz_id: str,
     user_id: str = Depends(current_user_id),
 ):
-    """Finalize a quiz; returns score, per-topic breakdown, and weak areas."""
+    """Finalize a quiz; returns score, per-topic breakdown, weak areas, and the
+    confidence-calibration read-out."""
     try:
         return quiz_engine.submit_quiz(quiz_id, user_id)
-    except Exception as e:
-        print(f"Quiz submit failed: {e}")
+    except Exception:
         logger.exception("Submit failed")
         raise HTTPException(500, detail="Submit failed")
 

@@ -1,11 +1,24 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { generateQuiz, submitQuizAnswer, submitQuiz, type QuizResult } from '@/lib/api'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import {
+  generateQuiz,
+  getQuizQuestions,
+  submitQuizAnswer,
+  submitQuiz,
+  type QuizConfidence,
+  type QuizQuestion,
+  type QuizResult,
+} from '@/lib/api'
 import { showError } from '@/lib/toast'
 import { usePracticeTopics } from '@/hooks/useTopics'
 import { useInvalidateProgress } from '@/hooks/useInvalidateProgress'
 import { useSessionTimer } from './useSessionTimer'
 import { WHOLE_COURSE } from './constants'
 import type { QuizDifficulty, QuizRunState, TopicListState } from './types'
+
+/** How often to check for freshly written questions while generating. */
+const GENERATION_POLL_MS = 2500
+/** Consecutive poll failures tolerated before ending the quiz at what exists. */
+const MAX_POLL_FAILURES = 4
 
 export interface QuizController {
   courseId: string
@@ -22,16 +35,30 @@ export interface QuizController {
   timeElapsed: number
   topics: TopicListState
   selectLetter: (letter: string) => void
-  startQuiz: () => Promise<void>
+  setConfidence: (confidence: QuizConfidence | null) => void
+  /** Starts a run; `topicOverride` lets the debrief re-drill a weak topic directly. */
+  startQuiz: (topicOverride?: string) => Promise<void>
   submitAnswer: () => Promise<void>
   nextQuestion: () => Promise<void>
+  /** Score the run at whatever has been answered (recovery from a failed auto-finish). */
+  finishNow: () => Promise<void>
   resetQuiz: () => void
 }
 
+/** Append questions we haven't seen; never reorder ones already in play. */
+function mergeQuestions(existing: QuizQuestion[], incoming: QuizQuestion[]): QuizQuestion[] {
+  const known = new Set(existing.map((q) => q.id))
+  const added = incoming.filter((q) => !known.has(q.id))
+  return added.length ? [...existing, ...added] : existing
+}
+
 /**
- * Quick Quiz state machine: setup → generate → answer-by-answer grading →
- * server-side scoring. Progress caches are invalidated after scoring because
- * mastery changes server-side.
+ * Quick Quiz state machine, fast-start edition:
+ * setup → generate (returns first ~3 questions immediately) → answer-by-answer
+ * grading while a background poll merges the rest in → server-side scoring.
+ * If the user outruns generation, the session shows an honest waiting state; if
+ * the backend can only produce a partial set, the run ends gracefully at what
+ * exists. Progress caches are invalidated after scoring (mastery moves server-side).
  */
 export function useQuizRun(courseId: string, userId: string): QuizController {
   const [run, setRun] = useState<QuizRunState | null>(null)
@@ -41,8 +68,13 @@ export function useQuizRun(courseId: string, userId: string): QuizController {
   const [questionCount, setQuestionCount] = useState(10)
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  // One-shot latch so auto-finish (partial generation) can't double-submit.
+  const finishingRef = useRef(false)
+  // Auto-finish tries once; on failure the session offers a manual retry
+  // instead of toast-looping.
+  const autoFinishRef = useRef(false)
 
-  // Whole-quiz timer (for the summary screen) — ticks while a run is live.
+  // Whole-quiz timer (for the debrief) — ticks while a run is live.
   const { timeElapsed, reset: resetTimer } = useSessionTimer(!!run && !result)
 
   // "Whole course" is always available and the default — specific topics just
@@ -80,37 +112,94 @@ export function useQuizRun(courseId: string, userId: string): QuizController {
     },
   }
 
-  const startQuiz = useCallback(async () => {
-    if (!courseId) return
-    setLoading(true)
-    try {
-      // Null topic => backend retrieves broadly across the whole course.
-      const topicArg = selectedTopic === WHOLE_COURSE ? null : selectedTopic
-      const quiz = await generateQuiz(courseId, topicArg, difficulty, questionCount)
-      if (!quiz.questions.length) {
-        showError('No questions could be generated. Try another topic.')
-        return
+  const startQuiz = useCallback(
+    async (topicOverride?: string) => {
+      if (!courseId) return
+      setLoading(true)
+      try {
+        const topicLabel = topicOverride ?? selectedTopic
+        // Null topic => backend retrieves broadly across the whole course.
+        const topicArg = topicLabel === WHOLE_COURSE ? null : topicLabel
+        const quiz = await generateQuiz(courseId, topicArg, difficulty, questionCount)
+        if (!quiz.questions.length) {
+          showError('No questions could be generated. Try another topic.')
+          return
+        }
+        finishingRef.current = false
+        autoFinishRef.current = false
+        setRun({
+          quizId: quiz.quiz_id,
+          questions: quiz.questions,
+          numRequested: quiz.num_requested || quiz.questions.length,
+          generationStatus: quiz.generation_status ?? 'ready',
+          topicLabel,
+          currentIndex: 0,
+          selectedLetter: '',
+          confidence: null,
+          feedback: null,
+          questionStart: Date.now(),
+          correctCount: 0,
+          answers: [],
+        })
+        setResult(null)
+        resetTimer()
+      } catch (e) {
+        showError(e instanceof Error ? e.message : 'Failed to generate quiz')
+      } finally {
+        setLoading(false)
       }
-      setRun({
-        quizId: quiz.quiz_id,
-        questions: quiz.questions,
-        currentIndex: 0,
-        selectedLetter: '',
-        feedback: null,
-        questionStart: Date.now(),
-        correctCount: 0,
-      })
-      setResult(null)
-      resetTimer()
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Failed to generate quiz')
-    } finally {
-      setLoading(false)
+    },
+    [courseId, selectedTopic, difficulty, questionCount, resetTimer],
+  )
+
+  // Background poll: while the backend is still writing questions, pull what
+  // exists every few seconds and merge it in. Stops on 'ready'/'partial', on
+  // reset, or after repeated failures (then ends honestly at what we have).
+  const quizId = run?.quizId ?? null
+  const polling = !!quizId && run?.generationStatus === 'generating' && !result
+  useEffect(() => {
+    if (!polling || !quizId) return
+    let cancelled = false
+    let failures = 0
+    const tick = async () => {
+      try {
+        const data = await getQuizQuestions(quizId)
+        if (cancelled) return
+        failures = 0
+        setRun((prev) => {
+          if (!prev || prev.quizId !== quizId) return prev
+          return {
+            ...prev,
+            questions: mergeQuestions(prev.questions, data.questions),
+            generationStatus: data.generation_status,
+            numRequested: data.num_requested || prev.numRequested,
+          }
+        })
+      } catch {
+        if (cancelled) return
+        failures += 1
+        if (failures >= MAX_POLL_FAILURES) {
+          showError('Lost contact while writing the remaining questions — ending at what we have.')
+          setRun((prev) =>
+            prev && prev.quizId === quizId ? { ...prev, generationStatus: 'partial' } : prev,
+          )
+        }
+      }
     }
-  }, [courseId, selectedTopic, difficulty, questionCount, resetTimer])
+    const interval = window.setInterval(() => void tick(), GENERATION_POLL_MS)
+    void tick()
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [polling, quizId])
 
   const selectLetter = useCallback((letter: string) => {
     setRun((prev) => (prev && !prev.feedback ? { ...prev, selectedLetter: letter } : prev))
+  }, [])
+
+  const setConfidence = useCallback((confidence: QuizConfidence | null) => {
+    setRun((prev) => (prev && !prev.feedback ? { ...prev, confidence } : prev))
   }, [])
 
   const submitAnswer = useCallback(async () => {
@@ -125,12 +214,22 @@ export function useQuizRun(courseId: string, userId: string): QuizController {
         run.selectedLetter,
         timeTaken,
         userId,
+        run.confidence ?? undefined,
       )
-      setRun({
-        ...run,
-        feedback,
-        correctCount: run.correctCount + (feedback.is_correct ? 1 : 0),
-      })
+      // Functional update: the generation poll may have merged questions since.
+      setRun((prev) =>
+        prev
+          ? {
+              ...prev,
+              feedback,
+              correctCount: prev.correctCount + (feedback.is_correct ? 1 : 0),
+              answers: [
+                ...prev.answers,
+                { question, selectedLetter: prev.selectedLetter, confidence: prev.confidence, result: feedback },
+              ],
+            }
+          : prev,
+      )
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to submit answer')
     } finally {
@@ -139,7 +238,8 @@ export function useQuizRun(courseId: string, userId: string): QuizController {
   }, [run, userId])
 
   const finishQuiz = useCallback(async () => {
-    if (!run) return
+    if (!run || finishingRef.current) return
+    finishingRef.current = true
     setSubmitting(true)
     try {
       const finalResult = await submitQuiz(run.quizId, userId)
@@ -147,6 +247,7 @@ export function useQuizRun(courseId: string, userId: string): QuizController {
       // Scoring the quiz changed mastery server-side — refresh progress views.
       invalidateProgress()
     } catch (e) {
+      finishingRef.current = false
       showError(e instanceof Error ? e.message : 'Failed to score quiz')
     } finally {
       setSubmitting(false)
@@ -154,21 +255,44 @@ export function useQuizRun(courseId: string, userId: string): QuizController {
   }, [run, userId, invalidateProgress])
 
   const nextQuestion = useCallback(async () => {
-    if (!run) return
-    if (run.currentIndex < run.questions.length - 1) {
-      setRun({
-        ...run,
-        currentIndex: run.currentIndex + 1,
-        selectedLetter: '',
-        feedback: null,
-        questionStart: Date.now(),
-      })
-    } else {
+    if (!run || !run.feedback) return
+    const answered = run.currentIndex + 1
+    const doneRequested = answered >= run.numRequested
+    const doneAvailable = run.generationStatus !== 'generating' && answered >= run.questions.length
+    if (doneRequested || doneAvailable) {
       await finishQuiz()
+      return
     }
+    // May step past the last available question — the session shows an honest
+    // waiting state and the poll effect fills it in as soon as it lands.
+    setRun((prev) =>
+      prev
+        ? {
+            ...prev,
+            currentIndex: prev.currentIndex + 1,
+            selectedLetter: '',
+            confidence: null,
+            feedback: null,
+            questionStart: Date.now(),
+          }
+        : prev,
+    )
   }, [run, finishQuiz])
 
+  // If the user is parked on the waiting state and generation ends without
+  // producing that question ('partial'), close the run out gracefully. One
+  // attempt only — a failure surfaces a manual "score it" action instead.
+  useEffect(() => {
+    if (!run || result || submitting || autoFinishRef.current) return
+    if (run.currentIndex >= run.questions.length && run.generationStatus !== 'generating') {
+      autoFinishRef.current = true
+      void finishQuiz()
+    }
+  }, [run, result, submitting, finishQuiz])
+
   const resetQuiz = useCallback(() => {
+    finishingRef.current = false
+    autoFinishRef.current = false
     setRun(null)
     setResult(null)
     resetTimer()
@@ -189,9 +313,11 @@ export function useQuizRun(courseId: string, userId: string): QuizController {
     timeElapsed,
     topics,
     selectLetter,
+    setConfidence,
     startQuiz,
     submitAnswer,
     nextQuestion,
+    finishNow: finishQuiz,
     resetQuiz,
   }
 }

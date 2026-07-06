@@ -2,8 +2,9 @@ from fastapi import APIRouter, Form, Depends
 import os
 
 from auth import current_user_id
-from deps import analytics_engine, practice_generator
+from deps import analytics_engine
 
+import course_brain
 import readiness_engine
 
 router = APIRouter()
@@ -69,8 +70,8 @@ async def get_analytics_topics(course_id: str):
             print(f"Found studied topics for course {course_id}: {studied_topics}")
             return {"topics": studied_topics}
         else:
-            # If no progress yet, try to get topics from course content
-            topics = practice_generator.extract_topics_from_course(course_id)
+            # If no progress yet, serve the Course Brain topics for the course.
+            topics = course_brain.topic_names(course_id, auto_generate=True)
             return {"topics": topics}
             
     except Exception as e:

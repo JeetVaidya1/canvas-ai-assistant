@@ -1,7 +1,10 @@
 # timing_metrics.py - Per-session time metrics and analytics tracking
+import logging
 from typing import Dict, Any
 
 from .timing import _utcnow, _parse_dt
+
+logger = logging.getLogger(__name__)
 
 
 class TimingMetricsMixin:
@@ -80,11 +83,21 @@ class TimingMetricsMixin:
                 question_type="exam"
             )
 
-            # Track topic-specific performance
+            # Track topic-specific performance. topic MUST be passed as the
+            # explicit keyword: positionally it lands in the `question` slot and
+            # mastery gets keyed by extract_topic()'s keyword table (usually
+            # "general") instead of the real exam topic.
             for topic, performance in results.get('topic_performance', {}).items():
                 if performance['total'] > 0:
                     topic_score = performance['correct'] / performance['total']
-                    analytics.update_learning_progress(user_id, course_id, topic, topic_score)
+                    analytics.update_learning_progress(
+                        user_id, course_id,
+                        question=f"Exam topic: {topic}",
+                        confidence=topic_score,
+                        topic=topic,
+                    )
 
-        except Exception as e:
-            print(f"Analytics tracking failed: {e}")
+        except Exception:
+            logger.warning("Exam analytics tracking failed (user=%s course=%s exam=%s)",
+                           session.get("user_id"), session.get("course_id"),
+                           session.get("exam_name"), exc_info=True)

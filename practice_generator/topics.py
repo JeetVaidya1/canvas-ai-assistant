@@ -14,7 +14,24 @@ class TopicsMixin:
     """Multi-strategy topic extraction and combination logic."""
 
     def extract_topics_from_course(self, course_id: str) -> List[str]:
-        """Extract actual topics from course materials using multiple strategies - IMPROVED"""
+        """Course topics for a course — Course Brain first, legacy strategies last.
+
+        The Course Brain (course_brain.py / course_topics table) is the single
+        source of truth: content-grounded, persisted, rebuilt on ingest. The
+        legacy filename/content/context strategies below survive only as a
+        last-resort fallback for courses where synthesis is impossible.
+        """
+        try:
+            import course_brain
+            names = course_brain.topic_names(course_id, auto_generate=True)
+            if names:
+                return names
+        except Exception as e:  # noqa: BLE001
+            print(f"Course Brain topics unavailable, using legacy extraction: {e}")
+        return self._extract_topics_legacy(course_id)
+
+    def _extract_topics_legacy(self, course_id: str) -> List[str]:
+        """LEGACY multi-strategy extraction (filenames/content/title). Fallback only."""
         try:
             from vector_store import VectorStore
             vector_store = VectorStore()
