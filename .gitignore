@@ -21,3 +21,8 @@ canvas-ai-frontend/dist/
 *.swp
 .idea/
 .vscode/
+
+# local course data (copyrighted course materials stay local)
+data/
+courses.json
+vectorstores/
